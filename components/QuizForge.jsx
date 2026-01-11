@@ -957,7 +957,7 @@ ${quizContent.substring(0, 40000)}
                   <>
                     <button onClick={() => { setAuthMode('signup'); setAuthForm(f => ({ ...f, role: 'teacher' })); setPage('auth'); }} className="px-5 py-3 bg-white text-indigo-900 rounded-xl font-semibold hover:bg-indigo-100 shadow-lg text-sm">👩‍🏫 I'm a Teacher</button>
                     <button onClick={() => { setAuthMode('signup'); setAuthForm(f => ({ ...f, role: 'student' })); setPage('auth'); }} className="px-5 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-500 border border-indigo-500 text-sm">👨‍🎓 I'm a Student</button>
-                    <button onClick={() => { setAuthMode('signup'); setAuthForm(f => ({ ...f, role: 'creator' })); setPage('auth'); }} className="px-5 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-semibold hover:from-amber-400 hover:to-orange-400 text-sm">✨ Just Make Quizzes</button>
+                    <button onClick={() => { setAuthMode('signup'); setAuthForm(f => ({ ...f, role: 'creator' })); setPage('auth'); }} className="px-5 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-semibold hover:from-amber-400 hover:to-orange-400 text-sm">✨ I'm Just Making Quizzes</button>
                   </>
                 )}
               </div>
@@ -971,6 +971,10 @@ ${quizContent.substring(0, 40000)}
                   <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full text-xs">Score: 2/2</span>
                 </div>
                 <div className="w-full bg-slate-700 rounded-full h-1.5 mb-4"><div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full w-2/3"></div></div>
+                <div className="flex gap-2 mb-3">
+                  <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 text-xs rounded-full">Game Theory</span>
+                  <span className="px-2 py-0.5 bg-amber-500/20 text-amber-300 text-xs rounded-full">Intermediate</span>
+                </div>
                 <p className="text-white text-sm md:text-base font-medium mb-3">Why does cooperation become harder as the number of firms increases?</p>
                 <div className="space-y-1.5 mb-3">
                   <div className="p-2 rounded-lg border bg-slate-800/50 border-slate-600"><div className="flex items-center gap-2"><span className="w-5 h-5 flex items-center justify-center rounded-full bg-slate-700 text-slate-300 text-xs font-bold">A</span><span className="text-white text-xs">More administrative complexity</span></div></div>
@@ -997,7 +1001,7 @@ ${quizContent.substring(0, 40000)}
                   <div className="grid grid-cols-2 gap-2">
                     {[
                       { icon: '📤', title: 'Upload', desc: 'PDFs & slides' },
-                      { icon: '🧠', title: 'Generate', desc: 'AI creates quiz' },
+                      { icon: '🧠', title: 'Generate', desc: 'AI creates quiz/exam' },
                       { icon: '📨', title: 'Assign', desc: 'Share code' },
                       { icon: '📊', title: 'Track', desc: 'View results' }
                     ].map((item, i) => (
@@ -1016,7 +1020,7 @@ ${quizContent.substring(0, 40000)}
                   <div className="grid grid-cols-2 gap-2">
                     {[
                       { icon: '🔑', title: 'Join', desc: 'Enter code' },
-                      { icon: '✍️', title: 'Take', desc: 'Do quizzes' },
+                      { icon: '✍️', title: 'Take', desc: 'Do quizzes/exams' },
                       { icon: '💡', title: 'Learn', desc: 'Get feedback' },
                       { icon: '🎯', title: 'Focus', desc: 'AI study tips' }
                     ].map((item, i) => (
@@ -1027,6 +1031,20 @@ ${quizContent.substring(0, 40000)}
                       </div>
                     ))}
                   </div>
+                </div>
+              </div>
+              
+              {/* Student Study Section */}
+              <div className="mt-8 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-200">
+                <div className="flex flex-col md:flex-row items-center gap-4">
+                  <div className="text-4xl">📚</div>
+                  <div className="text-center md:text-left">
+                    <h3 className="font-semibold text-slate-900 mb-1">Study Smarter, Not Harder</h3>
+                    <p className="text-slate-600 text-sm">Upload your course materials, past exams, or lecture notes — our AI generates practice exams tailored to your class. Perfect for exam prep!</p>
+                  </div>
+                  <button onClick={() => { setAuthMode('signup'); setAuthForm(f => ({ ...f, role: 'student' })); setPage('auth'); }} className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-white rounded-lg font-medium text-sm whitespace-nowrap">
+                    Start Practicing →
+                  </button>
                 </div>
               </div>
             </div>
