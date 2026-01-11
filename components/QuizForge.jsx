@@ -102,6 +102,8 @@ export default function QuizForge() {
   const [toast, setToast] = useState(null);
   const [uploadProgress, setUploadProgress] = useState({ active: false, step: '', progress: 0 });
   const [uploadController, setUploadController] = useState(null);
+  const [sharedQuizMode, setSharedQuizMode] = useState(false);
+  const [sharedQuizData, setSharedQuizData] = useState(null);
   const fileInputRef = useRef(null);
   
   const cancelUpload = () => {
@@ -152,6 +154,31 @@ export default function QuizForge() {
     });
     
     return () => unsubscribe();
+  }, []);
+  
+  // Check for shared quiz in URL
+  useEffect(() => {
+    const checkSharedQuiz = async () => {
+      if (typeof window === 'undefined') return;
+      const params = new URLSearchParams(window.location.search);
+      const sharedId = params.get('quiz');
+      if (sharedId) {
+        try {
+          const result = await storage.get(`quizforge-shared-${sharedId}`);
+          if (result && result.value) {
+            const quizData = JSON.parse(result.value);
+            setSharedQuizData(quizData);
+            setSharedQuizMode(true);
+            setCurrentQuiz(quizData);
+            setQuizState({ currentQuestion: 0, selectedAnswer: null, answeredQuestions: new Set(), score: 0, results: [] });
+            setPage('take-quiz');
+          }
+        } catch (err) {
+          console.log('Could not load shared quiz:', err);
+        }
+      }
+    };
+    checkSharedQuiz();
   }, []);
   
   // Save data whenever it changes
@@ -314,6 +341,37 @@ export default function QuizForge() {
   const showToast = (message, type = 'info') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
+  };
+  
+  // Share quiz function
+  const shareQuiz = async (quiz) => {
+    try {
+      const shareId = `share_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const shareData = {
+        id: shareId,
+        name: quiz.name,
+        questions: quiz.questions,
+        subject: quiz.subject || 'General',
+        createdBy: user?.name || 'Anonymous',
+        createdAt: Date.now()
+      };
+      
+      await storage.set(`quizforge-shared-${shareId}`, JSON.stringify(shareData));
+      
+      const shareUrl = `${window.location.origin}${window.location.pathname}?quiz=${shareId}`;
+      
+      // Try to copy to clipboard
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(shareUrl);
+        showToast('🔗 Share link copied to clipboard!', 'success');
+      } else {
+        setModal('share-link');
+        setModalInput(shareUrl);
+      }
+    } catch (err) {
+      console.error('Share error:', err);
+      showToast('Could not create share link', 'error');
+    }
   };
 
   const navigate = (newPage, type = null) => {
@@ -867,6 +925,26 @@ ${quizContent.substring(0, 40000)}
               </>
             )}
             
+            {/* Share Link Modal */}
+            {modal === 'share-link' && (
+              <>
+                <div className="text-center mb-4">
+                  <div className="text-5xl mb-2">🔗</div>
+                  <p className="text-slate-600">Share this link with anyone!</p>
+                </div>
+                <div className="bg-slate-100 rounded-lg p-3 mb-4 break-all text-sm font-mono text-slate-700">
+                  {modalInput}
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => { setModal(null); setModalInput(''); }} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg">Close</button>
+                  <button onClick={() => { 
+                    navigator.clipboard.writeText(modalInput); 
+                    showToast('Copied!', 'success');
+                  }} className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium">Copy Link</button>
+                </div>
+              </>
+            )}
+            
             {/* Next Steps Modal (after publishing) */}
             {modal.type === 'next-steps' && (
               <>
@@ -1028,16 +1106,19 @@ ${quizContent.substring(0, 40000)}
               <div className="bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 p-4 md:p-5">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-500"></div><div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div><div className="w-2.5 h-2.5 rounded-full bg-green-500"></div></div>
-                  <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full text-xs">Score: 2/2</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-slate-400 text-xs">Question 7 of 10</span>
+                    <span className="px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full text-xs font-medium">✓ 6 correct</span>
+                  </div>
                 </div>
-                <div className="w-full bg-slate-700 rounded-full h-1.5 mb-4"><div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full w-2/3"></div></div>
+                <div className="w-full bg-slate-700 rounded-full h-1.5 mb-4"><div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full w-[70%]"></div></div>
                 <div className="flex gap-2 mb-3">
                   <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 text-xs rounded-full">Game Theory</span>
                   <span className="px-2 py-0.5 bg-amber-500/20 text-amber-300 text-xs rounded-full">Intermediate</span>
                 </div>
                 <p className="text-white text-sm md:text-base font-medium mb-3">Why does cooperation become harder as the number of firms increases?</p>
                 <div className="space-y-1.5 mb-3">
-                  <div className="p-2 rounded-lg border bg-slate-800/50 border-slate-600"><div className="flex items-center gap-2"><span className="w-5 h-5 flex items-center justify-center rounded-full bg-slate-700 text-slate-300 text-xs font-bold">A</span><span className="text-white text-xs">More administrative complexity</span></div></div>
+                  <div className="p-2 rounded-lg border bg-slate-800/30 border-slate-700 opacity-50"><div className="flex items-center gap-2"><span className="w-5 h-5 flex items-center justify-center rounded-full bg-slate-700 text-slate-300 text-xs font-bold">A</span><span className="text-white text-xs">More administrative complexity</span></div></div>
                   <div className="p-2 rounded-lg border bg-green-500/20 border-green-500"><div className="flex items-center gap-2"><span className="w-5 h-5 flex items-center justify-center rounded-full bg-green-500 text-white text-xs font-bold">B</span><span className="text-white text-xs flex-1">Each firm's share shrinks, but deviation gains stay constant</span><span className="text-green-400 text-xs">✓</span></div></div>
                   <div className="p-2 rounded-lg border bg-slate-800/30 border-slate-700 opacity-50"><div className="flex items-center gap-2"><span className="w-5 h-5 flex items-center justify-center rounded-full bg-slate-700 text-slate-300 text-xs font-bold">C</span><span className="text-white text-xs">Government pays more attention</span></div></div>
                   <div className="p-2 rounded-lg border bg-slate-800/30 border-slate-700 opacity-50"><div className="flex items-center gap-2"><span className="w-5 h-5 flex items-center justify-center rounded-full bg-slate-700 text-slate-300 text-xs font-bold">D</span><span className="text-white text-xs">Communication costs increase</span></div></div>
@@ -1516,6 +1597,7 @@ ${quizContent.substring(0, 40000)}
                             <p className="text-sm text-slate-500">{quiz.questions.length} questions</p>
                           </div>
                           <div className="flex gap-2">
+                            <button onClick={() => shareQuiz(quiz)} className="px-3 py-1.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg text-sm" title="Share quiz">🔗 Share</button>
                             <button onClick={() => { setCurrentQuiz(quiz); setPage('review-quiz'); }} className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm">View</button>
                             <button onClick={() => {
                               const selected = shuffleArray([...quiz.questions]).slice(0, 10).map(q => ({ ...q, options: shuffleArray([...q.options]) }));
@@ -1736,6 +1818,32 @@ ${quizContent.substring(0, 40000)}
                     </div>
                   </div>
                 </div>
+                
+                {/* Student's Created Quizzes */}
+                {quizzes.length > 0 && (
+                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                    <h3 className="font-semibold text-slate-900 mb-4">Your Created Quizzes</h3>
+                    <div className="space-y-3">
+                      {quizzes.map(quiz => (
+                        <div key={quiz.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+                          <div>
+                            <p className="font-medium text-slate-900">{quiz.name}</p>
+                            <p className="text-sm text-slate-500">{quiz.questions.length} questions</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <button onClick={() => shareQuiz(quiz)} className="px-3 py-1.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg text-sm" title="Share with friends">🔗 Share</button>
+                            <button onClick={() => {
+                              const selected = shuffleArray([...quiz.questions]).slice(0, 10).map(q => ({ ...q, options: shuffleArray([...q.options]) }));
+                              setCurrentQuiz({ ...quiz, questions: selected });
+                              setQuizState({ currentQuestion: 0, selectedAnswer: null, answeredQuestions: new Set(), score: 0, results: [] });
+                              setPage('take-quiz');
+                            }} className="px-3 py-1.5 bg-indigo-500 hover:bg-indigo-400 text-white rounded-lg text-sm">Practice</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="space-y-6">
                 {weakTopics.length > 0 && (
@@ -2013,12 +2121,34 @@ ${quizContent.substring(0, 40000)}
         const isAnswered = quizState.answeredQuestions.has(quizState.currentQuestion);
         return (
           <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900">
+            {/* Shared quiz header */}
+            {sharedQuizMode && !isLoggedIn && (
+              <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-b border-amber-500/20 px-6 py-3">
+                <div className="max-w-3xl mx-auto flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-amber-400">⚡</span>
+                    <span className="text-white text-sm font-medium">{currentQuiz.name}</span>
+                    {sharedQuizData?.createdBy && <span className="text-slate-400 text-sm">by {sharedQuizData.createdBy}</span>}
+                  </div>
+                  <button onClick={() => { setAuthMode('login'); setPage('auth'); }} className="px-4 py-1.5 bg-white/10 hover:bg-white/20 text-white text-sm rounded-lg">Sign In</button>
+                </div>
+              </div>
+            )}
             <div className="max-w-3xl mx-auto px-6 py-8">
               <div className="flex items-center justify-between mb-6">
-                <button onClick={() => setPage(getDashboard())} className="text-slate-400 hover:text-white">✕ Exit</button>
+                <button onClick={() => {
+                  if (sharedQuizMode && !isLoggedIn) {
+                    setSharedQuizMode(false);
+                    setSharedQuizData(null);
+                    window.history.replaceState({}, '', window.location.pathname);
+                    setPage('landing');
+                  } else {
+                    setPage(getDashboard());
+                  }
+                }} className="text-slate-400 hover:text-white">✕ Exit</button>
                 <div className="flex items-center gap-4">
                   <span className="text-slate-400 text-sm">{quizState.currentQuestion + 1} / {currentQuiz.questions.length}</span>
-                  <span className="px-3 py-1 bg-amber-500/20 text-amber-400 rounded-full text-sm">Score: {quizState.score}/{quizState.answeredQuestions.size}</span>
+                  <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm font-medium">✓ {quizState.score} correct</span>
                 </div>
               </div>
               <div className="w-full bg-slate-700 rounded-full h-2 mb-8"><div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all" style={{ width: `${((quizState.currentQuestion + 1) / currentQuiz.questions.length) * 100}%` }} /></div>
@@ -2080,13 +2210,57 @@ ${quizContent.substring(0, 40000)}
                 <div className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500 mb-2">{quizState.score}/{currentQuiz.questions.length}</div>
                 <p className="text-slate-400 mb-8">{percentage}% correct</p>
                 <div className="w-full bg-slate-700 rounded-full h-4 mb-8 overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-500 to-orange-500" style={{ width: `${percentage}%` }} /></div>
+                
+                {/* Show sign-up prompt for non-logged-in users who took a shared quiz */}
+                {sharedQuizMode && !isLoggedIn && (
+                  <div className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-xl p-6 mb-6 text-left">
+                    <h3 className="text-white font-semibold mb-2">📊 Want to save your progress?</h3>
+                    <p className="text-slate-300 text-sm mb-4">Create a free account to track your scores, create your own quizzes, and study smarter!</p>
+                    <div className="flex gap-3">
+                      <button onClick={() => { 
+                        setSharedQuizMode(false); 
+                        setSharedQuizData(null);
+                        // Clear URL params
+                        window.history.replaceState({}, '', window.location.pathname);
+                        setAuthMode('signup'); 
+                        setPage('auth'); 
+                      }} className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-white rounded-lg font-medium">Sign Up Free</button>
+                      <button onClick={() => { 
+                        setSharedQuizMode(false); 
+                        setSharedQuizData(null);
+                        window.history.replaceState({}, '', window.location.pathname);
+                        setAuthMode('login'); 
+                        setPage('auth'); 
+                      }} className="flex-1 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg">Log In</button>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="flex gap-3">
-                  <button onClick={() => setPage(getDashboard())} className="flex-1 px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl">Dashboard</button>
-                  <button onClick={() => {
-                    setQuizState({ currentQuestion: 0, selectedAnswer: null, answeredQuestions: new Set(), score: 0, results: [] });
-                    setCurrentQuiz(q => ({ ...q, questions: shuffleArray(q.questions.map(qq => ({ ...qq, options: shuffleArray([...qq.options]) }))) }));
-                    setPage('take-quiz');
-                  }} className="flex-1 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl">Retake</button>
+                  {sharedQuizMode && !isLoggedIn ? (
+                    <>
+                      <button onClick={() => {
+                        setQuizState({ currentQuestion: 0, selectedAnswer: null, answeredQuestions: new Set(), score: 0, results: [] });
+                        setCurrentQuiz(q => ({ ...q, questions: shuffleArray(q.questions.map(qq => ({ ...qq, options: shuffleArray([...qq.options]) }))) }));
+                        setPage('take-quiz');
+                      }} className="flex-1 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl">Retake Quiz</button>
+                      <button onClick={() => {
+                        setSharedQuizMode(false);
+                        setSharedQuizData(null);
+                        window.history.replaceState({}, '', window.location.pathname);
+                        setPage('landing');
+                      }} className="flex-1 px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl">Browse QuizForge</button>
+                    </>
+                  ) : (
+                    <>
+                      <button onClick={() => setPage(getDashboard())} className="flex-1 px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl">Dashboard</button>
+                      <button onClick={() => {
+                        setQuizState({ currentQuestion: 0, selectedAnswer: null, answeredQuestions: new Set(), score: 0, results: [] });
+                        setCurrentQuiz(q => ({ ...q, questions: shuffleArray(q.questions.map(qq => ({ ...qq, options: shuffleArray([...qq.options]) }))) }));
+                        setPage('take-quiz');
+                      }} className="flex-1 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl">Retake</button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
