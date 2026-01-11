@@ -939,95 +939,91 @@ ${quizContent.substring(0, 40000)}
             </div>
           </nav>
 
-          <div className="max-w-7xl mx-auto px-6 pt-16 pb-12">
-            <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/20 text-amber-400 text-sm rounded-full mb-6">
+          <div className="max-w-7xl mx-auto px-6 pt-12 md:pt-16 pb-8 md:pb-12">
+            <div className="max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/20 text-amber-400 text-sm rounded-full mb-4">
                 🎯 AI-Powered Assessment Platform
               </div>
-              <h1 className="text-5xl font-bold text-white leading-tight mb-6">
+              <h1 className="text-3xl md:text-5xl font-bold text-white leading-tight mb-4 md:mb-6">
                 Turn Course Materials into <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">Smart Quizzes</span> in Seconds
               </h1>
-              <p className="text-xl text-indigo-200 mb-8">Upload slides, readings, or case studies. Our AI generates questions that test real understanding.</p>
-              <div className="flex flex-wrap gap-4">
+              <p className="text-base md:text-xl text-indigo-200 mb-6">Upload slides, readings, or case studies. Our AI generates questions that test real understanding.</p>
+              <div className="flex flex-col sm:flex-row flex-wrap gap-3">
                 {isLoggedIn ? (
-                  <button onClick={() => setPage(getDashboard())} className="px-8 py-4 bg-white text-indigo-900 rounded-xl font-semibold hover:bg-indigo-100 shadow-lg">
+                  <button onClick={() => setPage(getDashboard())} className="px-6 py-3 bg-white text-indigo-900 rounded-xl font-semibold hover:bg-indigo-100 shadow-lg text-center">
                     Go to Dashboard →
                   </button>
                 ) : (
                   <>
-                    <button onClick={() => { setAuthMode('signup'); setAuthForm(f => ({ ...f, role: 'teacher' })); setPage('auth'); }} className="px-6 py-4 bg-white text-indigo-900 rounded-xl font-semibold hover:bg-indigo-100 shadow-lg">👩‍🏫 I'm a Teacher</button>
-                    <button onClick={() => { setAuthMode('signup'); setAuthForm(f => ({ ...f, role: 'student' })); setPage('auth'); }} className="px-6 py-4 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-500 border border-indigo-500">👨‍🎓 I'm a Student</button>
-                    <button onClick={() => { setAuthMode('signup'); setAuthForm(f => ({ ...f, role: 'creator' })); setPage('auth'); }} className="px-6 py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-semibold hover:from-amber-400 hover:to-orange-400">✨ Just Make Quizzes</button>
+                    <button onClick={() => { setAuthMode('signup'); setAuthForm(f => ({ ...f, role: 'teacher' })); setPage('auth'); }} className="px-5 py-3 bg-white text-indigo-900 rounded-xl font-semibold hover:bg-indigo-100 shadow-lg text-sm">👩‍🏫 I'm a Teacher</button>
+                    <button onClick={() => { setAuthMode('signup'); setAuthForm(f => ({ ...f, role: 'student' })); setPage('auth'); }} className="px-5 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-500 border border-indigo-500 text-sm">👨‍🎓 I'm a Student</button>
+                    <button onClick={() => { setAuthMode('signup'); setAuthForm(f => ({ ...f, role: 'creator' })); setPage('auth'); }} className="px-5 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-semibold hover:from-amber-400 hover:to-orange-400 text-sm">✨ Just Make Quizzes</button>
                   </>
                 )}
               </div>
             </div>
 
             {/* Preview */}
-            <div className="mt-12 max-w-2xl mx-auto">
-              <div className="bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex gap-1.5"><div className="w-3 h-3 rounded-full bg-red-500"></div><div className="w-3 h-3 rounded-full bg-yellow-500"></div><div className="w-3 h-3 rounded-full bg-green-500"></div></div>
-                  <span className="px-3 py-1 bg-amber-500/20 text-amber-400 rounded-full text-sm">Score: 2/2</span>
+            <div className="mt-8 md:mt-12 max-w-xl mx-auto">
+              <div className="bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 p-4 md:p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-500"></div><div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div><div className="w-2.5 h-2.5 rounded-full bg-green-500"></div></div>
+                  <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full text-xs">Score: 2/2</span>
                 </div>
-                <div className="w-full bg-slate-700 rounded-full h-2 mb-6"><div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full w-[12%]"></div></div>
-                <p className="text-white text-lg font-medium mb-4">Why does cooperation become harder as the number of firms increases?</p>
-                <div className="space-y-2 mb-4">
-                  <div className="p-3 rounded-xl border-2 bg-slate-800/50 border-slate-600"><div className="flex items-center gap-3"><span className="w-7 h-7 flex items-center justify-center rounded-full bg-slate-700 text-slate-300 text-sm font-bold">A</span><span className="text-white text-sm">More administrative complexity</span></div></div>
-                  <div className="p-3 rounded-xl border-2 bg-green-500/20 border-green-500"><div className="flex items-center gap-3"><span className="w-7 h-7 flex items-center justify-center rounded-full bg-green-500 text-white text-sm font-bold">B</span><span className="text-white text-sm flex-1">Each firm's share shrinks, but deviation gains stay constant</span><span className="text-green-400">✓</span></div></div>
-                  <div className="p-3 rounded-xl border-2 bg-slate-800/30 border-slate-700 opacity-60"><div className="flex items-center gap-3"><span className="w-7 h-7 flex items-center justify-center rounded-full bg-slate-700 text-slate-300 text-sm font-bold">C</span><span className="text-white text-sm">Government pays more attention</span></div></div>
-                  <div className="p-3 rounded-xl border-2 bg-slate-800/30 border-slate-700 opacity-60"><div className="flex items-center gap-3"><span className="w-7 h-7 flex items-center justify-center rounded-full bg-slate-700 text-slate-300 text-sm font-bold">D</span><span className="text-white text-sm">Communication costs increase</span></div></div>
+                <div className="w-full bg-slate-700 rounded-full h-1.5 mb-4"><div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full w-2/3"></div></div>
+                <p className="text-white text-sm md:text-base font-medium mb-3">Why does cooperation become harder as the number of firms increases?</p>
+                <div className="space-y-1.5 mb-3">
+                  <div className="p-2 rounded-lg border bg-slate-800/50 border-slate-600"><div className="flex items-center gap-2"><span className="w-5 h-5 flex items-center justify-center rounded-full bg-slate-700 text-slate-300 text-xs font-bold">A</span><span className="text-white text-xs">More administrative complexity</span></div></div>
+                  <div className="p-2 rounded-lg border bg-green-500/20 border-green-500"><div className="flex items-center gap-2"><span className="w-5 h-5 flex items-center justify-center rounded-full bg-green-500 text-white text-xs font-bold">B</span><span className="text-white text-xs flex-1">Each firm's share shrinks, but deviation gains stay constant</span><span className="text-green-400 text-xs">✓</span></div></div>
+                  <div className="p-2 rounded-lg border bg-slate-800/30 border-slate-700 opacity-50"><div className="flex items-center gap-2"><span className="w-5 h-5 flex items-center justify-center rounded-full bg-slate-700 text-slate-300 text-xs font-bold">C</span><span className="text-white text-xs">Government pays more attention</span></div></div>
+                  <div className="p-2 rounded-lg border bg-slate-800/30 border-slate-700 opacity-50"><div className="flex items-center gap-2"><span className="w-5 h-5 flex items-center justify-center rounded-full bg-slate-700 text-slate-300 text-xs font-bold">D</span><span className="text-white text-xs">Communication costs increase</span></div></div>
                 </div>
-                <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl">
-                  <p className="text-blue-400 font-medium text-sm mb-1">💡 Explanation</p>
-                  <p className="text-slate-300 text-xs">With n firms sharing profit, each gets π/n. As n increases, cooperation value shrinks while deviation gains remain attractive.</p>
+                <div className="p-2 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                  <p className="text-blue-400 font-medium text-xs mb-0.5">💡 Explanation</p>
+                  <p className="text-slate-300 text-xs leading-relaxed">With n firms sharing profit, each gets π/n. As n increases, cooperation value shrinks while deviation gains remain attractive.</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* How it Works */}
-          <div className="bg-white py-16">
-            <div className="max-w-7xl mx-auto px-6">
-              <h2 className="text-2xl font-bold text-center text-slate-900 mb-12">How It Works</h2>
-              <div className="grid grid-cols-2 gap-6">
+          <div className="bg-white py-12">
+            <div className="max-w-4xl mx-auto px-6">
+              <h2 className="text-xl font-bold text-center text-slate-900 mb-8">How It Works</h2>
+              <div className="grid md:grid-cols-2 gap-8">
                 {/* Teachers Column */}
-                <div>
-                  <h3 className="text-base font-semibold text-indigo-600 mb-4 text-center">👩‍🏫 For Teachers</h3>
-                  <div className="space-y-3">
+                <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-5">
+                  <h3 className="text-sm font-semibold text-indigo-600 mb-3 text-center">👩‍🏫 For Teachers</h3>
+                  <div className="grid grid-cols-2 gap-2">
                     {[
-                      { icon: '📤', title: 'Upload Material', desc: 'PDFs, slides, or notes' },
-                      { icon: '🧠', title: 'AI Generates Quiz', desc: 'Questions testing understanding' },
-                      { icon: '📨', title: 'Assign to Class', desc: 'Share via class code' },
-                      { icon: '📊', title: 'Track Results', desc: 'Scores & weak topics' }
+                      { icon: '📤', title: 'Upload', desc: 'PDFs & slides' },
+                      { icon: '🧠', title: 'Generate', desc: 'AI creates quiz' },
+                      { icon: '📨', title: 'Assign', desc: 'Share code' },
+                      { icon: '📊', title: 'Track', desc: 'View results' }
                     ].map((item, i) => (
-                      <div key={i} className="flex items-start gap-2 p-3 bg-slate-50 rounded-xl">
-                        <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center text-sm flex-shrink-0">{item.icon}</div>
-                        <div className="min-w-0">
-                          <h4 className="font-semibold text-slate-900 text-sm">{i + 1}. {item.title}</h4>
-                          <p className="text-slate-600 text-xs">{item.desc}</p>
-                        </div>
+                      <div key={i} className="bg-white/80 rounded-xl p-3 text-center">
+                        <div className="text-xl mb-1">{item.icon}</div>
+                        <h4 className="font-semibold text-slate-900 text-xs">{item.title}</h4>
+                        <p className="text-slate-500 text-xs">{item.desc}</p>
                       </div>
                     ))}
                   </div>
                 </div>
                 
                 {/* Students Column */}
-                <div>
-                  <h3 className="text-base font-semibold text-blue-600 mb-4 text-center">👨‍🎓 For Students</h3>
-                  <div className="space-y-3">
+                <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-5">
+                  <h3 className="text-sm font-semibold text-blue-600 mb-3 text-center">👨‍🎓 For Students</h3>
+                  <div className="grid grid-cols-2 gap-2">
                     {[
-                      { icon: '🔑', title: 'Join Class', desc: 'Enter teacher\'s code' },
-                      { icon: '✍️', title: 'Take Quizzes', desc: 'Assigned or self-practice' },
-                      { icon: '💡', title: 'Learn from Feedback', desc: 'Instant explanations' },
-                      { icon: '🎯', title: 'AI Focus Areas', desc: 'Personalized study recs' }
+                      { icon: '🔑', title: 'Join', desc: 'Enter code' },
+                      { icon: '✍️', title: 'Take', desc: 'Do quizzes' },
+                      { icon: '💡', title: 'Learn', desc: 'Get feedback' },
+                      { icon: '🎯', title: 'Focus', desc: 'AI study tips' }
                     ].map((item, i) => (
-                      <div key={i} className="flex items-start gap-2 p-3 bg-slate-50 rounded-xl">
-                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-sm flex-shrink-0">{item.icon}</div>
-                        <div className="min-w-0">
-                          <h4 className="font-semibold text-slate-900 text-sm">{i + 1}. {item.title}</h4>
-                          <p className="text-slate-600 text-xs">{item.desc}</p>
-                        </div>
+                      <div key={i} className="bg-white/80 rounded-xl p-3 text-center">
+                        <div className="text-xl mb-1">{item.icon}</div>
+                        <h4 className="font-semibold text-slate-900 text-xs">{item.title}</h4>
+                        <p className="text-slate-500 text-xs">{item.desc}</p>
                       </div>
                     ))}
                   </div>
