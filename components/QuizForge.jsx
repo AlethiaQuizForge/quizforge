@@ -1158,19 +1158,28 @@ ${quizContent.substring(0, 40000)}
                 {/* Students Column */}
                 <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-5">
                   <h3 className="text-sm font-semibold text-blue-600 mb-3 text-center">👨‍🎓 For Students</h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { icon: '🔑', title: 'Join', desc: 'Enter code' },
-                      { icon: '✍️', title: 'Take', desc: 'Do quizzes/exams' },
-                      { icon: '💡', title: 'Learn', desc: 'Get feedback' },
-                      { icon: '🎯', title: 'Focus', desc: 'AI study tips' }
-                    ].map((item, i) => (
-                      <div key={i} className="bg-white/80 rounded-xl p-3 text-center">
-                        <div className="text-xl mb-1">{item.icon}</div>
-                        <h4 className="font-semibold text-slate-900 text-xs">{item.title}</h4>
-                        <p className="text-slate-500 text-xs">{item.desc}</p>
+                  <div className="space-y-2">
+                    <div className="bg-white/80 rounded-xl p-3 flex items-center gap-3">
+                      <div className="text-xl">📋</div>
+                      <div>
+                        <h4 className="font-semibold text-slate-900 text-xs">Join & Take</h4>
+                        <p className="text-slate-500 text-xs">Complete assigned quizzes</p>
                       </div>
-                    ))}
+                    </div>
+                    <div className="bg-white/80 rounded-xl p-3 flex items-center gap-3">
+                      <div className="text-xl">📚</div>
+                      <div>
+                        <h4 className="font-semibold text-slate-900 text-xs">Create & Study</h4>
+                        <p className="text-slate-500 text-xs">Upload notes, practice exams</p>
+                      </div>
+                    </div>
+                    <div className="bg-white/80 rounded-xl p-3 flex items-center gap-3">
+                      <div className="text-xl">🔗</div>
+                      <div>
+                        <h4 className="font-semibold text-slate-900 text-xs">Share & Compete</h4>
+                        <p className="text-slate-500 text-xs">Quiz friends, study together</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
