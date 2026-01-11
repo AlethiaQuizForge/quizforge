@@ -654,22 +654,33 @@ ${quizContent.substring(0, 40000)}
       questions = questions.map((q, idx) => ({ ...q, id: idx + 1, options: shuffleArray([...q.options]) }));
 
       setGeneration({ isGenerating: false, step: 'Complete!', progress: 100, error: null });
-      setCurrentQuiz({
+      
+      const newQuiz = {
         id: `quiz_${Date.now()}`,
         name: quizNameInput || 'Generated Quiz',
         questions: shuffleArray(questions),
-        published: false,
+        subject: quizSubject || 'General',
+        published: true,
         createdAt: Date.now()
-      });
+      };
+      
+      // Auto-save quiz immediately
+      setCurrentQuiz(newQuiz);
+      setQuizzes(prev => [...prev, newQuiz]);
+      setQuestionBank(prev => [...prev, ...questions]);
 
       showToast(`✅ Generated ${questions.length} questions!`, 'success');
       
-      if (userType === 'student') {
-        setQuizState({ currentQuestion: 0, selectedAnswer: null, answeredQuestions: new Set(), score: 0, results: [] });
-        setPage('take-quiz');
-      } else {
-        setPage('review-quiz');
-      }
+      // Clear form
+      setQuizContent('');
+      setQuizSubject('');
+      setQuizNameInput('');
+      
+      // Show options modal
+      setModal({
+        type: 'quiz-created',
+        quiz: newQuiz
+      });
 
     } catch (error) {
       clearInterval(progressInterval);
@@ -887,7 +898,7 @@ ${quizContent.substring(0, 40000)}
       {modal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => { setModal(null); setModalInput(''); }}>
           <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold mb-4">{modal.title}</h3>
+            {modal?.title && <h3 className="text-lg font-semibold mb-4">{modal.title}</h3>}
             
             {/* Input Modal */}
             {modal.type === 'input' && (
@@ -942,6 +953,72 @@ ${quizContent.substring(0, 40000)}
                     showToast('Copied!', 'success');
                   }} className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium">Copy Link</button>
                 </div>
+              </>
+            )}
+            
+            {/* Quiz Created Modal - shows after generation */}
+            {modal?.type === 'quiz-created' && (
+              <>
+                <div className="text-center mb-4">
+                  <div className="text-5xl mb-2">🎉</div>
+                  <h3 className="text-xl font-bold text-slate-900">Quiz Created!</h3>
+                  <p className="text-slate-600 mt-1">"{modal.quiz.name}" • {modal.quiz.questions.length} questions</p>
+                </div>
+                
+                <div className="space-y-3 mb-6">
+                  <button 
+                    onClick={() => {
+                      shareQuiz(modal.quiz);
+                      setModal(null);
+                    }}
+                    className="w-full p-4 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl text-left flex items-center gap-4 hover:from-indigo-400 hover:to-purple-400"
+                  >
+                    <span className="text-2xl">🔗</span>
+                    <div>
+                      <span className="font-semibold block">Share with Friends</span>
+                      <span className="text-indigo-200 text-sm">Get a link anyone can use</span>
+                    </div>
+                  </button>
+                  
+                  <button 
+                    onClick={() => {
+                      const selected = shuffleArray([...modal.quiz.questions]).slice(0, 10).map(q => ({ ...q, options: shuffleArray([...q.options]) }));
+                      setCurrentQuiz({ ...modal.quiz, questions: selected });
+                      setQuizState({ currentQuestion: 0, selectedAnswer: null, answeredQuestions: new Set(), score: 0, results: [] });
+                      setModal(null);
+                      setPage('take-quiz');
+                    }}
+                    className="w-full p-4 bg-amber-500 hover:bg-amber-400 text-white rounded-xl text-left flex items-center gap-4"
+                  >
+                    <span className="text-2xl">🎯</span>
+                    <div>
+                      <span className="font-semibold block">Practice Now</span>
+                      <span className="text-amber-100 text-sm">Test yourself with this quiz</span>
+                    </div>
+                  </button>
+                  
+                  <button 
+                    onClick={() => {
+                      setCurrentQuiz(modal.quiz);
+                      setModal(null);
+                      setPage('review-quiz');
+                    }}
+                    className="w-full p-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-left flex items-center gap-4"
+                  >
+                    <span className="text-2xl">👁️</span>
+                    <div>
+                      <span className="font-semibold block">Review Questions</span>
+                      <span className="text-slate-500 text-sm">See all questions and answers</span>
+                    </div>
+                  </button>
+                </div>
+                
+                <button 
+                  onClick={() => { setModal(null); setPage(getDashboard()); }}
+                  className="w-full py-2 text-slate-500 hover:text-slate-700 text-sm"
+                >
+                  Go to Dashboard →
+                </button>
               </>
             )}
             
@@ -2069,6 +2146,12 @@ ${quizContent.substring(0, 40000)}
               <div className="flex gap-3">
                 {currentQuiz.published ? (
                   <>
+                    <button 
+                      onClick={() => shareQuiz(currentQuiz)}
+                      className="px-4 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg font-medium"
+                    >
+                      🔗 Share
+                    </button>
                     {userType === 'teacher' && (
                       <button 
                         onClick={() => classes.length > 0 ? setModal({ type: 'select', title: 'Assign Quiz' }) : showToast('Create a class first', 'error')} 
@@ -2091,6 +2174,7 @@ ${quizContent.substring(0, 40000)}
                   </>
                 ) : (
                   <>
+                    <button onClick={() => shareQuiz(currentQuiz)} className="px-4 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg">🔗 Share</button>
                     <button onClick={() => { setQuestionBank(prev => [...prev, ...currentQuiz.questions]); showToast('✅ Added to bank!', 'success'); }} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg">🗃️ Save Only</button>
                     <button onClick={publishQuiz} className="px-5 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg font-medium">✓ Publish</button>
                   </>
