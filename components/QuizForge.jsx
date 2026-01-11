@@ -42,7 +42,7 @@ export default function QuizForge() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
   const [authMode, setAuthMode] = useState('login'); // 'login' or 'signup'
-  const [authForm, setAuthForm] = useState({ name: '', email: '', role: 'student' });
+  const [authForm, setAuthForm] = useState({ name: '', email: '', password: '', role: 'student' });
   const [authError, setAuthError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   
@@ -148,12 +148,23 @@ export default function QuizForge() {
       setAuthError('Please enter your email');
       return;
     }
+    if (!authForm.password) {
+      setAuthError('Please enter your password');
+      return;
+    }
     
     try {
       // Check if user exists
       const result = await storage.get(`quizforge-account-${authForm.email.toLowerCase()}`);
       if (result && result.value) {
         const userData = JSON.parse(result.value);
+        
+        // Check password
+        if (userData.password !== authForm.password) {
+          setAuthError('Incorrect password');
+          return;
+        }
+        
         setUser(userData);
         setUserName(userData.name);
         setUserType(userData.role);
@@ -174,6 +185,7 @@ export default function QuizForge() {
         }
         
         showToast(`Welcome back, ${userData.name}!`, 'success');
+        setAuthForm({ name: '', email: '', password: '', role: 'student' });
         setPage(userData.role === 'teacher' ? 'teacher-dashboard' : userData.role === 'student' ? 'student-dashboard' : 'creator-dashboard');
       } else {
         setAuthError('Account not found. Please sign up first.');
@@ -197,6 +209,14 @@ export default function QuizForge() {
       setAuthError('Please enter a valid email');
       return;
     }
+    if (!authForm.password) {
+      setAuthError('Please enter a password');
+      return;
+    }
+    if (authForm.password.length < 6) {
+      setAuthError('Password must be at least 6 characters');
+      return;
+    }
     
     try {
       // Check if user already exists
@@ -210,6 +230,7 @@ export default function QuizForge() {
         id: `user_${Date.now()}`,
         name: authForm.name.trim(),
         email: authForm.email.toLowerCase().trim(),
+        password: authForm.password,
         role: authForm.role,
         createdAt: Date.now()
       };
@@ -223,6 +244,7 @@ export default function QuizForge() {
       setIsLoggedIn(true);
       
       showToast(`Welcome to QuizForge, ${userData.name}!`, 'success');
+      setAuthForm({ name: '', email: '', password: '', role: 'student' });
       setPage(userData.role === 'teacher' ? 'teacher-dashboard' : userData.role === 'student' ? 'student-dashboard' : 'creator-dashboard');
     } catch (err) {
       setAuthError('Signup failed. Please try again.');
@@ -1088,8 +1110,19 @@ ${quizContent.substring(0, 40000)}
                   type="email"
                   value={authForm.email}
                   onChange={e => setAuthForm(f => ({ ...f, email: e.target.value }))}
-                  onKeyDown={e => e.key === 'Enter' && (authMode === 'login' ? handleLogin() : handleSignup())}
                   placeholder="you@example.com"
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                <input
+                  type="password"
+                  value={authForm.password}
+                  onChange={e => setAuthForm(f => ({ ...f, password: e.target.value }))}
+                  onKeyDown={e => e.key === 'Enter' && (authMode === 'login' ? handleLogin() : handleSignup())}
+                  placeholder={authMode === 'signup' ? 'At least 6 characters' : 'Enter your password'}
                   className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                 />
               </div>
@@ -1143,11 +1176,11 @@ ${quizContent.substring(0, 40000)}
             <div className="mt-6 text-center text-sm">
               {authMode === 'login' ? (
                 <p className="text-slate-600">
-                  Don't have an account? <button onClick={() => { setAuthMode('signup'); setAuthError(''); }} className="text-indigo-600 font-medium hover:underline">Sign up</button>
+                  Don't have an account? <button onClick={() => { setAuthMode('signup'); setAuthError(''); setAuthForm(f => ({ ...f, password: '' })); }} className="text-indigo-600 font-medium hover:underline">Sign up</button>
                 </p>
               ) : (
                 <p className="text-slate-600">
-                  Already have an account? <button onClick={() => { setAuthMode('login'); setAuthError(''); }} className="text-indigo-600 font-medium hover:underline">Log in</button>
+                  Already have an account? <button onClick={() => { setAuthMode('login'); setAuthError(''); setAuthForm(f => ({ ...f, password: '' })); }} className="text-indigo-600 font-medium hover:underline">Log in</button>
                 </p>
               )}
             </div>
