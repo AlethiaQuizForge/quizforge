@@ -816,6 +816,13 @@ ${quizContent.substring(0, 40000)}
       questionCount: published.questions.length
     });
   };
+  
+  const deleteQuiz = (quizId) => {
+    setQuizzes(prev => prev.filter(q => q.id !== quizId));
+    // Also remove questions from bank that came from this quiz
+    showToast('🗑️ Quiz deleted', 'info');
+    setModal(null);
+  };
 
   const startPractice = (topic) => {
     const available = questionBank.filter(q => topic === 'all' || q.topic === topic);
@@ -1019,6 +1026,21 @@ ${quizContent.substring(0, 40000)}
                 >
                   Go to Dashboard →
                 </button>
+              </>
+            )}
+            
+            {/* Delete Confirmation Modal */}
+            {modal?.type === 'delete-confirm' && (
+              <>
+                <div className="text-center mb-4">
+                  <div className="text-5xl mb-2">🗑️</div>
+                  <h3 className="text-xl font-bold text-slate-900">Delete Quiz?</h3>
+                  <p className="text-slate-600 mt-1">"{modal.quizName}" will be permanently deleted.</p>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => setModal(null)} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg">Cancel</button>
+                  <button onClick={() => deleteQuiz(modal.quizId)} className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-400 text-white rounded-lg font-medium">Delete</button>
+                </div>
               </>
             )}
             
@@ -1534,15 +1556,15 @@ ${quizContent.substring(0, 40000)}
         <div className="min-h-screen bg-slate-100">
           <nav className="bg-white border-b border-slate-200 px-6 py-3 sticky top-0 z-40">
             <div className="max-w-7xl mx-auto flex justify-between items-center">
-              <div className="flex items-center gap-8">
-                <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('landing')}><span className="text-xl">⚡</span><span className="font-bold text-slate-900">QuizForge</span></div>
+              <div className="flex items-center gap-4 md:gap-8">
+                <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('landing')}><span className="text-xl">⚡</span><span className="font-bold text-slate-900 hidden sm:inline">QuizForge</span></div>
                 <button onClick={() => setPage('teacher-dashboard')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Dashboard</button>
-                <button onClick={() => setPage('create-quiz')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Create Quiz</button>
+                <button onClick={() => setPage('create-quiz')} className="text-slate-600 hover:text-slate-900 text-sm font-medium hidden sm:block">Create</button>
                 <button onClick={() => setPage('class-manager')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Classes</button>
               </div>
               <button onClick={() => setPage('profile')} className="flex items-center gap-2 px-3 py-1 bg-purple-100 hover:bg-purple-200 text-purple-700 text-sm font-medium rounded-full">
                 <span className="w-6 h-6 bg-purple-500 text-white rounded-full flex items-center justify-center text-xs">{user?.name?.charAt(0).toUpperCase() || '?'}</span>
-                {user?.name || 'Teacher'}
+                <span className="hidden sm:inline">{user?.name || 'Teacher'}</span>
               </button>
             </div>
           </nav>
@@ -1626,14 +1648,14 @@ ${quizContent.substring(0, 40000)}
         <div className="min-h-screen bg-slate-100">
           <nav className="bg-white border-b border-slate-200 px-6 py-3 sticky top-0 z-40">
             <div className="max-w-7xl mx-auto flex justify-between items-center">
-              <div className="flex items-center gap-8">
-                <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('landing')}><span className="text-xl">⚡</span><span className="font-bold text-slate-900">QuizForge</span></div>
+              <div className="flex items-center gap-4 md:gap-8">
+                <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('landing')}><span className="text-xl">⚡</span><span className="font-bold text-slate-900 hidden sm:inline">QuizForge</span></div>
                 <button onClick={() => setPage('creator-dashboard')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Dashboard</button>
-                <button onClick={() => setPage('create-quiz')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Create Quiz</button>
+                <button onClick={() => setPage('create-quiz')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Create</button>
               </div>
               <button onClick={() => setPage('profile')} className="flex items-center gap-2 px-3 py-1 bg-amber-100 hover:bg-amber-200 text-amber-700 text-sm font-medium rounded-full">
                 <span className="w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center text-xs">{user?.name?.charAt(0).toUpperCase() || '?'}</span>
-                {user?.name || 'Creator'}
+                <span className="hidden sm:inline">{user?.name || 'Creator'}</span>
               </button>
             </div>
           </nav>
@@ -1677,12 +1699,13 @@ ${quizContent.substring(0, 40000)}
                   {quizzes.length > 0 ? (
                     <div className="space-y-3">
                       {quizzes.map(quiz => (
-                        <div key={quiz.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+                        <div key={quiz.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl group">
                           <div>
                             <p className="font-medium text-slate-900">{quiz.name}</p>
                             <p className="text-sm text-slate-500">{quiz.questions.length} questions</p>
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 items-center">
+                            <button onClick={() => setModal({ type: 'delete-confirm', quizId: quiz.id, quizName: quiz.name })} className="px-2 py-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity" title="Delete">🗑️</button>
                             <button onClick={() => shareQuiz(quiz)} className="px-3 py-1.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg text-sm" title="Share quiz">🔗 Share</button>
                             <button onClick={() => { setCurrentQuiz(quiz); setPage('review-quiz'); }} className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm">View</button>
                             <button onClick={() => {
@@ -1836,14 +1859,15 @@ ${quizContent.substring(0, 40000)}
         <div className="min-h-screen bg-slate-100">
           <nav className="bg-white border-b border-slate-200 px-6 py-3 sticky top-0 z-40">
             <div className="max-w-7xl mx-auto flex justify-between items-center">
-              <div className="flex items-center gap-8">
-                <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('landing')}><span className="text-xl">⚡</span><span className="font-bold text-slate-900">QuizForge</span></div>
+              <div className="flex items-center gap-4 md:gap-8">
+                <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('landing')}><span className="text-xl">⚡</span><span className="font-bold text-slate-900 hidden sm:inline">QuizForge</span></div>
                 <button onClick={() => setPage('student-dashboard')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Dashboard</button>
-                <button onClick={() => setPage('student-classes')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">My Classes</button>
+                <button onClick={() => setPage('create-quiz')} className="text-slate-600 hover:text-slate-900 text-sm font-medium hidden sm:block">Create</button>
+                <button onClick={() => setPage('student-classes')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Classes</button>
               </div>
               <button onClick={() => setPage('profile')} className="flex items-center gap-2 px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-sm font-medium rounded-full">
                 <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs">{user?.name?.charAt(0).toUpperCase() || '?'}</span>
-                {user?.name || 'Student'}
+                <span className="hidden sm:inline">{user?.name || 'Student'}</span>
               </button>
             </div>
           </nav>
@@ -1911,12 +1935,13 @@ ${quizContent.substring(0, 40000)}
                     <h3 className="font-semibold text-slate-900 mb-4">Your Created Quizzes</h3>
                     <div className="space-y-3">
                       {quizzes.map(quiz => (
-                        <div key={quiz.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+                        <div key={quiz.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl group">
                           <div>
                             <p className="font-medium text-slate-900">{quiz.name}</p>
                             <p className="text-sm text-slate-500">{quiz.questions.length} questions</p>
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 items-center">
+                            <button onClick={() => setModal({ type: 'delete-confirm', quizId: quiz.id, quizName: quiz.name })} className="px-2 py-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity" title="Delete">🗑️</button>
                             <button onClick={() => shareQuiz(quiz)} className="px-3 py-1.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg text-sm" title="Share with friends">🔗 Share</button>
                             <button onClick={() => {
                               const selected = shuffleArray([...quiz.questions]).slice(0, 10).map(q => ({ ...q, options: shuffleArray([...q.options]) }));
@@ -2303,6 +2328,24 @@ ${quizContent.substring(0, 40000)}
                 <div className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500 mb-2">{quizState.score}/{currentQuiz.questions.length}</div>
                 <p className="text-slate-400 mb-8">{percentage}% correct</p>
                 <div className="w-full bg-slate-700 rounded-full h-4 mb-8 overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-500 to-orange-500" style={{ width: `${percentage}%` }} /></div>
+                
+                {/* Share Results Button */}
+                {isLoggedIn && (
+                  <button 
+                    onClick={() => {
+                      const text = `I scored ${percentage}% on "${currentQuiz.name}" on QuizForge! 🎯`;
+                      if (navigator.share) {
+                        navigator.share({ title: 'My QuizForge Score', text, url: window.location.origin });
+                      } else if (navigator.clipboard) {
+                        navigator.clipboard.writeText(text + ' ' + window.location.origin);
+                        showToast('📋 Result copied!', 'success');
+                      }
+                    }}
+                    className="mb-6 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm flex items-center gap-2 mx-auto"
+                  >
+                    📤 Share Result
+                  </button>
+                )}
                 
                 {/* Show sign-up prompt for non-logged-in users who took a shared quiz */}
                 {sharedQuizMode && !isLoggedIn && (
