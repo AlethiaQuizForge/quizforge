@@ -2,23 +2,44 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import * as mammoth from 'mammoth';
+import { initializeApp, getApps } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 
-// Storage helper (replaces artifact's storage)
+// Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyAi6pp6BHnPBbTAqUn78ldOeXO_y6LGouY",
+  authDomain: "quizforge-58f79.firebaseapp.com",
+  projectId: "quizforge-58f79",
+  storageBucket: "quizforge-58f79.firebasestorage.app",
+  messagingSenderId: "437296472306",
+  appId: "1:437296472306:web:7cee86fa4aa7dbc16c306b"
+};
+
+// Initialize Firebase (prevent multiple initializations)
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// Storage helper using Firestore
 const storage = {
   async get(key) {
-    if (typeof window === 'undefined') return null;
     try {
-      const value = localStorage.getItem(key);
-      return value ? { key, value } : null;
+      const docRef = doc(db, 'userData', key);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        return { key, value: docSnap.data().value };
+      }
+      return null;
     } catch (e) {
       console.error('Storage get error:', e);
       return null;
     }
   },
   async set(key, value) {
-    if (typeof window === 'undefined') return null;
     try {
-      localStorage.setItem(key, value);
+      const docRef = doc(db, 'userData', key);
+      await setDoc(docRef, { value, updatedAt: new Date() });
       return { key, value };
     } catch (e) {
       console.error('Storage set error:', e);
@@ -26,9 +47,9 @@ const storage = {
     }
   },
   async delete(key) {
-    if (typeof window === 'undefined') return null;
     try {
-      localStorage.removeItem(key);
+      const docRef = doc(db, 'userData', key);
+      await deleteDoc(docRef);
       return { key, deleted: true };
     } catch (e) {
       console.error('Storage delete error:', e);
@@ -91,45 +112,54 @@ export default function QuizForge() {
     showToast('Upload cancelled', 'info');
   };
   
-  // Load user from storage on mount
+  // Listen for Firebase auth state changes
   useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const result = await storage.get('quizforge-user');
-        if (result && result.value) {
-          const userData = JSON.parse(result.value);
-          setUser(userData);
-          setUserName(userData.name);
-          setUserType(userData.role);
-          setIsLoggedIn(true);
-          
-          // Load user's data
-          const dataResult = await storage.get(`quizforge-data-${userData.email}`);
-          if (dataResult && dataResult.value) {
-            const data = JSON.parse(dataResult.value);
-            setQuizzes(data.quizzes || []);
-            setClasses(data.classes || []);
-            setJoinedClasses(data.joinedClasses || []);
-            setAssignments(data.assignments || []);
-            setSubmissions(data.submissions || []);
-            setQuestionBank(data.questionBank || []);
-            setStudentProgress(data.studentProgress || { quizzesTaken: 0, totalScore: 0, totalQuestions: 0, topicHistory: {}, recentScores: [] });
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        try {
+          // Load user profile from Firestore
+          const result = await storage.get(`quizforge-account-${firebaseUser.uid}`);
+          if (result && result.value) {
+            const userData = JSON.parse(result.value);
+            setUser(userData);
+            setUserName(userData.name);
+            setUserType(userData.role);
+            setIsLoggedIn(true);
+            
+            // Load user's data
+            const dataResult = await storage.get(`quizforge-data-${firebaseUser.uid}`);
+            if (dataResult && dataResult.value) {
+              const data = JSON.parse(dataResult.value);
+              setQuizzes(data.quizzes || []);
+              setClasses(data.classes || []);
+              setJoinedClasses(data.joinedClasses || []);
+              setAssignments(data.assignments || []);
+              setSubmissions(data.submissions || []);
+              setQuestionBank(data.questionBank || []);
+              setStudentProgress(data.studentProgress || { quizzesTaken: 0, totalScore: 0, totalQuestions: 0, topicHistory: {}, recentScores: [] });
+            }
           }
+        } catch (err) {
+          console.log('Error loading user data:', err);
         }
-      } catch (err) {
-        console.log('No saved user found');
+      } else {
+        setUser(null);
+        setIsLoggedIn(false);
+        setUserType(null);
+        setUserName('');
       }
       setIsLoading(false);
-    };
-    loadUser();
+    });
+    
+    return () => unsubscribe();
   }, []);
   
   // Save data whenever it changes
   useEffect(() => {
     const saveData = async () => {
-      if (user && isLoggedIn) {
+      if (user && isLoggedIn && auth.currentUser) {
         try {
-          await storage.set(`quizforge-data-${user.email}`, JSON.stringify({
+          await storage.set(`quizforge-data-${auth.currentUser.uid}`, JSON.stringify({
             quizzes, classes, joinedClasses, assignments, submissions, questionBank, studentProgress
           }));
         } catch (err) {
@@ -154,25 +184,21 @@ export default function QuizForge() {
     }
     
     try {
-      // Check if user exists
-      const result = await storage.get(`quizforge-account-${authForm.email.toLowerCase()}`);
+      // Sign in with Firebase Auth
+      const userCredential = await signInWithEmailAndPassword(auth, authForm.email.trim(), authForm.password);
+      const firebaseUser = userCredential.user;
+      
+      // Load user profile from Firestore
+      const result = await storage.get(`quizforge-account-${firebaseUser.uid}`);
       if (result && result.value) {
         const userData = JSON.parse(result.value);
-        
-        // Check password
-        if (userData.password !== authForm.password) {
-          setAuthError('Incorrect password');
-          return;
-        }
-        
         setUser(userData);
         setUserName(userData.name);
         setUserType(userData.role);
         setIsLoggedIn(true);
-        await storage.set('quizforge-user', JSON.stringify(userData));
         
         // Load user's data
-        const dataResult = await storage.get(`quizforge-data-${userData.email}`);
+        const dataResult = await storage.get(`quizforge-data-${firebaseUser.uid}`);
         if (dataResult && dataResult.value) {
           const data = JSON.parse(dataResult.value);
           setQuizzes(data.quizzes || []);
@@ -187,11 +213,18 @@ export default function QuizForge() {
         showToast(`Welcome back, ${userData.name}!`, 'success');
         setAuthForm({ name: '', email: '', password: '', role: 'student' });
         setPage(userData.role === 'teacher' ? 'teacher-dashboard' : userData.role === 'student' ? 'student-dashboard' : 'creator-dashboard');
-      } else {
-        setAuthError('Account not found. Please sign up first.');
       }
     } catch (err) {
-      setAuthError('Login failed. Please try again.');
+      console.error('Login error:', err);
+      if (err.code === 'auth/user-not-found') {
+        setAuthError('Account not found. Please sign up first.');
+      } else if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        setAuthError('Incorrect password. Please try again.');
+      } else if (err.code === 'auth/invalid-email') {
+        setAuthError('Please enter a valid email address.');
+      } else {
+        setAuthError('Login failed. Please try again.');
+      }
     }
   };
   
@@ -219,24 +252,20 @@ export default function QuizForge() {
     }
     
     try {
-      // Check if user already exists
-      const existing = await storage.get(`quizforge-account-${authForm.email.toLowerCase()}`);
-      if (existing && existing.value) {
-        setAuthError('An account with this email already exists. Please log in.');
-        return;
-      }
+      // Create user with Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, authForm.email.trim(), authForm.password);
+      const firebaseUser = userCredential.user;
       
       const userData = {
-        id: `user_${Date.now()}`,
+        id: firebaseUser.uid,
         name: authForm.name.trim(),
         email: authForm.email.toLowerCase().trim(),
-        password: authForm.password,
         role: authForm.role,
         createdAt: Date.now()
       };
       
-      await storage.set(`quizforge-account-${userData.email}`, JSON.stringify(userData));
-      await storage.set('quizforge-user', JSON.stringify(userData));
+      // Save user profile to Firestore (no password stored - Firebase handles it)
+      await storage.set(`quizforge-account-${firebaseUser.uid}`, JSON.stringify(userData));
       
       setUser(userData);
       setUserName(userData.name);
@@ -247,15 +276,24 @@ export default function QuizForge() {
       setAuthForm({ name: '', email: '', password: '', role: 'student' });
       setPage(userData.role === 'teacher' ? 'teacher-dashboard' : userData.role === 'student' ? 'student-dashboard' : 'creator-dashboard');
     } catch (err) {
-      setAuthError('Signup failed. Please try again.');
+      console.error('Signup error:', err);
+      if (err.code === 'auth/email-already-in-use') {
+        setAuthError('An account with this email already exists. Please log in.');
+      } else if (err.code === 'auth/weak-password') {
+        setAuthError('Password must be at least 6 characters.');
+      } else if (err.code === 'auth/invalid-email') {
+        setAuthError('Please enter a valid email address.');
+      } else {
+        setAuthError('Signup failed. Please try again.');
+      }
     }
   };
   
   const handleLogout = async () => {
     try {
-      await storage.delete('quizforge-user');
+      await signOut(auth);
     } catch (err) {
-      console.log('Could not clear session');
+      console.log('Could not sign out:', err);
     }
     setUser(null);
     setIsLoggedIn(false);
@@ -268,7 +306,7 @@ export default function QuizForge() {
     setSubmissions([]);
     setQuestionBank([]);
     setStudentProgress({ quizzesTaken: 0, totalScore: 0, totalQuestions: 0, topicHistory: {}, recentScores: [] });
-    setAuthForm({ name: '', email: '', role: 'student' });
+    setAuthForm({ name: '', email: '', password: '', role: 'student' });
     setPage('landing');
     showToast('Logged out successfully', 'info');
   };
@@ -735,9 +773,9 @@ ${quizContent.substring(0, 40000)}
     setCurrentClass(null); setCurrentQuiz({ id: null, name: '', questions: [], published: false });
     
     // Clear saved data
-    if (user) {
+    if (auth.currentUser) {
       try {
-        await storage.delete(`quizforge-data-${user.email}`);
+        await storage.delete(`quizforge-data-${auth.currentUser.uid}`);
       } catch (err) {
         console.log('Could not clear data');
       }
