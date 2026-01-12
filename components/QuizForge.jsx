@@ -93,6 +93,7 @@ export default function QuizForge() {
   const [numQuestions, setNumQuestions] = useState(10);
   const [difficulty, setDifficulty] = useState('mixed');
   const [topicFocus, setTopicFocus] = useState('');
+  const [questionStyle, setQuestionStyle] = useState('concept');
   
   const [generation, setGeneration] = useState({ isGenerating: false, step: '', progress: 0, error: null });
   const [currentQuiz, setCurrentQuiz] = useState({ id: null, name: '', questions: [], published: false });
@@ -864,6 +865,22 @@ export default function QuizForge() {
         'advanced': 'All questions should be ADVANCED.'
       };
 
+      const questionStyleInstructions = {
+        'concept': `IMPORTANT - CONCEPT-FOCUSED QUESTIONS:
+- Extract and test the UNDERLYING THEORIES, FRAMEWORKS, and CONCEPTS from the material
+- Do NOT ask about specific company names, dates, or case study details
+- Convert case examples into general principle questions
+- Example: Instead of "What did Company X do in 2021?", ask "What strategic principle does this scenario illustrate?"
+- Focus on transferable knowledge that applies beyond specific examples`,
+        'case': `CASE-BASED QUESTIONS:
+- Test specific details from the cases and examples provided
+- Include company names, dates, and specific outcomes
+- Ask about what happened in particular scenarios`,
+        'mixed': `MIX OF CONCEPT AND CASE QUESTIONS:
+- 70% concept-focused questions about underlying theories and frameworks
+- 30% case-based questions about specific examples`
+      };
+
       const topicFocusInstruction = topicFocus.trim() 
         ? `\n## TOPIC FOCUS: Focus ONLY on content related to: ${topicFocus.trim()}. Ignore any content not related to this topic.`
         : '';
@@ -876,6 +893,9 @@ export default function QuizForge() {
 1. Test understanding, not just recall.
 2. Create plausible distractors.
 3. Write helpful explanations.
+
+## QUESTION STYLE:
+${questionStyleInstructions[questionStyle]}
 
 ## DIFFICULTY: ${difficultyInstructions[difficulty]}
 ## SUBJECT: ${quizSubject || 'Determine from content'}${topicFocusInstruction}
@@ -899,7 +919,8 @@ ${quizContent.substring(0, 40000)}
           subject: quizSubject,
           numQuestions,
           difficulty,
-          topicFocus: topicFocus.trim()
+          topicFocus: topicFocus.trim(),
+          questionStyle
         })
       });
 
@@ -1105,6 +1126,7 @@ ${quizContent.substring(0, 40000)}
     setNumQuestions(10);
     setDifficulty('mixed');
     setTopicFocus('');
+    setQuestionStyle('concept');
     
     showToast('✅ Quiz published!', 'success');
     
@@ -3031,16 +3053,27 @@ ${quizContent.substring(0, 40000)}
                     </select>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Topic Focus <span className="text-slate-400 font-normal">(optional)</span></label>
-                  <input
-                    type="text"
-                    value={topicFocus}
-                    onChange={e => setTopicFocus(e.target.value)}
-                    placeholder="e.g., Portfolio Theory, CAPM, Risk Management..."
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                  <p className="text-xs text-slate-400 mt-1">Leave empty to generate questions from all content, or specify topics to focus on</p>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Question Style</label>
+                    <select value={questionStyle} onChange={e => setQuestionStyle(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-xl">
+                      <option value="concept">📚 Concept-focused (theories & frameworks)</option>
+                      <option value="mixed">🔀 Mixed (concepts + case examples)</option>
+                      <option value="case">📋 Case-based (specific examples)</option>
+                    </select>
+                    <p className="text-xs text-slate-400 mt-1">Concept-focused avoids case-specific details</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Topic Focus <span className="text-slate-400 font-normal">(optional)</span></label>
+                    <input
+                      type="text"
+                      value={topicFocus}
+                      onChange={e => setTopicFocus(e.target.value)}
+                      placeholder="e.g., Portfolio Theory, CAPM..."
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                    <p className="text-xs text-slate-400 mt-1">Leave empty for all topics</p>
+                  </div>
                 </div>
                 <button type="button" onClick={generateQuestions} disabled={quizContent.length < 100 || uploadProgress.active} className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:from-slate-400 disabled:to-slate-400 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-lg">⚡ Generate Quiz with AI</button>
               </div>

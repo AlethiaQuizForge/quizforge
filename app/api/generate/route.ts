@@ -11,7 +11,7 @@ const anthropic = new Anthropic({
 
 export async function POST(request: NextRequest) {
   try {
-    const { content, subject, numQuestions, difficulty, topicFocus } = await request.json();
+    const { content, subject, numQuestions, difficulty, topicFocus, questionStyle } = await request.json();
 
     if (!content || content.length < 100) {
       return NextResponse.json(
@@ -26,14 +26,35 @@ export async function POST(request: NextRequest) {
       advanced: 'Focus on analysis, evaluation, and application. Require deep understanding.',
     };
 
+    const questionStyleGuide = {
+      concept: `IMPORTANT - CONCEPT-FOCUSED QUESTIONS:
+- Extract and test the UNDERLYING THEORIES, FRAMEWORKS, and CONCEPTS from the material
+- Do NOT ask about specific company names, dates, or case study details
+- Convert case examples into general principle questions
+- Example: Instead of "What did Company X do in 2021?", ask "What strategic principle does this scenario illustrate?"
+- Focus on transferable knowledge that applies beyond specific examples`,
+      case: `CASE-BASED QUESTIONS:
+- Test specific details from the cases and examples provided
+- Include company names, dates, and specific outcomes
+- Ask about what happened in particular scenarios`,
+      mixed: `MIX OF CONCEPT AND CASE QUESTIONS:
+- 70% concept-focused questions about underlying theories and frameworks
+- 30% case-based questions about specific examples`
+    };
+
     const topicFocusInstruction = topicFocus 
       ? `\nTOPIC FOCUS: Generate questions ONLY about: ${topicFocus}. Ignore any content not related to this topic.`
       : '';
+
+    const questionStyleInstruction = questionStyleGuide[questionStyle as keyof typeof questionStyleGuide] || questionStyleGuide.concept;
 
     const prompt = `You are an expert educational assessment designer. Generate ${numQuestions} high-quality multiple-choice questions based on the following content.
 
 SUBJECT: ${subject || 'General'}
 DIFFICULTY: ${difficulty} - ${difficultyGuide[difficulty as keyof typeof difficultyGuide] || difficultyGuide.mixed}${topicFocusInstruction}
+
+QUESTION STYLE:
+${questionStyleInstruction}
 
 CONTENT TO ASSESS:
 ${content.substring(0, 15000)}
