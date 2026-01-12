@@ -1900,7 +1900,7 @@ ${quizContent.substring(0, 40000)}
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5"><p className="text-3xl font-bold text-indigo-600">{studentProgress.quizzesTaken}</p><p className="text-sm text-slate-500">Quizzes Taken</p></div>
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5"><p className="text-3xl font-bold text-green-600">{avgScore}%</p><p className="text-sm text-slate-500">Average Score</p></div>
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5"><p className="text-3xl font-bold text-amber-600">{joinedClasses.length}</p><p className="text-sm text-slate-500">Classes</p></div>
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5"><p className="text-3xl font-bold text-purple-600">{studentProgress.totalQuestions}</p><p className="text-sm text-slate-500">Questions</p></div>
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5"><p className="text-3xl font-bold text-purple-600">{questionBank.length}</p><p className="text-sm text-slate-500">Questions</p></div>
             </div>
             <div className="grid lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-6">
@@ -1933,12 +1933,29 @@ ${quizContent.substring(0, 40000)}
                       </div>
                     </div>
                   ) : (
-                    <div className="space-y-2">
-                      {['All Topics', ...new Set(questionBank.map(q => q.topic))].map(topic => (
-                        <button key={topic} onClick={() => startPractice(topic === 'All Topics' ? 'all' : topic)} className="w-full p-4 bg-slate-50 hover:bg-indigo-50 rounded-xl text-left flex justify-between items-center">
-                          <div><p className="font-medium text-slate-900">{topic}</p><p className="text-sm text-slate-500">{topic === 'All Topics' ? questionBank.length : questionBank.filter(q => q.topic === topic).length} questions</p></div>
-                        </button>
-                      ))}
+                    <div>
+                      <button onClick={() => startPractice('all')} className="w-full p-4 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-400 hover:to-purple-400 rounded-xl text-left flex justify-between items-center text-white mb-3">
+                        <div><p className="font-semibold">🎯 Practice All Topics</p><p className="text-sm text-indigo-100">{questionBank.length} questions from all your materials</p></div>
+                        <span className="text-2xl">→</span>
+                      </button>
+                      {/* Show top topics with 2+ questions */}
+                      {(() => {
+                        const topicCounts = {};
+                        questionBank.forEach(q => { topicCounts[q.topic] = (topicCounts[q.topic] || 0) + 1; });
+                        const multiQuestionTopics = Object.entries(topicCounts).filter(([_, count]) => count >= 2).sort((a, b) => b[1] - a[1]).slice(0, 5);
+                        if (multiQuestionTopics.length === 0) return null;
+                        return (
+                          <div className="space-y-2">
+                            <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">Focus Areas</p>
+                            {multiQuestionTopics.map(([topic, count]) => (
+                              <button key={topic} onClick={() => startPractice(topic)} className="w-full p-3 bg-slate-50 hover:bg-indigo-50 rounded-lg text-left flex justify-between items-center">
+                                <span className="font-medium text-slate-700">{topic}</span>
+                                <span className="text-sm text-slate-500">{count} questions</span>
+                              </button>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>
