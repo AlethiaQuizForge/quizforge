@@ -368,33 +368,27 @@ export default function QuizForge() {
         createdAt: Date.now()
       };
       
-      console.log('Attempting to share quiz:', shareId);
-      console.log('Data size (approx):', JSON.stringify(shareData).length, 'bytes');
-      
       const result = await storage.set(`shared-${shareId}`, JSON.stringify(shareData));
       
-      console.log('Storage result:', result);
-      
       if (!result) {
-        console.error('Storage returned null - check Firestore rules and connection');
         showToast('❌ Could not save quiz to database', 'error');
         return;
       }
       
       const shareUrl = `${window.location.origin}${window.location.pathname}?quiz=${shareId}`;
       
-      // Try to copy to clipboard
-      if (navigator.clipboard) {
+      // Try to copy to clipboard, but always show modal as backup
+      try {
         await navigator.clipboard.writeText(shareUrl);
         showToast('🔗 Share link copied to clipboard!', 'success');
-      } else {
-        setModal('share-link');
+      } catch (clipboardErr) {
+        // Clipboard failed - show modal with link instead
+        console.log('Clipboard access denied, showing modal');
         setModalInput(shareUrl);
+        setModal('share-link');
       }
     } catch (err) {
       console.error('Share error:', err);
-      console.error('Error code:', err.code);
-      console.error('Error message:', err.message);
       showToast(`❌ Share failed: ${err.message || 'Unknown error'}`, 'error');
     }
   };
