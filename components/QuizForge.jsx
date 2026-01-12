@@ -1249,7 +1249,16 @@ ${quizContent.substring(0, 40000)}
             </div>
           </nav>
 
-          <div className="max-w-7xl mx-auto px-6 pt-12 md:pt-16 pb-8 md:pb-12">
+          <div className="max-w-7xl mx-auto px-6 pt-12 md:pt-16 pb-8 md:pb-12 relative">
+            {/* Love Note Sticker */}
+            <div className="absolute top-0 right-0 md:right-4 transform rotate-3 hidden sm:block">
+              <div className="bg-pink-500/90 backdrop-blur-sm text-white px-3 py-2 rounded-lg shadow-lg text-xs font-medium">
+                <span className="flex items-center gap-1.5">
+                  💝 Made with love for my GF
+                </span>
+              </div>
+            </div>
+            
             <div className="max-w-2xl">
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/20 text-amber-400 text-sm rounded-full mb-4">
                 🎯 AI-Powered Assessment Platform
@@ -1367,15 +1376,6 @@ ${quizContent.substring(0, 40000)}
                   <button onClick={() => { setAuthMode('signup'); setAuthForm(f => ({ ...f, role: 'student' })); setPage('auth'); }} className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-white rounded-lg font-medium text-sm whitespace-nowrap">
                     Start Practicing →
                   </button>
-                </div>
-              </div>
-              
-              {/* Love Note Footer */}
-              <div className="mt-12 text-center">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full border border-white/20">
-                  <span className="text-pink-400">💝</span>
-                  <span className="text-white/70 text-sm">Made with love for my GF — go ace those exams!</span>
-                  <span className="text-pink-400">💝</span>
                 </div>
               </div>
             </div>
