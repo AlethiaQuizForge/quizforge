@@ -349,19 +349,35 @@ export default function QuizForge() {
   const shareQuiz = async (quiz) => {
     try {
       const shareId = `s${Date.now()}`;
+      
+      // Warn if quiz is very large (>50 questions)
+      const questionsToShare = quiz.questions.length > 50 
+        ? quiz.questions.slice(0, 50) 
+        : quiz.questions;
+      
+      if (quiz.questions.length > 50) {
+        showToast(`ℹ️ Sharing first 50 of ${quiz.questions.length} questions`, 'info');
+      }
+      
       const shareData = {
         id: shareId,
         name: quiz.name,
-        questions: quiz.questions.slice(0, 15), // Limit to 15 questions to reduce size
+        questions: questionsToShare,
         subject: quiz.subject || 'General',
         createdBy: user?.name || 'Anonymous',
         createdAt: Date.now()
       };
       
+      console.log('Attempting to share quiz:', shareId);
+      console.log('Data size (approx):', JSON.stringify(shareData).length, 'bytes');
+      
       const result = await storage.set(`shared-${shareId}`, JSON.stringify(shareData));
       
+      console.log('Storage result:', result);
+      
       if (!result) {
-        showToast('❌ Could not save quiz. Check console.', 'error');
+        console.error('Storage returned null - check Firestore rules and connection');
+        showToast('❌ Could not save quiz to database', 'error');
         return;
       }
       
@@ -377,7 +393,9 @@ export default function QuizForge() {
       }
     } catch (err) {
       console.error('Share error:', err);
-      showToast('❌ Sharing failed', 'error');
+      console.error('Error code:', err.code);
+      console.error('Error message:', err.message);
+      showToast(`❌ Share failed: ${err.message || 'Unknown error'}`, 'error');
     }
   };
 
@@ -682,6 +700,9 @@ ${quizContent.substring(0, 40000)}
       setQuizContent('');
       setQuizSubject('');
       setQuizNameInput('');
+      
+      // Navigate to dashboard first, then show modal
+      setPage(getDashboard());
       
       // Show options modal
       setModal({
@@ -2115,8 +2136,9 @@ ${quizContent.substring(0, 40000)}
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Questions</label>
                     <select value={numQuestions} onChange={e => setNumQuestions(parseInt(e.target.value))} className="w-full px-4 py-3 border border-slate-300 rounded-xl">
-                      <option value={5}>5</option><option value={10}>10</option><option value={15}>15</option><option value={20}>20</option><option value={25}>25</option>
+                      <option value={5}>5</option><option value={10}>10</option><option value={15}>15</option><option value={20}>20</option><option value={25}>25</option><option value={30}>30</option><option value={40}>40</option><option value={50}>50</option>
                     </select>
+                    <p className="text-xs text-slate-400 mt-1">All questions can be shared with friends</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Difficulty</label>
