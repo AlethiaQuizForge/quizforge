@@ -59,6 +59,9 @@ const storage = {
 };
 
 export default function QuizForge() {
+  // Helper for grammar
+  const pluralize = (count, word) => count === 1 ? `${count} ${word}` : `${count} ${word}s`;
+  
   // Auth state
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
@@ -914,6 +917,18 @@ ${quizContent.substring(0, 40000)}
     );
   }
 
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4 animate-pulse">⚡</div>
+          <p className="text-white/60">Loading QuizForge...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen">
       {/* Toast */}
@@ -925,8 +940,8 @@ ${quizContent.substring(0, 40000)}
 
       {/* Modal */}
       {modal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => { setModal(null); setModalInput(''); }}>
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setModal(null); setModalInput(''); }}>
+          <div className={`bg-white rounded-2xl p-6 w-full mx-4 shadow-2xl ${modal?.type === 'review-answers' ? 'max-w-3xl max-h-[80vh] overflow-y-auto' : 'max-w-md'}`} onClick={e => e.stopPropagation()}>
             {modal?.title && <h3 className="text-lg font-semibold mb-4">{modal.title}</h3>}
             
             {/* Input Modal */}
@@ -955,7 +970,7 @@ ${quizContent.substring(0, 40000)}
                   {quizzes.length > 0 ? quizzes.map(quiz => (
                     <button key={quiz.id} onClick={() => assignQuiz(quiz.id)} className="w-full p-3 text-left bg-slate-50 hover:bg-indigo-50 rounded-lg border border-slate-200">
                       <p className="font-medium">{quiz.name}</p>
-                      <p className="text-sm text-slate-500">{quiz.questions.length} questions</p>
+                      <p className="text-sm text-slate-500">{pluralize(quiz.questions.length, 'question')}</p>
                     </button>
                   )) : (
                     <p className="text-slate-500 text-center py-4">No quizzes available. Create one first!</p>
@@ -991,7 +1006,7 @@ ${quizContent.substring(0, 40000)}
                 <div className="text-center mb-4">
                   <div className="text-5xl mb-2">🎉</div>
                   <h3 className="text-xl font-bold text-slate-900">Quiz Created!</h3>
-                  <p className="text-slate-600 mt-1">"{modal.quiz.name}" • {modal.quiz.questions.length} questions</p>
+                  <p className="text-slate-600 mt-1">"{modal.quiz.name}" • {pluralize(modal.quiz.questions.length, 'question')}</p>
                 </div>
                 
                 <div className="space-y-3 mb-6">
@@ -1063,6 +1078,42 @@ ${quizContent.substring(0, 40000)}
                   <button onClick={() => setModal(null)} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg">Cancel</button>
                   <button onClick={() => deleteQuiz(modal.quizId)} className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-400 text-white rounded-lg font-medium">Delete</button>
                 </div>
+              </>
+            )}
+            
+            {/* Review Answers Modal */}
+            {modal?.type === 'review-answers' && (
+              <>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-xl font-bold text-slate-900">📋 Review Answers</h3>
+                  <button onClick={() => setModal(null)} className="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+                </div>
+                <div className="space-y-4">
+                  {modal.results.map((result, idx) => {
+                    const question = modal.questions[idx];
+                    if (!question) return null;
+                    return (
+                      <div key={idx} className={`p-4 rounded-xl border-2 ${result.correct ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                        <div className="flex items-start gap-3 mb-2">
+                          <span className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${result.correct ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+                            {result.correct ? '✓' : '✗'}
+                          </span>
+                          <p className="font-medium text-slate-900">{question.question}</p>
+                        </div>
+                        <div className="ml-9 space-y-1">
+                          {!result.correct && (
+                            <p className="text-sm"><span className="text-red-600">Your answer:</span> {question.options[result.selectedAnswer]?.text}</p>
+                          )}
+                          <p className="text-sm"><span className="text-green-600">Correct:</span> {question.options.find(o => o.isCorrect)?.text}</p>
+                          {question.explanation && (
+                            <p className="text-sm text-slate-600 mt-2 italic">💡 {question.explanation}</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <button onClick={() => setModal(null)} className="w-full mt-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg font-medium">Close</button>
               </>
             )}
             
@@ -1641,7 +1692,7 @@ ${quizContent.substring(0, 40000)}
                     return (
                       <div key={quiz.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
                         <h4 className="font-semibold text-slate-900 mb-1">{quiz.name}</h4>
-                        <p className="text-sm text-slate-500 mb-3">{quiz.questions.length} questions</p>
+                        <p className="text-sm text-slate-500 mb-3">{pluralize(quiz.questions.length, 'question')}</p>
                         <div className="flex gap-2 text-xs text-slate-500 mb-4">
                           <span className="px-2 py-1 bg-slate-100 rounded">{assignedTo} class{assignedTo !== 1 ? 'es' : ''}</span>
                           <span className="px-2 py-1 bg-slate-100 rounded">{totalSubmissions} submissions</span>
@@ -1724,7 +1775,7 @@ ${quizContent.substring(0, 40000)}
                         <div key={quiz.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl group">
                           <div>
                             <p className="font-medium text-slate-900">{quiz.name}</p>
-                            <p className="text-sm text-slate-500">{quiz.questions.length} questions</p>
+                            <p className="text-sm text-slate-500">{pluralize(quiz.questions.length, 'question')}</p>
                           </div>
                           <div className="flex gap-2 items-center">
                             <button onClick={() => setModal({ type: 'delete-confirm', quizId: quiz.id, quizName: quiz.name })} className="px-2 py-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity" title="Delete">🗑️</button>
@@ -1914,7 +1965,7 @@ ${quizContent.substring(0, 40000)}
                         <div key={a.id} className="flex items-center justify-between p-4 bg-amber-50 rounded-lg mb-2">
                           <div>
                             <p className="font-medium text-slate-900">{quiz?.name}</p>
-                            <p className="text-sm text-slate-500">{quiz?.questions.length} questions • From: {assignedClass?.name || 'Unknown class'}</p>
+                            <p className="text-sm text-slate-500">{quiz ? pluralize(quiz.questions.length, 'question') : '?'} • From: {assignedClass?.name || 'Unknown class'}</p>
                           </div>
                           <button onClick={() => startAssignment(a)} className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-white rounded-lg font-medium">Start →</button>
                         </div>
@@ -1977,11 +2028,12 @@ ${quizContent.substring(0, 40000)}
                         <div key={quiz.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl group">
                           <div>
                             <p className="font-medium text-slate-900">{quiz.name}</p>
-                            <p className="text-sm text-slate-500">{quiz.questions.length} questions</p>
+                            <p className="text-sm text-slate-500">{pluralize(quiz.questions.length, 'question')}</p>
                           </div>
                           <div className="flex gap-2 items-center">
                             <button onClick={() => setModal({ type: 'delete-confirm', quizId: quiz.id, quizName: quiz.name })} className="px-2 py-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity" title="Delete">🗑️</button>
                             <button onClick={() => shareQuiz(quiz)} className="px-3 py-1.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg text-sm" title="Share with friends">🔗 Share</button>
+                            <button onClick={() => { setCurrentQuiz(quiz); setPage('review-quiz'); }} className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm">View</button>
                             <button onClick={() => {
                               const selected = shuffleArray([...quiz.questions]).slice(0, 10).map(q => ({ ...q, options: shuffleArray([...q.options]) }));
                               setCurrentQuiz({ ...quiz, questions: selected });
@@ -2206,7 +2258,7 @@ ${quizContent.substring(0, 40000)}
             <div className="flex justify-between items-start mb-6">
               <div>
                 <h1 className="text-2xl font-bold text-slate-900">{currentQuiz.published ? '' : 'Review: '}{currentQuiz.name}</h1>
-                <p className="text-slate-600">{currentQuiz.questions.length} questions {currentQuiz.published && <span className="text-green-600">• Published ✓</span>}</p>
+                <p className="text-slate-600">{pluralize(currentQuiz.questions.length, 'question')} {currentQuiz.published && <span className="text-green-600">• Published ✓</span>}</p>
               </div>
               <div className="flex gap-3">
                 {currentQuiz.published ? (
@@ -2369,23 +2421,32 @@ ${quizContent.substring(0, 40000)}
                 <p className="text-slate-400 mb-8">{percentage}% correct</p>
                 <div className="w-full bg-slate-700 rounded-full h-4 mb-8 overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-500 to-orange-500" style={{ width: `${percentage}%` }} /></div>
                 
-                {/* Share Results Button */}
-                {isLoggedIn && (
+                {/* Action buttons row */}
+                <div className="flex justify-center gap-3 mb-6">
+                  {/* Review Answers Button */}
+                  <button 
+                    onClick={() => setModal({ type: 'review-answers', results: quizState.results, questions: currentQuiz.questions })}
+                    className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm flex items-center gap-2"
+                  >
+                    📋 Review Answers
+                  </button>
+                  
+                  {/* Share Results Button - for all users */}
                   <button 
                     onClick={() => {
                       const text = `I scored ${percentage}% on "${currentQuiz.name}" on QuizForge! 🎯`;
                       if (navigator.share) {
                         navigator.share({ title: 'My QuizForge Score', text, url: window.location.origin });
-                      } else if (navigator.clipboard) {
-                        navigator.clipboard.writeText(text + ' ' + window.location.origin);
+                      } else {
+                        navigator.clipboard?.writeText(text + ' ' + window.location.origin);
                         showToast('📋 Result copied!', 'success');
                       }
                     }}
-                    className="mb-6 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm flex items-center gap-2 mx-auto"
+                    className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm flex items-center gap-2"
                   >
                     📤 Share Result
                   </button>
-                )}
+                </div>
                 
                 {/* Show sign-up prompt for non-logged-in users who took a shared quiz */}
                 {sharedQuizMode && !isLoggedIn && (
