@@ -1,4 +1,6 @@
 // app/terms/page.tsx
+'use client';
+
 export default function TermsOfService() {
   return (
     <div className="min-h-screen bg-slate-50 py-12 px-6">
@@ -121,7 +123,13 @@ export default function TermsOfService() {
           <h2 className="text-xl font-semibold text-slate-900 mt-8 mb-4">16. Contact</h2>
           <p className="text-slate-600 mb-4">
             For questions about these Terms, contact us at:<br />
-            <strong>Email:</strong> legal@quizforgeapp.com
+            <strong>Email:</strong>{' '}
+            <button 
+              onClick={() => window.location.href = 'mailto:' + 'support' + '@' + 'quizforgeapp.com'}
+              className="text-indigo-600 hover:text-indigo-500 underline"
+            >
+              Click to email support
+            </button>
           </p>
         </div>
         

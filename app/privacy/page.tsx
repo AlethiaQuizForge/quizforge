@@ -1,4 +1,6 @@
 // app/privacy/page.tsx
+'use client';
+
 export default function PrivacyPolicy() {
   return (
     <div className="min-h-screen bg-slate-50 py-12 px-6">
@@ -91,7 +93,13 @@ export default function PrivacyPolicy() {
             If you have questions about this Privacy Policy, please contact us at:
           </p>
           <p className="text-slate-600 mb-4">
-            <strong>Email:</strong> privacy@quizforgeapp.com<br />
+            <strong>Email:</strong>{' '}
+            <button 
+              onClick={() => window.location.href = 'mailto:' + 'support' + '@' + 'quizforgeapp.com'}
+              className="text-indigo-600 hover:text-indigo-500 underline"
+            >
+              Click to email support
+            </button>
           </p>
         </div>
         

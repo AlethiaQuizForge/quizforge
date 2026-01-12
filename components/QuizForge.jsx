@@ -1756,7 +1756,7 @@ ${quizContent.substring(0, 40000)}
               <div className="flex gap-6 text-sm">
                 <a href="/privacy" className="text-slate-400 hover:text-white transition-colors">Privacy Policy</a>
                 <a href="/terms" className="text-slate-400 hover:text-white transition-colors">Terms of Service</a>
-                <a href="mailto:support@quizforgeapp.com" className="text-slate-400 hover:text-white transition-colors">Contact</a>
+                <button onClick={() => window.location.href = 'mailto:' + 'support' + '@' + 'quizforgeapp.com'} className="text-slate-400 hover:text-white transition-colors">Contact</button>
               </div>
             </div>
           </footer>
