@@ -117,6 +117,30 @@ export default function QuizForge() {
     showToast('Upload cancelled', 'info');
   };
   
+  // Shared quiz checker function
+  const checkForSharedQuiz = async () => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const sharedId = params.get('quiz');
+    if (sharedId) {
+      try {
+        const result = await storage.get(`shared-${sharedId}`);
+        if (result && result.value) {
+          const quizData = JSON.parse(result.value);
+          setSharedQuizData(quizData);
+          setSharedQuizMode(true);
+          setCurrentQuiz(quizData);
+          setQuizState({ currentQuestion: 0, selectedAnswer: null, answeredQuestions: new Set(), score: 0, results: [] });
+          setPage('take-quiz');
+        } else {
+          console.log('Shared quiz not found');
+        }
+      } catch (err) {
+        console.log('Could not load shared quiz:', err);
+      }
+    }
+  };
+  
   // Listen for Firebase auth state changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -153,37 +177,13 @@ export default function QuizForge() {
         setUserType(null);
         setUserName('');
       }
+      
+      // Check for shared quiz BEFORE finishing loading
+      await checkForSharedQuiz();
       setIsLoading(false);
     });
     
     return () => unsubscribe();
-  }, []);
-  
-  // Check for shared quiz in URL
-  useEffect(() => {
-    const checkSharedQuiz = async () => {
-      if (typeof window === 'undefined') return;
-      const params = new URLSearchParams(window.location.search);
-      const sharedId = params.get('quiz');
-      if (sharedId) {
-        try {
-          const result = await storage.get(`shared-${sharedId}`);
-          if (result && result.value) {
-            const quizData = JSON.parse(result.value);
-            setSharedQuizData(quizData);
-            setSharedQuizMode(true);
-            setCurrentQuiz(quizData);
-            setQuizState({ currentQuestion: 0, selectedAnswer: null, answeredQuestions: new Set(), score: 0, results: [] });
-            setPage('take-quiz');
-          } else {
-            console.log('Shared quiz not found');
-          }
-        } catch (err) {
-          console.log('Could not load shared quiz:', err);
-        }
-      }
-    };
-    checkSharedQuiz();
   }, []);
   
   // Save data whenever it changes
