@@ -1369,6 +1369,15 @@ ${quizContent.substring(0, 40000)}
                   </button>
                 </div>
               </div>
+              
+              {/* Love Note Footer */}
+              <div className="mt-12 text-center">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full border border-white/20">
+                  <span className="text-pink-400">💝</span>
+                  <span className="text-white/70 text-sm">Made with love for my GF — go ace those exams!</span>
+                  <span className="text-pink-400">💝</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
