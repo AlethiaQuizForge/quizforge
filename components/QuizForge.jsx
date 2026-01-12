@@ -42,7 +42,7 @@ const storage = {
       await setDoc(docRef, { value, updatedAt: new Date() });
       return { key, value };
     } catch (e) {
-      console.error('Storage set error:', e);
+      console.error('Storage set error for key:', key, 'Error:', e.message, e.code);
       return null;
     }
   },
@@ -164,7 +164,7 @@ export default function QuizForge() {
       const sharedId = params.get('quiz');
       if (sharedId) {
         try {
-          const result = await storage.get(`quizforge-shared-${sharedId}`);
+          const result = await storage.get(`shared-${sharedId}`);
           if (result && result.value) {
             const quizData = JSON.parse(result.value);
             setSharedQuizData(quizData);
@@ -172,6 +172,8 @@ export default function QuizForge() {
             setCurrentQuiz(quizData);
             setQuizState({ currentQuestion: 0, selectedAnswer: null, answeredQuestions: new Set(), score: 0, results: [] });
             setPage('take-quiz');
+          } else {
+            console.log('Shared quiz not found');
           }
         } catch (err) {
           console.log('Could not load shared quiz:', err);
@@ -346,17 +348,22 @@ export default function QuizForge() {
   // Share quiz function
   const shareQuiz = async (quiz) => {
     try {
-      const shareId = `share_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const shareId = `s${Date.now()}`;
       const shareData = {
         id: shareId,
         name: quiz.name,
-        questions: quiz.questions,
+        questions: quiz.questions.slice(0, 15), // Limit to 15 questions to reduce size
         subject: quiz.subject || 'General',
         createdBy: user?.name || 'Anonymous',
         createdAt: Date.now()
       };
       
-      await storage.set(`quizforge-shared-${shareId}`, JSON.stringify(shareData));
+      const result = await storage.set(`shared-${shareId}`, JSON.stringify(shareData));
+      
+      if (!result) {
+        showToast('❌ Could not save quiz. Check console.', 'error');
+        return;
+      }
       
       const shareUrl = `${window.location.origin}${window.location.pathname}?quiz=${shareId}`;
       
@@ -370,7 +377,7 @@ export default function QuizForge() {
       }
     } catch (err) {
       console.error('Share error:', err);
-      showToast('Could not create share link', 'error');
+      showToast('❌ Sharing failed', 'error');
     }
   };
 
