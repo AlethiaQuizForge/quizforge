@@ -3265,20 +3265,116 @@ ${quizContent.substring(0, 40000)}
                   
                   {/* Share Results Button - for all users */}
                   <button 
-                    onClick={() => {
-                      const text = `I scored ${percentage}% on "${currentQuiz.name}" on QuizForge! 🎯`;
-                      if (navigator.share) {
-                        navigator.share({ title: 'My QuizForge Score', text, url: window.location.origin });
-                      } else {
-                        navigator.clipboard?.writeText(text + ' ' + window.location.origin);
-                        showToast('📋 Result copied!', 'success');
+                    onClick={async () => {
+                      try {
+                        // Create share link for the quiz
+                        const shareId = `s${Date.now()}`;
+                        const questionsToShare = currentQuiz.questions.length > 50 
+                          ? currentQuiz.questions.slice(0, 50) 
+                          : currentQuiz.questions;
+                        
+                        const shareData = {
+                          id: shareId,
+                          name: currentQuiz.name,
+                          questions: questionsToShare,
+                          subject: currentQuiz.subject || 'General',
+                          createdBy: user?.name || 'Anonymous',
+                          createdAt: Date.now()
+                        };
+                        
+                        await storage.set(`shared-${shareId}`, JSON.stringify(shareData));
+                        
+                        const shareUrl = `${window.location.origin}?quiz=${shareId}`;
+                        const text = `🎯 I scored ${percentage}% on "${currentQuiz.name}"!\n\nThink you can beat my score? Try it here:`;
+                        
+                        if (navigator.share) {
+                          await navigator.share({ 
+                            title: `Can you beat my ${percentage}% on QuizForge?`, 
+                            text, 
+                            url: shareUrl 
+                          });
+                        } else {
+                          const fullText = `${text}\n${shareUrl}`;
+                          await navigator.clipboard?.writeText(fullText);
+                          showToast('📋 Score & quiz link copied!', 'success');
+                        }
+                      } catch (err) {
+                        console.error('Share error:', err);
+                        if (err.name !== 'AbortError') {
+                          showToast('Could not share. Try again!', 'error');
+                        }
                       }
                     }}
                     className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm flex items-center gap-2"
                   >
-                    📤 Share Result
+                    📤 Share Score & Quiz
                   </button>
                 </div>
+                
+                {/* Social Share Buttons */}
+                <div className="flex justify-center gap-2 mb-6">
+                  <button
+                    onClick={async () => {
+                      const shareId = `s${Date.now()}`;
+                      const shareData = {
+                        id: shareId,
+                        name: currentQuiz.name,
+                        questions: currentQuiz.questions.slice(0, 50),
+                        subject: currentQuiz.subject || 'General',
+                        createdBy: user?.name || 'Anonymous',
+                        createdAt: Date.now()
+                      };
+                      await storage.set(`shared-${shareId}`, JSON.stringify(shareData));
+                      const shareUrl = `${window.location.origin}?quiz=${shareId}`;
+                      const text = `🎯 I scored ${percentage}% on "${currentQuiz.name}"! Can you beat me?`;
+                      window.open(`https://wa.me/?text=${encodeURIComponent(text + '\n' + shareUrl)}`, '_blank');
+                    }}
+                    className="px-3 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm"
+                    title="Share on WhatsApp"
+                  >
+                    WhatsApp
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const shareId = `s${Date.now()}`;
+                      const shareData = {
+                        id: shareId,
+                        name: currentQuiz.name,
+                        questions: currentQuiz.questions.slice(0, 50),
+                        subject: currentQuiz.subject || 'General',
+                        createdBy: user?.name || 'Anonymous',
+                        createdAt: Date.now()
+                      };
+                      await storage.set(`shared-${shareId}`, JSON.stringify(shareData));
+                      const shareUrl = `${window.location.origin}?quiz=${shareId}`;
+                      const text = `🎯 I scored ${percentage}% on "${currentQuiz.name}"! Can you beat me?`;
+                      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`, '_blank');
+                    }}
+                    className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm"
+                    title="Share on X/Twitter"
+                  >
+                    X / Twitter
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const shareId = `s${Date.now()}`;
+                      const shareData = {
+                        id: shareId,
+                        name: currentQuiz.name,
+                        questions: currentQuiz.questions.slice(0, 50),
+                        subject: currentQuiz.subject || 'General',
+                        createdBy: user?.name || 'Anonymous',
+                        createdAt: Date.now()
+                      };
+                      await storage.set(`shared-${shareId}`, JSON.stringify(shareData));
+                      const shareUrl = `${window.location.origin}?quiz=${shareId}`;
+                      window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, '_blank');
+                    }}
+                    className="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm"
+                    title="Share on Facebook"
+                  >
+                    Facebook
+                  </button>
                 
                 {/* Show sign-up prompt for non-logged-in users who took a shared quiz */}
                 {sharedQuizMode && !isLoggedIn && (
