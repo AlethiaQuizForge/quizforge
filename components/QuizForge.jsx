@@ -92,6 +92,7 @@ export default function QuizForge() {
   const [quizNameInput, setQuizNameInput] = useState('');
   const [numQuestions, setNumQuestions] = useState(10);
   const [difficulty, setDifficulty] = useState('mixed');
+  const [topicFocus, setTopicFocus] = useState('');
   
   const [generation, setGeneration] = useState({ isGenerating: false, step: '', progress: 0, error: null });
   const [currentQuiz, setCurrentQuiz] = useState({ id: null, name: '', questions: [], published: false });
@@ -863,6 +864,10 @@ export default function QuizForge() {
         'advanced': 'All questions should be ADVANCED.'
       };
 
+      const topicFocusInstruction = topicFocus.trim() 
+        ? `\n## TOPIC FOCUS: Focus ONLY on content related to: ${topicFocus.trim()}. Ignore any content not related to this topic.`
+        : '';
+
       setGeneration(g => ({ ...g, step: 'Building quiz prompt...', progress: 10 }));
 
       const prompt = `You are an expert educational assessment designer.
@@ -873,7 +878,7 @@ export default function QuizForge() {
 3. Write helpful explanations.
 
 ## DIFFICULTY: ${difficultyInstructions[difficulty]}
-## SUBJECT: ${quizSubject || 'Determine from content'}
+## SUBJECT: ${quizSubject || 'Determine from content'}${topicFocusInstruction}
 
 Return ONLY a valid JSON array with exactly ${numQuestions} questions:
 [{"id":1,"question":"...","topic":"...","difficulty":"Basic|Intermediate|Advanced","options":[{"text":"...","isCorrect":false},{"text":"...","isCorrect":true},{"text":"...","isCorrect":false},{"text":"...","isCorrect":false}],"explanation":"..."}]
@@ -893,7 +898,8 @@ ${quizContent.substring(0, 40000)}
           content: quizContent,
           subject: quizSubject,
           numQuestions,
-          difficulty
+          difficulty,
+          topicFocus: topicFocus.trim()
         })
       });
 
@@ -1098,6 +1104,7 @@ ${quizContent.substring(0, 40000)}
     setQuizNameInput('');
     setNumQuestions(10);
     setDifficulty('mixed');
+    setTopicFocus('');
     
     showToast('✅ Quiz published!', 'success');
     
@@ -3023,6 +3030,17 @@ ${quizContent.substring(0, 40000)}
                       <option value="basic">Basic</option><option value="mixed">Mixed</option><option value="advanced">Advanced</option>
                     </select>
                   </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Topic Focus <span className="text-slate-400 font-normal">(optional)</span></label>
+                  <input
+                    type="text"
+                    value={topicFocus}
+                    onChange={e => setTopicFocus(e.target.value)}
+                    placeholder="e.g., Portfolio Theory, CAPM, Risk Management..."
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                  <p className="text-xs text-slate-400 mt-1">Leave empty to generate questions from all content, or specify topics to focus on</p>
                 </div>
                 <button type="button" onClick={generateQuestions} disabled={quizContent.length < 100 || uploadProgress.active} className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:from-slate-400 disabled:to-slate-400 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-lg">⚡ Generate Quiz with AI</button>
               </div>

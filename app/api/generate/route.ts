@@ -11,7 +11,7 @@ const anthropic = new Anthropic({
 
 export async function POST(request: NextRequest) {
   try {
-    const { content, subject, numQuestions, difficulty } = await request.json();
+    const { content, subject, numQuestions, difficulty, topicFocus } = await request.json();
 
     if (!content || content.length < 100) {
       return NextResponse.json(
@@ -26,10 +26,14 @@ export async function POST(request: NextRequest) {
       advanced: 'Focus on analysis, evaluation, and application. Require deep understanding.',
     };
 
+    const topicFocusInstruction = topicFocus 
+      ? `\nTOPIC FOCUS: Generate questions ONLY about: ${topicFocus}. Ignore any content not related to this topic.`
+      : '';
+
     const prompt = `You are an expert educational assessment designer. Generate ${numQuestions} high-quality multiple-choice questions based on the following content.
 
 SUBJECT: ${subject || 'General'}
-DIFFICULTY: ${difficulty} - ${difficultyGuide[difficulty as keyof typeof difficultyGuide] || difficultyGuide.mixed}
+DIFFICULTY: ${difficulty} - ${difficultyGuide[difficulty as keyof typeof difficultyGuide] || difficultyGuide.mixed}${topicFocusInstruction}
 
 CONTENT TO ASSESS:
 ${content.substring(0, 15000)}
