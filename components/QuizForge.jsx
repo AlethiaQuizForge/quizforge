@@ -806,7 +806,7 @@ ${quizContent.substring(0, 40000)}
     }
   };
 
-  const assignQuiz = (quizId) => {
+  const assignQuiz = (quizId, weight = 10, dueDate = null) => {
     if (!currentClass && classes.length > 0) {
       setCurrentClass(classes[0]);
     }
@@ -816,11 +816,20 @@ ${quizContent.substring(0, 40000)}
       return;
     }
     const targetClass = currentClass || classes[0];
-    const newAssignment = { id: `assign_${Date.now()}`, quizId, classId: targetClass.id, createdAt: Date.now(), submissions: [] };
+    const newAssignment = { 
+      id: `assign_${Date.now()}`, 
+      quizId, 
+      classId: targetClass.id, 
+      weight: parseFloat(weight) || 10,
+      dueDate: dueDate || null,
+      createdAt: Date.now(), 
+      submissions: [] 
+    };
     setAssignments(prev => [...prev, newAssignment]);
     const quiz = quizzes.find(q => q.id === quizId);
     showToast(`✅ "${quiz?.name}" assigned to ${targetClass.name}!`, 'success');
     setModal(null);
+    setModalInput('');
   };
 
   const submitQuizResult = (assignmentId, score, total, answers) => {
@@ -1033,20 +1042,78 @@ ${quizContent.substring(0, 40000)}
               </>
             )}
             
-            {/* Select Quiz Modal */}
+            {/* Select Quiz Modal - with weight and due date */}
             {modal.type === 'select' && (
               <>
-                <div className="space-y-2 mb-4 max-h-60 overflow-y-auto">
-                  {quizzes.length > 0 ? quizzes.map(quiz => (
-                    <button key={quiz.id} onClick={() => assignQuiz(quiz.id)} className="w-full p-3 text-left bg-slate-50 hover:bg-indigo-50 rounded-lg border border-slate-200">
-                      <p className="font-medium">{quiz.name}</p>
-                      <p className="text-sm text-slate-500">{pluralize(quiz.questions.length, 'question')}</p>
-                    </button>
-                  )) : (
-                    <p className="text-slate-500 text-center py-4">No quizzes available. Create one first!</p>
-                  )}
-                </div>
-                <button onClick={() => { setModal(null); setModalInput(''); }} className="w-full px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg">Close</button>
+                {!modal.selectedQuiz ? (
+                  <>
+                    <p className="text-sm text-slate-600 mb-3">Select a quiz to assign:</p>
+                    <div className="space-y-2 mb-4 max-h-60 overflow-y-auto">
+                      {quizzes.length > 0 ? quizzes.map(quiz => (
+                        <button 
+                          key={quiz.id} 
+                          onClick={() => setModal({ ...modal, selectedQuiz: quiz, weight: 10, dueDate: '' })} 
+                          className="w-full p-3 text-left bg-slate-50 hover:bg-indigo-50 rounded-lg border border-slate-200"
+                        >
+                          <p className="font-medium">{quiz.name}</p>
+                          <p className="text-sm text-slate-500">{pluralize(quiz.questions.length, 'question')}</p>
+                        </button>
+                      )) : (
+                        <p className="text-slate-500 text-center py-4">No quizzes available. Create one first!</p>
+                      )}
+                    </div>
+                    <button onClick={() => { setModal(null); setModalInput(''); }} className="w-full px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg">Cancel</button>
+                  </>
+                ) : (
+                  <>
+                    <div className="bg-indigo-50 rounded-lg p-3 mb-4">
+                      <p className="font-medium text-indigo-900">{modal.selectedQuiz.name}</p>
+                      <p className="text-sm text-indigo-600">{pluralize(modal.selectedQuiz.questions.length, 'question')}</p>
+                    </div>
+                    <div className="space-y-4 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Weight (%)</label>
+                        <div className="flex gap-2">
+                          {[10, 15, 20, 25].map(w => (
+                            <button 
+                              key={w}
+                              onClick={() => setModal({ ...modal, weight: w })}
+                              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${modal.weight === w ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                            >
+                              {w}%
+                            </button>
+                          ))}
+                          <input 
+                            type="number" 
+                            min="1" 
+                            max="100"
+                            value={modal.weight}
+                            onChange={e => setModal({ ...modal, weight: parseInt(e.target.value) || 10 })}
+                            className="w-20 px-2 py-2 border border-slate-300 rounded-lg text-center text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Due Date (optional)</label>
+                        <input 
+                          type="datetime-local"
+                          value={modal.dueDate}
+                          onChange={e => setModal({ ...modal, dueDate: e.target.value })}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <button onClick={() => setModal({ ...modal, selectedQuiz: null })} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg">← Back</button>
+                      <button 
+                        onClick={() => assignQuiz(modal.selectedQuiz.id, modal.weight, modal.dueDate || null)} 
+                        className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium"
+                      >
+                        Assign Quiz
+                      </button>
+                    </div>
+                  </>
+                )}
               </>
             )}
             
@@ -2039,44 +2106,57 @@ ${quizContent.substring(0, 40000)}
                   {/* Assignments Tab */}
                   {(modalInput || 'assignments') === 'assignments' && (
                     <div className="space-y-4">
-                      {assignmentStats.length > 0 ? assignmentStats.map(a => (
-                        <div key={a.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-                          <div className="flex items-start justify-between mb-3">
-                            <div>
-                              <h4 className="font-semibold text-slate-900">{a.quiz?.name || 'Unknown Quiz'}</h4>
-                              <p className="text-sm text-slate-500">{a.quiz?.questions.length || 0} questions</p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-sm font-medium text-slate-900">{a.avgScore > 0 ? `${a.avgScore}% avg` : 'No scores yet'}</p>
-                              <p className="text-xs text-slate-500">{a.completedCount}/{a.totalStudents} completed</p>
-                            </div>
-                          </div>
-                          {/* Progress bar */}
-                          <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
-                            <div 
-                              className={`h-full rounded-full transition-all ${a.completedCount === a.totalStudents ? 'bg-green-500' : 'bg-indigo-500'}`}
-                              style={{ width: `${a.totalStudents > 0 ? (a.completedCount / a.totalStudents) * 100 : 0}%` }}
-                            />
-                          </div>
-                          {/* Individual scores */}
-                          {a.submissions.length > 0 && (
-                            <div className="mt-3 pt-3 border-t border-slate-100">
-                              <div className="flex flex-wrap gap-2">
-                                {a.submissions.map((sub, i) => (
-                                  <span key={i} className={`text-xs px-2 py-1 rounded-full ${sub.percentage >= 80 ? 'bg-green-100 text-green-700' : sub.percentage >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
-                                    {sub.studentName.split(' ')[0]}: {sub.percentage}%
-                                  </span>
-                                ))}
-                                {a.totalStudents - a.completedCount > 0 && (
-                                  <span className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-500">
-                                    +{a.totalStudents - a.completedCount} pending
-                                  </span>
+                      {assignmentStats.length > 0 ? assignmentStats.map(a => {
+                        const isOverdue = a.dueDate && new Date(a.dueDate) < new Date();
+                        const isDueSoon = a.dueDate && !isOverdue && (new Date(a.dueDate) - new Date()) < 24 * 60 * 60 * 1000;
+                        return (
+                          <div key={a.id} className={`bg-white rounded-xl shadow-sm border p-5 ${isOverdue ? 'border-red-200' : 'border-slate-200'}`}>
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <h4 className="font-semibold text-slate-900">{a.quiz?.name || 'Unknown Quiz'}</h4>
+                                  <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs font-medium rounded">{a.weight || 10}%</span>
+                                </div>
+                                <p className="text-sm text-slate-500">{a.quiz?.questions.length || 0} questions</p>
+                                {a.dueDate && (
+                                  <p className={`text-xs mt-1 ${isOverdue ? 'text-red-600 font-medium' : isDueSoon ? 'text-amber-600' : 'text-slate-500'}`}>
+                                    {isOverdue ? '⚠️ Overdue: ' : isDueSoon ? '⏰ Due soon: ' : '📅 Due: '}
+                                    {new Date(a.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                                  </p>
                                 )}
                               </div>
+                              <div className="text-right">
+                                <p className="text-sm font-medium text-slate-900">{a.avgScore > 0 ? `${a.avgScore}% avg` : 'No scores yet'}</p>
+                                <p className="text-xs text-slate-500">{a.completedCount}/{a.totalStudents} completed</p>
+                              </div>
                             </div>
-                          )}
-                        </div>
-                      )) : (
+                            {/* Progress bar */}
+                            <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                              <div 
+                                className={`h-full rounded-full transition-all ${a.completedCount === a.totalStudents ? 'bg-green-500' : isOverdue ? 'bg-red-500' : 'bg-indigo-500'}`}
+                                style={{ width: `${a.totalStudents > 0 ? (a.completedCount / a.totalStudents) * 100 : 0}%` }}
+                              />
+                            </div>
+                            {/* Individual scores */}
+                            {a.submissions.length > 0 && (
+                              <div className="mt-3 pt-3 border-t border-slate-100">
+                                <div className="flex flex-wrap gap-2">
+                                  {a.submissions.map((sub, i) => (
+                                    <span key={i} className={`text-xs px-2 py-1 rounded-full ${sub.percentage >= 80 ? 'bg-green-100 text-green-700' : sub.percentage >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                                      {sub.studentName.split(' ')[0]}: {sub.percentage}%
+                                    </span>
+                                  ))}
+                                  {a.totalStudents - a.completedCount > 0 && (
+                                    <span className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-500">
+                                      +{a.totalStudents - a.completedCount} pending
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }) : (
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
                           <div className="text-4xl mb-3">📝</div>
                           <h4 className="font-semibold text-slate-900 mb-2">No Assignments Yet</h4>
@@ -2088,126 +2168,208 @@ ${quizContent.substring(0, 40000)}
                   )}
                   
                   {/* Students Tab */}
-                  {modalInput === 'students' && (
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                      {studentStats.length > 0 ? (
-                        <div className="divide-y divide-slate-100">
-                          {studentStats.map((student, i) => (
-                            <div key={i} className="flex items-center justify-between p-4 hover:bg-slate-50">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-bold">
-                                  {student.name.substring(0, 2).toUpperCase()}
+                  {modalInput === 'students' && (() => {
+                    // Calculate weighted grades for students tab
+                    const studentGradesForTab = studentStats.map(student => {
+                      let weightedSum = 0;
+                      let weightUsed = 0;
+                      assignmentStats.forEach(a => {
+                        const sub = student.submissions.find(s => s.assignmentId === a.id);
+                        if (sub) {
+                          weightedSum += sub.percentage * (a.weight || 10);
+                          weightUsed += (a.weight || 10);
+                        }
+                      });
+                      return { ...student, weightedGrade: weightUsed > 0 ? Math.round(weightedSum / weightUsed) : null };
+                    });
+                    
+                    return (
+                      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        {studentGradesForTab.length > 0 ? (
+                          <div className="divide-y divide-slate-100">
+                            {studentGradesForTab.map((student, i) => (
+                              <div key={i} className="flex items-center justify-between p-4 hover:bg-slate-50">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-bold">
+                                    {student.name.substring(0, 2).toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <p className="font-medium text-slate-900">{student.name}</p>
+                                    <p className="text-xs text-slate-500">
+                                      {student.completed}/{student.total} assignments completed
+                                      {student.completed < student.total && <span className="text-amber-600 ml-1">⚠️</span>}
+                                    </p>
+                                  </div>
                                 </div>
-                                <div>
-                                  <p className="font-medium text-slate-900">{student.name}</p>
-                                  <p className="text-xs text-slate-500">
-                                    {student.completed}/{student.total} assignments completed
-                                    {student.completed < student.total && <span className="text-amber-600 ml-1">⚠️</span>}
-                                  </p>
+                                <div className="text-right">
+                                  {student.weightedGrade !== null ? (
+                                    <p className={`text-lg font-bold ${student.weightedGrade >= 80 ? 'text-green-600' : student.weightedGrade >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
+                                      {student.weightedGrade}%
+                                    </p>
+                                  ) : (
+                                    <p className="text-slate-400">--</p>
+                                  )}
+                                  <p className="text-xs text-slate-500">weighted grade</p>
                                 </div>
                               </div>
-                              <div className="text-right">
-                                {student.avgScore !== null ? (
-                                  <p className={`text-lg font-bold ${student.avgScore >= 80 ? 'text-green-600' : student.avgScore >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
-                                    {student.avgScore}%
-                                  </p>
-                                ) : (
-                                  <p className="text-slate-400">--</p>
-                                )}
-                                <p className="text-xs text-slate-500">average</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="p-12 text-center">
-                          <div className="text-4xl mb-3">👥</div>
-                          <h4 className="font-semibold text-slate-900 mb-2">No Students Yet</h4>
-                          <p className="text-slate-500 text-sm">Share the code <span className="font-mono bg-slate-100 px-2 py-1 rounded">{selectedClass?.code}</span> with your students</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="p-12 text-center">
+                            <div className="text-4xl mb-3">👥</div>
+                            <h4 className="font-semibold text-slate-900 mb-2">No Students Yet</h4>
+                            <p className="text-slate-500 text-sm">Share the code <span className="font-mono bg-slate-100 px-2 py-1 rounded">{selectedClass?.code}</span> with your students</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                   
                   {/* Gradebook Tab */}
-                  {modalInput === 'gradebook' && (
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                      {studentStats.length > 0 && assignmentStats.length > 0 ? (
-                        <div className="overflow-x-auto">
-                          <table className="w-full">
-                            <thead className="bg-slate-50 border-b border-slate-200">
-                              <tr>
-                                <th className="text-left px-4 py-3 text-sm font-semibold text-slate-900">Student</th>
-                                {assignmentStats.map(a => (
-                                  <th key={a.id} className="text-center px-4 py-3 text-sm font-semibold text-slate-900 min-w-[100px]">
-                                    <div className="truncate max-w-[120px]" title={a.quiz?.name}>{a.quiz?.name}</div>
-                                  </th>
-                                ))}
-                                <th className="text-center px-4 py-3 text-sm font-semibold text-slate-900 bg-indigo-50">Average</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                              {studentStats.map((student, i) => (
-                                <tr key={i} className="hover:bg-slate-50">
-                                  <td className="px-4 py-3">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-xs font-bold">
-                                        {student.name.substring(0, 2).toUpperCase()}
-                                      </div>
-                                      <span className="font-medium text-slate-900">{student.name}</span>
-                                    </div>
-                                  </td>
-                                  {assignmentStats.map(a => {
-                                    const sub = student.submissions.find(s => s.assignmentId === a.id);
-                                    return (
-                                      <td key={a.id} className="text-center px-4 py-3">
-                                        {sub ? (
-                                          <span className={`font-medium ${sub.percentage >= 80 ? 'text-green-600' : sub.percentage >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
-                                            {sub.percentage}%
+                  {modalInput === 'gradebook' && (() => {
+                    // Calculate weighted grades for each student
+                    const totalWeight = assignmentStats.reduce((sum, a) => sum + (a.weight || 10), 0);
+                    
+                    const studentGrades = studentStats.map(student => {
+                      let weightedSum = 0;
+                      let weightUsed = 0;
+                      
+                      assignmentStats.forEach(a => {
+                        const sub = student.submissions.find(s => s.assignmentId === a.id);
+                        if (sub) {
+                          weightedSum += sub.percentage * (a.weight || 10);
+                          weightUsed += (a.weight || 10);
+                        }
+                      });
+                      
+                      const weightedGrade = weightUsed > 0 ? Math.round(weightedSum / weightUsed) : null;
+                      return { ...student, weightedGrade };
+                    });
+                    
+                    // CSV Export function
+                    const exportCSV = () => {
+                      const headers = ['Student', ...assignmentStats.map(a => `${a.quiz?.name} (${a.weight || 10}%)`), 'Weighted Grade'];
+                      const rows = studentGrades.map(student => {
+                        const scores = assignmentStats.map(a => {
+                          const sub = student.submissions.find(s => s.assignmentId === a.id);
+                          return sub ? sub.percentage : '';
+                        });
+                        return [student.name, ...scores, student.weightedGrade || ''];
+                      });
+                      
+                      const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
+                      const blob = new Blob([csv], { type: 'text/csv' });
+                      const url = URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = `${selectedClass?.name || 'gradebook'}_grades.csv`;
+                      link.click();
+                      URL.revokeObjectURL(url);
+                      showToast('📥 Gradebook exported!', 'success');
+                    };
+                    
+                    return (
+                      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        {studentGrades.length > 0 && assignmentStats.length > 0 ? (
+                          <>
+                            <div className="flex justify-between items-center p-4 border-b border-slate-200 bg-slate-50">
+                              <div className="text-sm text-slate-600">
+                                Total weight: <span className="font-semibold text-slate-900">{totalWeight}%</span>
+                                {totalWeight !== 100 && <span className="text-amber-600 ml-2">⚠️ Not 100%</span>}
+                              </div>
+                              <button 
+                                onClick={exportCSV}
+                                className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-medium flex items-center gap-1"
+                              >
+                                📥 Export CSV
+                              </button>
+                            </div>
+                            <div className="overflow-x-auto">
+                              <table className="w-full">
+                                <thead className="bg-slate-50 border-b border-slate-200">
+                                  <tr>
+                                    <th className="text-left px-4 py-3 text-sm font-semibold text-slate-900">Student</th>
+                                    {assignmentStats.map(a => (
+                                      <th key={a.id} className="text-center px-4 py-3 text-sm font-semibold text-slate-900 min-w-[100px]">
+                                        <div className="truncate max-w-[120px]" title={a.quiz?.name}>{a.quiz?.name}</div>
+                                        <div className="text-xs font-normal text-slate-500">{a.weight || 10}%</div>
+                                      </th>
+                                    ))}
+                                    <th className="text-center px-4 py-3 text-sm font-semibold text-slate-900 bg-indigo-50">
+                                      <div>Weighted</div>
+                                      <div className="text-xs font-normal text-slate-500">Grade</div>
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                  {studentGrades.map((student, i) => (
+                                    <tr key={i} className="hover:bg-slate-50">
+                                      <td className="px-4 py-3">
+                                        <div className="flex items-center gap-2">
+                                          <div className="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-xs font-bold">
+                                            {student.name.substring(0, 2).toUpperCase()}
+                                          </div>
+                                          <span className="font-medium text-slate-900">{student.name}</span>
+                                        </div>
+                                      </td>
+                                      {assignmentStats.map(a => {
+                                        const sub = student.submissions.find(s => s.assignmentId === a.id);
+                                        return (
+                                          <td key={a.id} className="text-center px-4 py-3">
+                                            {sub ? (
+                                              <span className={`font-medium ${sub.percentage >= 80 ? 'text-green-600' : sub.percentage >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
+                                                {sub.percentage}%
+                                              </span>
+                                            ) : (
+                                              <span className="text-slate-300">--</span>
+                                            )}
+                                          </td>
+                                        );
+                                      })}
+                                      <td className="text-center px-4 py-3 bg-indigo-50">
+                                        {student.weightedGrade !== null ? (
+                                          <span className={`font-bold ${student.weightedGrade >= 80 ? 'text-green-600' : student.weightedGrade >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
+                                            {student.weightedGrade}%
                                           </span>
                                         ) : (
                                           <span className="text-slate-300">--</span>
                                         )}
                                       </td>
-                                    );
-                                  })}
-                                  <td className="text-center px-4 py-3 bg-indigo-50">
-                                    {student.avgScore !== null ? (
-                                      <span className={`font-bold ${student.avgScore >= 80 ? 'text-green-600' : student.avgScore >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
-                                        {student.avgScore}%
-                                      </span>
-                                    ) : (
-                                      <span className="text-slate-300">--</span>
-                                    )}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                            {/* Class averages footer */}
-                            <tfoot className="bg-slate-50 border-t-2 border-slate-200">
-                              <tr>
-                                <td className="px-4 py-3 font-semibold text-slate-900">Class Average</td>
-                                {assignmentStats.map(a => (
-                                  <td key={a.id} className="text-center px-4 py-3 font-semibold text-indigo-600">
-                                    {a.avgScore > 0 ? `${a.avgScore}%` : '--'}
-                                  </td>
-                                ))}
-                                <td className="text-center px-4 py-3 bg-indigo-100 font-bold text-indigo-700">
-                                  {classAvg > 0 ? `${classAvg}%` : '--'}
-                                </td>
-                              </tr>
-                            </tfoot>
-                          </table>
-                        </div>
-                      ) : (
-                        <div className="p-12 text-center">
-                          <div className="text-4xl mb-3">📊</div>
-                          <h4 className="font-semibold text-slate-900 mb-2">No Data Yet</h4>
-                          <p className="text-slate-500 text-sm">Gradebook will populate as students complete assignments</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                                    </tr>
+                                  ))}
+                                </tbody>
+                                {/* Class averages footer */}
+                                <tfoot className="bg-slate-50 border-t-2 border-slate-200">
+                                  <tr>
+                                    <td className="px-4 py-3 font-semibold text-slate-900">Class Average</td>
+                                    {assignmentStats.map(a => (
+                                      <td key={a.id} className="text-center px-4 py-3 font-semibold text-indigo-600">
+                                        {a.avgScore > 0 ? `${a.avgScore}%` : '--'}
+                                      </td>
+                                    ))}
+                                    <td className="text-center px-4 py-3 bg-indigo-100 font-bold text-indigo-700">
+                                      {(() => {
+                                        const validGrades = studentGrades.filter(s => s.weightedGrade !== null);
+                                        return validGrades.length > 0 
+                                          ? Math.round(validGrades.reduce((sum, s) => sum + s.weightedGrade, 0) / validGrades.length) + '%'
+                                          : '--';
+                                      })()}
+                                    </td>
+                                  </tr>
+                                </tfoot>
+                              </table>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="p-12 text-center">
+                            <div className="text-4xl mb-3">📊</div>
+                            <h4 className="font-semibold text-slate-900 mb-2">No Data Yet</h4>
+                            <p className="text-slate-500 text-sm">Gradebook will populate as students complete assignments</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </>
               );
             })()}
@@ -2249,13 +2411,22 @@ ${quizContent.substring(0, 40000)}
                     {pendingAssignments.map(a => {
                       const quiz = quizzes.find(q => q.id === a.quizId);
                       const assignedClass = classes.find(c => c.id === a.classId);
+                      const isOverdue = a.dueDate && new Date(a.dueDate) < new Date();
+                      const isDueSoon = a.dueDate && !isOverdue && (new Date(a.dueDate) - new Date()) < 24 * 60 * 60 * 1000;
                       return (
-                        <div key={a.id} className="flex items-center justify-between p-4 bg-amber-50 rounded-lg mb-2">
+                        <div key={a.id} className={`flex items-center justify-between p-4 rounded-lg mb-2 ${isOverdue ? 'bg-red-50 border border-red-200' : 'bg-amber-50'}`}>
                           <div>
                             <p className="font-medium text-slate-900">{quiz?.name}</p>
                             <p className="text-sm text-slate-500">{quiz ? pluralize(quiz.questions.length, 'question') : '?'} • From: {assignedClass?.name || 'Unknown class'}</p>
+                            {a.dueDate && (
+                              <p className={`text-xs mt-1 ${isOverdue ? 'text-red-600 font-medium' : isDueSoon ? 'text-amber-600 font-medium' : 'text-slate-500'}`}>
+                                {isOverdue ? '⚠️ Overdue!' : isDueSoon ? '⏰ Due soon:' : '📅 Due:'} {new Date(a.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                              </p>
+                            )}
                           </div>
-                          <button onClick={() => startAssignment(a)} className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-white rounded-lg font-medium">Start →</button>
+                          <button onClick={() => startAssignment(a)} className={`px-4 py-2 text-white rounded-lg font-medium ${isOverdue ? 'bg-red-500 hover:bg-red-400' : 'bg-amber-500 hover:bg-amber-400'}`}>
+                            {isOverdue ? 'Complete Now!' : 'Start →'}
+                          </button>
                         </div>
                       );
                     })}
