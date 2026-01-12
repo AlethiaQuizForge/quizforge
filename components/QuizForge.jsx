@@ -443,166 +443,227 @@ export default function QuizForge() {
     });
   };
 
-  const handleFileUpload = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    
+  // Process a single file and return its text content
+  const processFile = async (file, fileIndex, totalFiles) => {
     const fileName = file.name.toLowerCase();
+    const prefix = totalFiles > 1 ? `[File ${fileIndex + 1}/${totalFiles}] ` : '';
     
     // Text files
     if (file.type === 'text/plain' || fileName.endsWith('.txt')) {
       const text = await file.text();
-      setQuizContent(text);
-      showToast('✅ File loaded', 'success');
+      return { success: true, text, name: file.name };
     } 
     // Word documents (.docx)
     else if (fileName.endsWith('.docx') || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-      setUploadProgress({ active: true, step: 'Reading Word document...', progress: 30 });
-      try {
-        const arrayBuffer = await file.arrayBuffer();
-        setUploadProgress({ active: true, step: 'Extracting text...', progress: 60 });
-        const result = await mammoth.extractRawText({ arrayBuffer });
-        const text = result.value.trim();
-        
-        if (text.length > 100) {
-          setQuizContent(text);
-          setUploadProgress({ active: true, step: 'Complete!', progress: 100 });
-          setTimeout(() => setUploadProgress({ active: false, step: '', progress: 0 }), 500);
-          showToast(`✅ Extracted ${text.length.toLocaleString()} characters`, 'success');
-        } else {
-          setUploadProgress({ active: false, step: '', progress: 0 });
-          showToast('⚠️ Document has little text content', 'error');
-        }
-      } catch (err) {
-        console.error('Word doc error:', err);
-        setUploadProgress({ active: false, step: '', progress: 0 });
-        showToast('⚠️ Error reading Word document. Try copy-pasting content.', 'error');
+      setUploadProgress({ active: true, step: `${prefix}Reading Word document...`, progress: 30 });
+      const arrayBuffer = await file.arrayBuffer();
+      setUploadProgress({ active: true, step: `${prefix}Extracting text...`, progress: 60 });
+      const result = await mammoth.extractRawText({ arrayBuffer });
+      const text = result.value.trim();
+      if (text.length > 50) {
+        return { success: true, text, name: file.name };
+      } else {
+        return { success: false, error: `${file.name} has little text content` };
       }
     }
-    // PDF files - try text extraction first, then vision API
+    // PDF files
     else if (file.type === 'application/pdf' || fileName.endsWith('.pdf')) {
-      setUploadProgress({ active: true, step: 'Loading PDF reader...', progress: 5 });
+      setUploadProgress({ active: true, step: `${prefix}Loading PDF...`, progress: 10 });
       
-      try {
-        const pdfjsLib = await loadPdfJs();
-        setUploadProgress({ active: true, step: 'Opening PDF...', progress: 10 });
+      const pdfjsLib = await loadPdfJs();
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const numPages = Math.min(pdf.numPages, 20);
+      
+      setUploadProgress({ active: true, step: `${prefix}Extracting text from PDF...`, progress: 20 });
+      
+      let extractedText = '';
+      for (let i = 1; i <= numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map(item => item.str).join(' ');
+        extractedText += pageText + '\n\n';
         
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        const numPages = Math.min(pdf.numPages, 20);
+        const progress = 20 + Math.round((i / numPages) * 60);
+        setUploadProgress({ active: true, step: `${prefix}Reading page ${i}/${numPages}...`, progress });
+      }
+      
+      extractedText = extractedText.trim();
+      
+      if (extractedText.length > 500) {
+        return { success: true, text: extractedText, name: file.name };
+      } else {
+        // Try vision API for image-based PDFs
+        setUploadProgress({ active: true, step: `${prefix}PDF is image-based. Using AI vision...`, progress: 70 });
         
-        // FIRST: Try to extract text directly using PDF.js
-        setUploadProgress({ active: true, step: 'Extracting text from PDF...', progress: 20 });
+        const pageImages = [];
+        const maxVisionPages = Math.min(numPages, 10);
         
-        let extractedText = '';
-        for (let i = 1; i <= numPages; i++) {
+        for (let i = 1; i <= maxVisionPages; i++) {
           const page = await pdf.getPage(i);
-          const textContent = await page.getTextContent();
-          const pageText = textContent.items.map(item => item.str).join(' ');
-          extractedText += pageText + '\n\n';
+          const scale = 1.2;
+          const viewport = page.getViewport({ scale });
           
-          const progress = 20 + Math.round((i / numPages) * 60);
-          setUploadProgress({ active: true, step: `Reading page ${i}/${numPages}...`, progress });
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          const ctx = canvas.getContext('2d');
+          
+          await page.render({ canvasContext: ctx, viewport }).promise;
+          const base64 = canvas.toDataURL('image/jpeg', 0.6).split(',')[1];
+          pageImages.push(base64);
         }
         
-        extractedText = extractedText.trim();
+        setUploadProgress({ active: true, step: `${prefix}AI analyzing images...`, progress: 80 });
         
-        // If we got good text, use it
-        if (extractedText.length > 500) {
-          setQuizContent(extractedText);
-          setUploadProgress({ active: true, step: '✅ Complete!', progress: 100 });
-          setTimeout(() => setUploadProgress({ active: false, step: '', progress: 0 }), 500);
-          showToast(`✅ Extracted ${extractedText.length.toLocaleString()} characters from ${numPages} pages`, 'success');
-        } 
-        // If little text found, try Vision API for image-based PDFs
-        else {
-          setUploadProgress({ active: true, step: 'PDF appears to be image-based. Using AI vision...', progress: 70 });
-          
-          // Convert pages to images
-          const pageImages = [];
-          const maxVisionPages = Math.min(numPages, 10); // Limit for vision
-          
-          for (let i = 1; i <= maxVisionPages; i++) {
-            const page = await pdf.getPage(i);
-            const scale = 1.2;
-            const viewport = page.getViewport({ scale });
-            
-            const canvas = document.createElement('canvas');
-            canvas.width = viewport.width;
-            canvas.height = viewport.height;
-            const ctx = canvas.getContext('2d');
-            
-            await page.render({ canvasContext: ctx, viewport }).promise;
-            const base64 = canvas.toDataURL('image/jpeg', 0.6).split(',')[1];
-            pageImages.push(base64);
-          }
-          
-          setUploadProgress({ active: true, step: '🧠 AI analyzing images... (30-60 seconds)', progress: 80 });
-          
-          const controller = new AbortController();
-          setUploadController(controller);
-          
-          const imageContent = pageImages.map(img => ({
-            type: 'image',
-            source: { type: 'base64', media_type: 'image/jpeg', data: img }
-          }));
-          
-          const response = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            signal: controller.signal,
-            body: JSON.stringify({
-              model: 'claude-sonnet-4-20250514',
-              max_tokens: 8000,
-              messages: [{
-                role: 'user',
-                content: [
-                  ...imageContent,
-                  { type: 'text', text: 'Extract ALL text and describe all visual content (graphs, charts, diagrams) from these PDF pages. Output as clean text.' }
-                ]
-              }]
-            })
-          });
-          
-          setUploadController(null);
-          
-          if (!response.ok) {
-            throw new Error(`API error: ${response.status}. Try copying text directly from the PDF.`);
-          }
-          
-          setUploadProgress({ active: true, step: 'Processing response...', progress: 95 });
-          
-          const data = await response.json();
-          const visionText = data.content
-            .filter(block => block.type === 'text')
-            .map(block => block.text)
-            .join('\n\n');
-          
-          if (visionText.length > 200) {
-            setQuizContent(visionText);
-            setUploadProgress({ active: true, step: '✅ Complete!', progress: 100 });
-            setTimeout(() => setUploadProgress({ active: false, step: '', progress: 0 }), 500);
-            showToast(`✅ Extracted content from ${maxVisionPages} pages!`, 'success');
-          } else {
-            throw new Error('Could not extract content. Please copy-paste text from PDF.');
-          }
-        }
-      } catch (err) {
-        console.error('PDF error:', err);
-        setUploadProgress({ active: false, step: '', progress: 0 });
+        const controller = new AbortController();
+        setUploadController(controller);
+        
+        const imageContent = pageImages.map(img => ({
+          type: 'image',
+          source: { type: 'base64', media_type: 'image/jpeg', data: img }
+        }));
+        
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 8000,
+            messages: [{
+              role: 'user',
+              content: [
+                ...imageContent,
+                { type: 'text', text: 'Extract ALL text and describe all visual content from these PDF pages. Output as clean text.' }
+              ]
+            }]
+          })
+        });
+        
         setUploadController(null);
         
-        if (err.name === 'AbortError') {
-          showToast('Upload cancelled', 'info');
-        } else {
-          showToast('⚠️ ' + err.message, 'error');
+        if (!response.ok) throw new Error(`Vision API error for ${file.name}`);
+        
+        const data = await response.json();
+        const visionText = data.content.filter(b => b.type === 'text').map(b => b.text).join('\n\n');
+        
+        if (visionText.length > 200) {
+          return { success: true, text: visionText, name: file.name };
         }
+        return { success: false, error: `Could not extract text from ${file.name}` };
       }
-    } 
-    else {
-      showToast('⚠️ Please use .docx, .pdf, or .txt files', 'error');
     }
+    // PowerPoint files (.pptx) - use JSZip to extract text
+    else if (fileName.endsWith('.pptx') || file.type === 'application/vnd.openxmlformats-officedocument.presentationml.presentation') {
+      setUploadProgress({ active: true, step: `${prefix}Reading PowerPoint...`, progress: 20 });
+      
+      try {
+        // Dynamically load JSZip
+        const JSZip = (await import('jszip')).default;
+        const arrayBuffer = await file.arrayBuffer();
+        const zip = await JSZip.loadAsync(arrayBuffer);
+        
+        setUploadProgress({ active: true, step: `${prefix}Extracting slides...`, progress: 50 });
+        
+        let allText = '';
+        const slideFiles = Object.keys(zip.files).filter(name => name.match(/ppt\/slides\/slide\d+\.xml/)).sort();
+        
+        for (let i = 0; i < slideFiles.length; i++) {
+          const slideXml = await zip.file(slideFiles[i]).async('string');
+          // Extract text from XML (basic extraction)
+          const textMatches = slideXml.match(/<a:t>([^<]*)<\/a:t>/g) || [];
+          const slideText = textMatches.map(m => m.replace(/<\/?a:t>/g, '')).join(' ');
+          if (slideText.trim()) {
+            allText += `\n--- Slide ${i + 1} ---\n${slideText.trim()}\n`;
+          }
+        }
+        
+        setUploadProgress({ active: true, step: `${prefix}Complete!`, progress: 100 });
+        
+        if (allText.length > 100) {
+          return { success: true, text: allText.trim(), name: file.name };
+        } else {
+          return { success: false, error: `${file.name} has little text content` };
+        }
+      } catch (err) {
+        console.error('PPTX error:', err);
+        return { success: false, error: `Could not read ${file.name}` };
+      }
+    }
+    return { success: false, error: `Unsupported file type: ${file.name}` };
+  };
+
+  const handleFileUpload = async (event) => {
+    const files = event.target.files || event.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+    
+    const fileArray = Array.from(files).filter(f => {
+      const name = f.name.toLowerCase();
+      return name.endsWith('.txt') || name.endsWith('.docx') || name.endsWith('.pdf') || name.endsWith('.pptx');
+    });
+    
+    if (fileArray.length === 0) {
+      showToast('⚠️ Please use .pdf, .docx, .pptx, or .txt files', 'error');
+      return;
+    }
+    
+    setUploadProgress({ active: true, step: `Processing ${fileArray.length} file(s)...`, progress: 5 });
+    
+    try {
+      const results = [];
+      for (let i = 0; i < fileArray.length; i++) {
+        const result = await processFile(fileArray[i], i, fileArray.length);
+        results.push(result);
+      }
+      
+      const successful = results.filter(r => r.success);
+      const failed = results.filter(r => !r.success);
+      
+      if (successful.length > 0) {
+        // Combine all text with file markers
+        const combinedText = successful.map(r => 
+          successful.length > 1 ? `\n--- ${r.name} ---\n${r.text}` : r.text
+        ).join('\n\n');
+        
+        setQuizContent(prev => prev ? prev + '\n\n' + combinedText : combinedText);
+        setUploadProgress({ active: true, step: '✅ Complete!', progress: 100 });
+        setTimeout(() => setUploadProgress({ active: false, step: '', progress: 0 }), 500);
+        
+        const totalChars = successful.reduce((sum, r) => sum + r.text.length, 0);
+        showToast(`✅ Loaded ${successful.length} file(s) (${totalChars.toLocaleString()} chars)`, 'success');
+        
+        if (failed.length > 0) {
+          setTimeout(() => showToast(`⚠️ ${failed.length} file(s) failed`, 'error'), 1500);
+        }
+      } else {
+        setUploadProgress({ active: false, step: '', progress: 0 });
+        showToast('⚠️ Could not extract text from files', 'error');
+      }
+    } catch (err) {
+      console.error('Upload error:', err);
+      setUploadProgress({ active: false, step: '', progress: 0 });
+      setUploadController(null);
+      if (err.name === 'AbortError') {
+        showToast('Upload cancelled', 'info');
+      } else {
+        showToast('⚠️ ' + err.message, 'error');
+      }
+    }
+    
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+  
+  // Drag and drop handlers
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleFileUpload(e);
   };
 
   const generateQuestions = async () => {
@@ -1316,29 +1377,38 @@ ${quizContent.substring(0, 40000)}
           <div className="bg-white py-12">
             <div className="max-w-4xl mx-auto px-6">
               <h2 className="text-xl font-bold text-center text-slate-900 mb-8">How It Works</h2>
-              <div className="grid md:grid-cols-2 gap-8">
+              <div className="grid md:grid-cols-2 gap-6">
                 {/* Teachers Column */}
                 <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-5">
-                  <h3 className="text-sm font-semibold text-indigo-600 mb-3 text-center">👩‍🏫 For Teachers</h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { icon: '📤', title: 'Upload', desc: 'PDFs & slides' },
-                      { icon: '🧠', title: 'Generate', desc: 'AI creates quiz/exam' },
-                      { icon: '📨', title: 'Assign', desc: 'Share code' },
-                      { icon: '📊', title: 'Track', desc: 'View results' }
-                    ].map((item, i) => (
-                      <div key={i} className="bg-white/80 rounded-xl p-3 text-center">
-                        <div className="text-xl mb-1">{item.icon}</div>
-                        <h4 className="font-semibold text-slate-900 text-xs">{item.title}</h4>
-                        <p className="text-slate-500 text-xs">{item.desc}</p>
+                  <h3 className="text-sm font-semibold text-indigo-600 mb-4 text-center">👩‍🏫 For Teachers</h3>
+                  <div className="space-y-2">
+                    <div className="bg-white/80 rounded-xl p-3 flex items-center gap-3">
+                      <div className="text-xl">📤</div>
+                      <div>
+                        <h4 className="font-semibold text-slate-900 text-xs">Upload</h4>
+                        <p className="text-slate-500 text-xs">PDFs, slides, or notes</p>
                       </div>
-                    ))}
+                    </div>
+                    <div className="bg-white/80 rounded-xl p-3 flex items-center gap-3">
+                      <div className="text-xl">🧠</div>
+                      <div>
+                        <h4 className="font-semibold text-slate-900 text-xs">Generate</h4>
+                        <p className="text-slate-500 text-xs">AI creates quiz instantly</p>
+                      </div>
+                    </div>
+                    <div className="bg-white/80 rounded-xl p-3 flex items-center gap-3">
+                      <div className="text-xl">📊</div>
+                      <div>
+                        <h4 className="font-semibold text-slate-900 text-xs">Assign & Track</h4>
+                        <p className="text-slate-500 text-xs">Share code, view results</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 
                 {/* Students Column */}
                 <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-5">
-                  <h3 className="text-sm font-semibold text-blue-600 mb-3 text-center">👨‍🎓 For Students</h3>
+                  <h3 className="text-sm font-semibold text-blue-600 mb-4 text-center">👨‍🎓 For Students</h3>
                   <div className="space-y-2">
                     <div className="bg-white/80 rounded-xl p-3 flex items-center gap-3">
                       <div className="text-xl">📋</div>
@@ -2166,11 +2236,35 @@ ${quizContent.substring(0, 40000)}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Course Material</label>
-                  <div className="mb-3">
-                    <input ref={fileInputRef} type="file" accept=".docx,.pdf,.txt,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,text/plain" onChange={handleFileUpload} className="hidden" disabled={uploadProgress.active} />
-                    <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadProgress.active} className="px-4 py-2 border-2 border-dashed border-slate-300 rounded-lg text-slate-600 hover:border-indigo-400 hover:text-indigo-600 w-full disabled:opacity-50 disabled:cursor-not-allowed">
-                      {uploadProgress.active ? '⏳ Processing...' : '📄 Upload Word (.docx), PDF, or Text File'}
-                    </button>
+                  
+                  {/* Drag & Drop Zone */}
+                  <div 
+                    onDragOver={handleDragOver}
+                    onDragEnter={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-indigo-500', 'bg-indigo-50'); }}
+                    onDragLeave={(e) => { e.preventDefault(); e.currentTarget.classList.remove('border-indigo-500', 'bg-indigo-50'); }}
+                    onDrop={(e) => { e.currentTarget.classList.remove('border-indigo-500', 'bg-indigo-50'); handleDrop(e); }}
+                    onClick={() => !uploadProgress.active && fileInputRef.current?.click()}
+                    className={`mb-3 p-6 border-2 border-dashed border-slate-300 rounded-xl text-center cursor-pointer transition-colors hover:border-indigo-400 hover:bg-indigo-50/50 ${uploadProgress.active ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <input 
+                      ref={fileInputRef} 
+                      type="file" 
+                      multiple
+                      accept=".docx,.pdf,.txt,.pptx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.presentationml.presentation" 
+                      onChange={handleFileUpload} 
+                      className="hidden" 
+                      disabled={uploadProgress.active} 
+                    />
+                    <div className="text-4xl mb-2">📄</div>
+                    <p className="font-medium text-slate-700">
+                      {uploadProgress.active ? '⏳ Processing...' : 'Drop files here or click to upload'}
+                    </p>
+                    <p className="text-sm text-slate-500 mt-1">
+                      PDF, Word (.docx), PowerPoint (.pptx), or Text files
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Multiple files supported • Up to 20 pages per PDF
+                    </p>
                   </div>
                   
                   {/* Upload Progress Bar */}
@@ -2198,7 +2292,18 @@ ${quizContent.substring(0, 40000)}
                     </div>
                   )}
                   
-                  <textarea value={quizContent} onChange={e => setQuizContent(e.target.value)} placeholder="Or paste your content here..." className="w-full h-48 px-4 py-3 border border-slate-300 rounded-xl resize-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" disabled={uploadProgress.active} />
+                  {/* Content textarea */}
+                  <div className="relative">
+                    <textarea value={quizContent} onChange={e => setQuizContent(e.target.value)} placeholder="Or paste your content here..." className="w-full h-48 px-4 py-3 border border-slate-300 rounded-xl resize-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" disabled={uploadProgress.active} />
+                    {quizContent && (
+                      <button 
+                        onClick={() => setQuizContent('')}
+                        className="absolute top-2 right-2 text-xs px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-600 rounded"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
                   <div className="flex justify-between mt-2 text-sm text-slate-500">
                     <span>{quizContent.length.toLocaleString()} characters</span>
                     <span>{quizContent.length < 500 ? '⚠️ Min 500 recommended' : '✓ Good'}</span>
