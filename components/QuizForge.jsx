@@ -3375,6 +3375,7 @@ ${quizContent.substring(0, 40000)}
                   >
                     Facebook
                   </button>
+                </div>
                 
                 {/* Show sign-up prompt for non-logged-in users who took a shared quiz */}
                 {sharedQuizMode && !isLoggedIn && (
