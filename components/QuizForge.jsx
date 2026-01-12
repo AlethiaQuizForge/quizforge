@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import * as mammoth from 'mammoth';
 import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, GoogleAuthProvider, OAuthProvider, signInWithPopup } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 
 // Firebase configuration
@@ -67,6 +67,7 @@ export default function QuizForge() {
   const [user, setUser] = useState(null);
   const [authMode, setAuthMode] = useState('login'); // 'login' or 'signup'
   const [authForm, setAuthForm] = useState({ name: '', email: '', password: '', role: 'student' });
+  const [socialAuthPending, setSocialAuthPending] = useState(null);
   const [authError, setAuthError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   
@@ -260,6 +261,32 @@ export default function QuizForge() {
     }
   };
   
+  const handleForgotPassword = async () => {
+    if (!authForm.email.trim()) {
+      setAuthError('Please enter your email address first');
+      return;
+    }
+    if (!authForm.email.includes('@')) {
+      setAuthError('Please enter a valid email address');
+      return;
+    }
+    
+    try {
+      await sendPasswordResetEmail(auth, authForm.email.trim());
+      showToast('Password reset email sent! Check your inbox.', 'success');
+      setAuthError('');
+    } catch (err) {
+      console.error('Password reset error:', err);
+      if (err.code === 'auth/user-not-found') {
+        setAuthError('No account found with this email.');
+      } else if (err.code === 'auth/invalid-email') {
+        setAuthError('Please enter a valid email address.');
+      } else {
+        setAuthError('Failed to send reset email. Please try again.');
+      }
+    }
+  };
+  
   const handleSignup = async () => {
     setAuthError('');
     if (!authForm.name.trim()) {
@@ -319,6 +346,168 @@ export default function QuizForge() {
         setAuthError('Signup failed. Please try again.');
       }
     }
+  };
+  
+  // Social login handlers
+  const handleGoogleSignIn = async (selectedRole = null) => {
+    setAuthError('');
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const firebaseUser = result.user;
+      
+      // Check if user already exists
+      const existingUser = await storage.get(`quizforge-account-${firebaseUser.uid}`);
+      if (existingUser && existingUser.value) {
+        // Existing user - log them in
+        const userData = JSON.parse(existingUser.value);
+        setUser(userData);
+        setUserName(userData.name);
+        setUserType(userData.role);
+        setIsLoggedIn(true);
+        
+        // Load user's data
+        const dataResult = await storage.get(`quizforge-data-${firebaseUser.uid}`);
+        if (dataResult && dataResult.value) {
+          const data = JSON.parse(dataResult.value);
+          setQuizzes(data.quizzes || []);
+          setClasses(data.classes || []);
+          setJoinedClasses(data.joinedClasses || []);
+          setAssignments(data.assignments || []);
+          setSubmissions(data.submissions || []);
+          setQuestionBank(data.questionBank || []);
+          setStudentProgress(data.studentProgress || { quizzesTaken: 0, totalScore: 0, totalQuestions: 0, topicHistory: {}, recentScores: [] });
+        }
+        
+        showToast(`Welcome back, ${userData.name}!`, 'success');
+        setPage(userData.role === 'teacher' ? 'teacher-dashboard' : userData.role === 'student' ? 'student-dashboard' : 'creator-dashboard');
+      } else {
+        // New user - need to select role
+        if (!selectedRole) {
+          setSocialAuthPending({ provider: 'google', user: firebaseUser });
+          return;
+        }
+        
+        const userData = {
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || 'User',
+          email: firebaseUser.email,
+          role: selectedRole,
+          createdAt: Date.now()
+        };
+        
+        await storage.set(`quizforge-account-${firebaseUser.uid}`, JSON.stringify(userData));
+        
+        setUser(userData);
+        setUserName(userData.name);
+        setUserType(userData.role);
+        setIsLoggedIn(true);
+        setSocialAuthPending(null);
+        
+        showToast(`Welcome to QuizForge, ${userData.name}!`, 'success');
+        setPage(userData.role === 'teacher' ? 'teacher-dashboard' : userData.role === 'student' ? 'student-dashboard' : 'creator-dashboard');
+      }
+    } catch (err) {
+      console.error('Google sign-in error:', err);
+      if (err.code === 'auth/popup-closed-by-user') {
+        return; // User closed popup, no error needed
+      }
+      setAuthError('Google sign-in failed. Please try again.');
+    }
+  };
+  
+  const handleAppleSignIn = async (selectedRole = null) => {
+    setAuthError('');
+    try {
+      const provider = new OAuthProvider('apple.com');
+      provider.addScope('email');
+      provider.addScope('name');
+      const result = await signInWithPopup(auth, provider);
+      const firebaseUser = result.user;
+      
+      // Check if user already exists
+      const existingUser = await storage.get(`quizforge-account-${firebaseUser.uid}`);
+      if (existingUser && existingUser.value) {
+        // Existing user - log them in
+        const userData = JSON.parse(existingUser.value);
+        setUser(userData);
+        setUserName(userData.name);
+        setUserType(userData.role);
+        setIsLoggedIn(true);
+        
+        // Load user's data
+        const dataResult = await storage.get(`quizforge-data-${firebaseUser.uid}`);
+        if (dataResult && dataResult.value) {
+          const data = JSON.parse(dataResult.value);
+          setQuizzes(data.quizzes || []);
+          setClasses(data.classes || []);
+          setJoinedClasses(data.joinedClasses || []);
+          setAssignments(data.assignments || []);
+          setSubmissions(data.submissions || []);
+          setQuestionBank(data.questionBank || []);
+          setStudentProgress(data.studentProgress || { quizzesTaken: 0, totalScore: 0, totalQuestions: 0, topicHistory: {}, recentScores: [] });
+        }
+        
+        showToast(`Welcome back, ${userData.name}!`, 'success');
+        setPage(userData.role === 'teacher' ? 'teacher-dashboard' : userData.role === 'student' ? 'student-dashboard' : 'creator-dashboard');
+      } else {
+        // New user - need to select role
+        if (!selectedRole) {
+          setSocialAuthPending({ provider: 'apple', user: firebaseUser });
+          return;
+        }
+        
+        const userData = {
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || 'User',
+          email: firebaseUser.email || 'private@apple.com',
+          role: selectedRole,
+          createdAt: Date.now()
+        };
+        
+        await storage.set(`quizforge-account-${firebaseUser.uid}`, JSON.stringify(userData));
+        
+        setUser(userData);
+        setUserName(userData.name);
+        setUserType(userData.role);
+        setIsLoggedIn(true);
+        setSocialAuthPending(null);
+        
+        showToast(`Welcome to QuizForge, ${userData.name}!`, 'success');
+        setPage(userData.role === 'teacher' ? 'teacher-dashboard' : userData.role === 'student' ? 'student-dashboard' : 'creator-dashboard');
+      }
+    } catch (err) {
+      console.error('Apple sign-in error:', err);
+      if (err.code === 'auth/popup-closed-by-user') {
+        return;
+      }
+      setAuthError('Apple sign-in failed. Please try again.');
+    }
+  };
+  
+  const completeSocialSignup = async (role) => {
+    if (!socialAuthPending) return;
+    
+    const { provider, user: firebaseUser } = socialAuthPending;
+    
+    const userData = {
+      id: firebaseUser.uid,
+      name: firebaseUser.displayName || 'User',
+      email: firebaseUser.email || 'private@apple.com',
+      role: role,
+      createdAt: Date.now()
+    };
+    
+    await storage.set(`quizforge-account-${firebaseUser.uid}`, JSON.stringify(userData));
+    
+    setUser(userData);
+    setUserName(userData.name);
+    setUserType(userData.role);
+    setIsLoggedIn(true);
+    setSocialAuthPending(null);
+    
+    showToast(`Welcome to QuizForge, ${userData.name}!`, 'success');
+    setPage(userData.role === 'teacher' ? 'teacher-dashboard' : userData.role === 'student' ? 'student-dashboard' : 'creator-dashboard');
   };
   
   const handleLogout = async () => {
@@ -1596,6 +1785,14 @@ ${quizContent.substring(0, 40000)}
                   placeholder={authMode === 'signup' ? 'At least 6 characters' : 'Enter your password'}
                   className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                 />
+                {authMode === 'login' && (
+                  <button 
+                    onClick={handleForgotPassword}
+                    className="text-sm text-indigo-600 hover:underline mt-2 block"
+                  >
+                    Forgot password?
+                  </button>
+                )}
               </div>
               
               {authMode === 'signup' && (
@@ -1642,7 +1839,114 @@ ${quizContent.substring(0, 40000)}
               >
                 {authMode === 'login' ? 'Log In' : 'Create Account'}
               </button>
+              
+              {/* Social Login Divider */}
+              <div className="flex items-center gap-4 my-4">
+                <div className="flex-1 h-px bg-slate-200"></div>
+                <span className="text-sm text-slate-400">or continue with</span>
+                <div className="flex-1 h-px bg-slate-200"></div>
+              </div>
+              
+              {/* Social Login Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => handleGoogleSignIn()}
+                  className="flex-1 py-3 px-4 border border-slate-200 rounded-xl hover:bg-slate-50 flex items-center justify-center gap-2 font-medium text-slate-700"
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                  </svg>
+                  Google
+                </button>
+                <button
+                  onClick={() => handleAppleSignIn()}
+                  className="flex-1 py-3 px-4 border border-slate-200 rounded-xl hover:bg-slate-50 flex items-center justify-center gap-2 font-medium text-slate-700"
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+                  </svg>
+                  Apple
+                </button>
+              </div>
+              
+              {authMode === 'login' && (
+                <button
+                  onClick={async () => {
+                    if (!authForm.email.trim()) {
+                      setAuthError('Please enter your email address first');
+                      return;
+                    }
+                    try {
+                      await sendPasswordResetEmail(auth, authForm.email.trim());
+                      setAuthError('');
+                      alert('Password reset email sent! Check your inbox.');
+                    } catch (err) {
+                      if (err.code === 'auth/user-not-found') {
+                        setAuthError('No account found with this email');
+                      } else {
+                        setAuthError('Failed to send reset email. Please try again.');
+                      }
+                    }
+                  }}
+                  className="w-full mt-3 text-indigo-600 text-sm hover:underline"
+                >
+                  Forgot password?
+                </button>
+              )}
             </div>
+            
+            {/* Role Selection Modal for Social Login */}
+            {socialAuthPending && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-2xl p-6 max-w-md w-full">
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">Welcome to QuizForge!</h3>
+                  <p className="text-slate-600 mb-4">One more step - tell us who you are:</p>
+                  
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => completeSocialSignup('teacher')}
+                      className="w-full p-4 rounded-xl border-2 border-slate-200 hover:border-purple-500 hover:bg-purple-50 text-left transition flex items-center gap-4"
+                    >
+                      <span className="text-3xl">👩‍🏫</span>
+                      <div>
+                        <span className="font-medium text-slate-900 block">I'm a Teacher</span>
+                        <p className="text-xs text-slate-500">Create quizzes, manage classes</p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => completeSocialSignup('student')}
+                      className="w-full p-4 rounded-xl border-2 border-slate-200 hover:border-blue-500 hover:bg-blue-50 text-left transition flex items-center gap-4"
+                    >
+                      <span className="text-3xl">👨‍🎓</span>
+                      <div>
+                        <span className="font-medium text-slate-900 block">I'm a Student</span>
+                        <p className="text-xs text-slate-500">Join classes, take quizzes</p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => completeSocialSignup('creator')}
+                      className="w-full p-4 rounded-xl border-2 border-slate-200 hover:border-amber-500 hover:bg-amber-50 text-left transition flex items-center gap-4"
+                    >
+                      <span className="text-3xl">✨</span>
+                      <div>
+                        <span className="font-medium text-slate-900 block">Quiz Creator</span>
+                        <p className="text-xs text-slate-500">Just making quizzes for myself</p>
+                      </div>
+                    </button>
+                  </div>
+                  
+                  <button
+                    onClick={() => setSocialAuthPending(null)}
+                    className="w-full mt-4 text-slate-500 text-sm hover:text-slate-700"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
             
             <div className="mt-6 text-center text-sm">
               {authMode === 'login' ? (
