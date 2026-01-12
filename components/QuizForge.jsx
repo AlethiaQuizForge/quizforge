@@ -834,6 +834,20 @@ ${quizContent.substring(0, 40000)}
     }
   };
 
+  // Cute affirmations for correct answers (shows ~30% of the time)
+  const affirmations = [
+    "You're beautiful 💕",
+    "Legend! 🏆", 
+    "Yes babe! 🔥",
+    "Smartie pants! 🧠",
+    "You got this! 💪",
+    "Killing it! ⚡",
+    "Brilliant! ✨",
+    "On fire! 🔥",
+    "Genius mode! 🎯",
+    "Slay! 👑"
+  ];
+
   const checkAnswer = () => {
     if (quizState.selectedAnswer === null) return;
     const q = currentQuiz.questions[quizState.currentQuestion];
@@ -846,6 +860,12 @@ ${quizContent.substring(0, 40000)}
     newResults[quizState.currentQuestion] = { correct: isCorrect, selected: quizState.selectedAnswer };
     
     setQuizState(s => ({ ...s, score: isCorrect ? s.score + 1 : s.score, answeredQuestions: newAnswered, results: newResults }));
+    
+    // Random affirmation ~30% of the time on correct answers
+    if (isCorrect && Math.random() < 0.3) {
+      const affirmation = affirmations[Math.floor(Math.random() * affirmations.length)];
+      showToast(affirmation, 'success');
+    }
     
     setStudentProgress(p => {
       const newHistory = { ...p.topicHistory };
