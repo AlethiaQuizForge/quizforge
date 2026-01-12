@@ -834,20 +834,6 @@ ${quizContent.substring(0, 40000)}
     }
   };
 
-  // Cute affirmations for correct answers (shows ~30% of the time)
-  const affirmations = [
-    "You're beautiful 💕",
-    "Legend! 🏆", 
-    "Yes babe! 🔥",
-    "Smartie pants! 🧠",
-    "You got this! 💪",
-    "Killing it! ⚡",
-    "Brilliant! ✨",
-    "On fire! 🔥",
-    "Genius mode! 🎯",
-    "Slay! 👑"
-  ];
-
   const checkAnswer = () => {
     if (quizState.selectedAnswer === null) return;
     const q = currentQuiz.questions[quizState.currentQuestion];
@@ -860,12 +846,6 @@ ${quizContent.substring(0, 40000)}
     newResults[quizState.currentQuestion] = { correct: isCorrect, selected: quizState.selectedAnswer };
     
     setQuizState(s => ({ ...s, score: isCorrect ? s.score + 1 : s.score, answeredQuestions: newAnswered, results: newResults }));
-    
-    // Random affirmation ~30% of the time on correct answers
-    if (isCorrect && Math.random() < 0.3) {
-      const affirmation = affirmations[Math.floor(Math.random() * affirmations.length)];
-      showToast(affirmation, 'success');
-    }
     
     setStudentProgress(p => {
       const newHistory = { ...p.topicHistory };
@@ -1334,9 +1314,9 @@ ${quizContent.substring(0, 40000)}
                 🎯 AI-Powered Assessment Platform
               </div>
               <h1 className="text-3xl md:text-5xl font-bold text-white leading-tight mb-4 md:mb-6">
-                Turn Course Materials into <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">Smart Quizzes & Exams</span> in Seconds
+                Turn Course Materials into <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">Smart Quizzes</span> in Seconds
               </h1>
-              <p className="text-base md:text-xl text-indigo-200 mb-6">Upload slides, readings, or case studies. Our AI generates quizzes for students or full exams for your class.</p>
+              <p className="text-base md:text-xl text-indigo-200 mb-6">Upload slides, readings, or case studies. Our AI generates questions that test real understanding.</p>
               <div className="flex flex-col sm:flex-row flex-wrap gap-3">
                 {isLoggedIn ? (
                   <button onClick={() => setPage(getDashboard())} className="px-6 py-3 bg-white text-indigo-900 rounded-xl font-semibold hover:bg-indigo-100 shadow-lg text-center">
@@ -1395,21 +1375,21 @@ ${quizContent.substring(0, 40000)}
                       <div className="text-xl">📤</div>
                       <div>
                         <h4 className="font-semibold text-slate-900 text-xs">Upload</h4>
-                        <p className="text-slate-500 text-xs">Lecture slides, PDFs, or notes</p>
+                        <p className="text-slate-500 text-xs">PDFs, slides, or notes</p>
                       </div>
                     </div>
                     <div className="bg-white/80 rounded-xl p-3 flex items-center gap-3">
                       <div className="text-xl">🧠</div>
                       <div>
-                        <h4 className="font-semibold text-slate-900 text-xs">Generate Quizzes & Exams</h4>
-                        <p className="text-slate-500 text-xs">AI creates assessments instantly</p>
+                        <h4 className="font-semibold text-slate-900 text-xs">Generate</h4>
+                        <p className="text-slate-500 text-xs">AI creates quiz instantly</p>
                       </div>
                     </div>
                     <div className="bg-white/80 rounded-xl p-3 flex items-center gap-3">
                       <div className="text-xl">📊</div>
                       <div>
                         <h4 className="font-semibold text-slate-900 text-xs">Assign & Track</h4>
-                        <p className="text-slate-500 text-xs">Share with class, view results</p>
+                        <p className="text-slate-500 text-xs">Share code, view results</p>
                       </div>
                     </div>
                   </div>
@@ -1945,272 +1925,72 @@ ${quizContent.substring(0, 40000)}
                 <div className="text-5xl mb-4">👥</div><h3 className="text-lg font-semibold text-slate-900 mb-2">No Classes Yet</h3>
                 <button onClick={() => setModal({ type: 'input', title: 'Create New Class', placeholder: 'Class name (e.g., Economics 101)', confirmText: 'Create', onConfirm: createClass })} className="px-6 py-2 bg-indigo-600 text-white rounded-lg">Create Class</button>
               </div>
-            ) : (() => {
-              // Calculate class stats
-              const classStudents = selectedClass?.students || [];
-              const classAssignmentsList = assignments.filter(a => a.classId === selectedClass?.id);
-              const classSubmissionsList = submissions.filter(s => classAssignmentsList.some(a => a.id === s.assignmentId));
-              const classAvg = classSubmissionsList.length > 0 ? Math.round(classSubmissionsList.reduce((sum, s) => sum + s.percentage, 0) / classSubmissionsList.length) : 0;
-              
-              // Get completion data per assignment
-              const assignmentStats = classAssignmentsList.map(a => {
-                const quiz = quizzes.find(q => q.id === a.quizId);
-                const subs = submissions.filter(s => s.assignmentId === a.id);
-                const completedCount = subs.length;
-                const totalStudents = classStudents.length;
-                const avgScore = subs.length > 0 ? Math.round(subs.reduce((sum, s) => sum + s.percentage, 0) / subs.length) : 0;
-                return { ...a, quiz, submissions: subs, completedCount, totalStudents, avgScore };
-              });
-              
-              // Get student performance data
-              const studentStats = classStudents.map(student => {
-                const studentSubs = classSubmissionsList.filter(s => s.studentName === student.name);
-                const completed = studentSubs.length;
-                const total = classAssignmentsList.length;
-                const avgScore = studentSubs.length > 0 ? Math.round(studentSubs.reduce((sum, s) => sum + s.percentage, 0) / studentSubs.length) : null;
-                return { ...student, submissions: studentSubs, completed, total, avgScore };
-              });
-              
-              return (
-                <>
-                  {/* Class Header */}
-                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                      <div>
-                        {classes.length > 1 ? (
-                          <select 
-                            value={selectedClass?.id || ''} 
-                            onChange={e => setCurrentClass(classes.find(c => c.id === e.target.value))}
-                            className="text-2xl font-bold text-slate-900 bg-transparent border-none cursor-pointer focus:outline-none"
-                          >
-                            {classes.map(cls => (
-                              <option key={cls.id} value={cls.id}>{cls.name}</option>
-                            ))}
-                          </select>
-                        ) : (
-                          <h1 className="text-2xl font-bold text-slate-900">{selectedClass?.name}</h1>
-                        )}
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-slate-500 text-sm">Join Code:</span>
-                          <span className="font-mono bg-indigo-100 px-2 py-0.5 rounded text-indigo-700 font-bold text-sm">{selectedClass?.code}</span>
-                          <button onClick={() => { navigator.clipboard.writeText(selectedClass?.code || ''); showToast('📋 Code copied!', 'success'); }} className="text-xs text-indigo-600 hover:text-indigo-800">Copy</button>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <button onClick={() => setModal({ type: 'input', title: 'Create New Class', placeholder: 'Class name', confirmText: 'Create', onConfirm: createClass })} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 text-sm">+ New Class</button>
-                        <button onClick={() => quizzes.length > 0 ? setModal({ type: 'select', title: 'Assign Quiz to ' + selectedClass?.name }) : showToast('Create a quiz first', 'error')} className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-500 text-sm">+ Assign Quiz</button>
-                      </div>
-                    </div>
-                    
-                    {/* Stats Row */}
-                    <div className="grid grid-cols-4 gap-4 mt-6 pt-6 border-t border-slate-100">
-                      <div className="text-center">
-                        <p className="text-2xl font-bold text-slate-900">{classStudents.length}</p>
-                        <p className="text-xs text-slate-500">Students</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-2xl font-bold text-indigo-600">{classAssignmentsList.length}</p>
-                        <p className="text-xs text-slate-500">Assignments</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-2xl font-bold text-green-600">{classAvg || '--'}%</p>
-                        <p className="text-xs text-slate-500">Class Average</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-2xl font-bold text-amber-600">{classSubmissionsList.length}</p>
-                        <p className="text-xs text-slate-500">Submissions</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Tabs */}
-                  <div className="flex gap-1 mb-6 bg-white rounded-lg p-1 shadow-sm border border-slate-200 w-fit">
-                    {['assignments', 'students', 'gradebook'].map(tab => (
-                      <button 
-                        key={tab}
-                        onClick={() => setModalInput(tab)}
-                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${(modalInput || 'assignments') === tab ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
+            ) : (
+              <>
+                <div className="flex justify-between items-start mb-6">
+                  <div>
+                    {/* Class selector dropdown */}
+                    {classes.length > 1 ? (
+                      <select 
+                        value={selectedClass?.id || ''} 
+                        onChange={e => setCurrentClass(classes.find(c => c.id === e.target.value))}
+                        className="text-2xl font-bold text-slate-900 bg-transparent border-none cursor-pointer focus:outline-none pr-8"
                       >
-                        {tab === 'assignments' ? '📋 Assignments' : tab === 'students' ? '👥 Students' : '📊 Gradebook'}
+                        {classes.map(cls => (
+                          <option key={cls.id} value={cls.id}>{cls.name}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <h1 className="text-2xl font-bold text-slate-900">{selectedClass?.name}</h1>
+                    )}
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-slate-600">Code:</span>
+                      <span className="font-mono bg-slate-100 px-2 py-1 rounded text-indigo-600 font-bold">{selectedClass?.code}</span>
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(selectedClass?.code || '');
+                          showToast('📋 Code copied!', 'success');
+                        }}
+                        className="text-xs px-2 py-1 bg-indigo-100 text-indigo-600 rounded hover:bg-indigo-200"
+                      >
+                        Copy
                       </button>
-                    ))}
+                    </div>
                   </div>
-                  
-                  {/* Assignments Tab */}
-                  {(modalInput || 'assignments') === 'assignments' && (
-                    <div className="space-y-4">
-                      {assignmentStats.length > 0 ? assignmentStats.map(a => (
-                        <div key={a.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-                          <div className="flex items-start justify-between mb-3">
-                            <div>
-                              <h4 className="font-semibold text-slate-900">{a.quiz?.name || 'Unknown Quiz'}</h4>
-                              <p className="text-sm text-slate-500">{a.quiz?.questions.length || 0} questions</p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-sm font-medium text-slate-900">{a.avgScore > 0 ? `${a.avgScore}% avg` : 'No scores yet'}</p>
-                              <p className="text-xs text-slate-500">{a.completedCount}/{a.totalStudents} completed</p>
-                            </div>
-                          </div>
-                          {/* Progress bar */}
-                          <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
-                            <div 
-                              className={`h-full rounded-full transition-all ${a.completedCount === a.totalStudents ? 'bg-green-500' : 'bg-indigo-500'}`}
-                              style={{ width: `${a.totalStudents > 0 ? (a.completedCount / a.totalStudents) * 100 : 0}%` }}
-                            />
-                          </div>
-                          {/* Individual scores */}
-                          {a.submissions.length > 0 && (
-                            <div className="mt-3 pt-3 border-t border-slate-100">
-                              <div className="flex flex-wrap gap-2">
-                                {a.submissions.map((sub, i) => (
-                                  <span key={i} className={`text-xs px-2 py-1 rounded-full ${sub.percentage >= 80 ? 'bg-green-100 text-green-700' : sub.percentage >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
-                                    {sub.studentName.split(' ')[0]}: {sub.percentage}%
-                                  </span>
-                                ))}
-                                {a.totalStudents - a.completedCount > 0 && (
-                                  <span className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-500">
-                                    +{a.totalStudents - a.completedCount} pending
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )) : (
-                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
-                          <div className="text-4xl mb-3">📝</div>
-                          <h4 className="font-semibold text-slate-900 mb-2">No Assignments Yet</h4>
-                          <p className="text-slate-500 text-sm mb-4">Create a quiz and assign it to this class</p>
-                          <button onClick={() => setPage('create-quiz')} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm">Create Quiz</button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  
-                  {/* Students Tab */}
-                  {modalInput === 'students' && (
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                      {studentStats.length > 0 ? (
-                        <div className="divide-y divide-slate-100">
-                          {studentStats.map((student, i) => (
-                            <div key={i} className="flex items-center justify-between p-4 hover:bg-slate-50">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-bold">
-                                  {student.name.substring(0, 2).toUpperCase()}
-                                </div>
-                                <div>
-                                  <p className="font-medium text-slate-900">{student.name}</p>
-                                  <p className="text-xs text-slate-500">
-                                    {student.completed}/{student.total} assignments completed
-                                    {student.completed < student.total && <span className="text-amber-600 ml-1">⚠️</span>}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                {student.avgScore !== null ? (
-                                  <p className={`text-lg font-bold ${student.avgScore >= 80 ? 'text-green-600' : student.avgScore >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
-                                    {student.avgScore}%
-                                  </p>
-                                ) : (
-                                  <p className="text-slate-400">--</p>
-                                )}
-                                <p className="text-xs text-slate-500">average</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="p-12 text-center">
-                          <div className="text-4xl mb-3">👥</div>
-                          <h4 className="font-semibold text-slate-900 mb-2">No Students Yet</h4>
-                          <p className="text-slate-500 text-sm">Share the code <span className="font-mono bg-slate-100 px-2 py-1 rounded">{selectedClass?.code}</span> with your students</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  
-                  {/* Gradebook Tab */}
-                  {modalInput === 'gradebook' && (
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                      {studentStats.length > 0 && assignmentStats.length > 0 ? (
-                        <div className="overflow-x-auto">
-                          <table className="w-full">
-                            <thead className="bg-slate-50 border-b border-slate-200">
-                              <tr>
-                                <th className="text-left px-4 py-3 text-sm font-semibold text-slate-900">Student</th>
-                                {assignmentStats.map(a => (
-                                  <th key={a.id} className="text-center px-4 py-3 text-sm font-semibold text-slate-900 min-w-[100px]">
-                                    <div className="truncate max-w-[120px]" title={a.quiz?.name}>{a.quiz?.name}</div>
-                                  </th>
-                                ))}
-                                <th className="text-center px-4 py-3 text-sm font-semibold text-slate-900 bg-indigo-50">Average</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                              {studentStats.map((student, i) => (
-                                <tr key={i} className="hover:bg-slate-50">
-                                  <td className="px-4 py-3">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-xs font-bold">
-                                        {student.name.substring(0, 2).toUpperCase()}
-                                      </div>
-                                      <span className="font-medium text-slate-900">{student.name}</span>
-                                    </div>
-                                  </td>
-                                  {assignmentStats.map(a => {
-                                    const sub = student.submissions.find(s => s.assignmentId === a.id);
-                                    return (
-                                      <td key={a.id} className="text-center px-4 py-3">
-                                        {sub ? (
-                                          <span className={`font-medium ${sub.percentage >= 80 ? 'text-green-600' : sub.percentage >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
-                                            {sub.percentage}%
-                                          </span>
-                                        ) : (
-                                          <span className="text-slate-300">--</span>
-                                        )}
-                                      </td>
-                                    );
-                                  })}
-                                  <td className="text-center px-4 py-3 bg-indigo-50">
-                                    {student.avgScore !== null ? (
-                                      <span className={`font-bold ${student.avgScore >= 80 ? 'text-green-600' : student.avgScore >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
-                                        {student.avgScore}%
-                                      </span>
-                                    ) : (
-                                      <span className="text-slate-300">--</span>
-                                    )}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                            {/* Class averages footer */}
-                            <tfoot className="bg-slate-50 border-t-2 border-slate-200">
-                              <tr>
-                                <td className="px-4 py-3 font-semibold text-slate-900">Class Average</td>
-                                {assignmentStats.map(a => (
-                                  <td key={a.id} className="text-center px-4 py-3 font-semibold text-indigo-600">
-                                    {a.avgScore > 0 ? `${a.avgScore}%` : '--'}
-                                  </td>
-                                ))}
-                                <td className="text-center px-4 py-3 bg-indigo-100 font-bold text-indigo-700">
-                                  {classAvg > 0 ? `${classAvg}%` : '--'}
-                                </td>
-                              </tr>
-                            </tfoot>
-                          </table>
-                        </div>
-                      ) : (
-                        <div className="p-12 text-center">
-                          <div className="text-4xl mb-3">📊</div>
-                          <h4 className="font-semibold text-slate-900 mb-2">No Data Yet</h4>
-                          <p className="text-slate-500 text-sm">Gradebook will populate as students complete assignments</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </>
-              );
-            })()}
+                  <div className="flex gap-2">
+                    <button onClick={() => setModal({ type: 'input', title: 'Create New Class', placeholder: 'Class name', confirmText: 'Create', onConfirm: createClass })} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200">+ New Class</button>
+                    <button onClick={() => quizzes.length > 0 ? setModal({ type: 'select', title: 'Assign Quiz to ' + selectedClass?.name }) : showToast('Create a quiz first', 'error')} className="px-5 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-500">+ Assign Quiz</button>
+                  </div>
+                </div>
+                <div className="grid lg:grid-cols-3 gap-6">
+                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                    <h3 className="font-semibold text-slate-900 mb-4">Students ({selectedClass?.students.length})</h3>
+                    {selectedClass?.students.length > 0 ? selectedClass.students.map((student, i) => (
+                      <div key={i} className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg mb-2">
+                        <div className="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-xs font-bold">{student.name.substring(0, 2).toUpperCase()}</div>
+                        <span className="text-sm text-slate-900">{student.name}</span>
+                      </div>
+                    )) : <p className="text-slate-500 text-sm text-center py-4">Share code <span className="font-mono bg-slate-100 px-1">{selectedClass?.code}</span></p>}
+                  </div>
+                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                    <h3 className="font-semibold text-slate-900 mb-4">Assigned Quizzes</h3>
+                    {classAssignments.length > 0 ? classAssignments.map(a => {
+                      const quiz = quizzes.find(q => q.id === a.quizId);
+                      return <div key={a.id} className="p-3 bg-slate-50 rounded-lg mb-2"><p className="font-medium text-slate-900">{quiz?.name}</p><p className="text-sm text-slate-500">{submissions.filter(s => s.assignmentId === a.id).length} submissions</p></div>;
+                    }) : <p className="text-slate-500 text-sm text-center py-4">No quizzes assigned</p>}
+                  </div>
+                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                    <h3 className="font-semibold text-slate-900 mb-4">Results</h3>
+                    {classSubmissions.length > 0 ? classSubmissions.slice(-5).reverse().map((sub, i) => (
+                      <div key={i} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg mb-2">
+                        <div><p className="text-sm font-medium text-slate-900">{sub.studentName}</p><p className="text-xs text-slate-500">{sub.score}/{sub.total}</p></div>
+                        <span className={`font-semibold ${sub.percentage >= 80 ? 'text-green-600' : sub.percentage >= 60 ? 'text-amber-600' : 'text-red-600'}`}>{sub.percentage}%</span>
+                      </div>
+                    )) : <p className="text-slate-500 text-sm text-center py-4">No results yet</p>}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
