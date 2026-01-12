@@ -1526,6 +1526,22 @@ ${quizContent.substring(0, 40000)}
               </div>
             </div>
           </div>
+          
+          {/* Footer */}
+          <footer className="bg-slate-900 py-8 px-6">
+            <div className="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">⚡</span>
+                <span className="font-bold text-white">QuizForge</span>
+                <span className="text-slate-400 text-sm ml-2">© 2026</span>
+              </div>
+              <div className="flex gap-6 text-sm">
+                <a href="/privacy" className="text-slate-400 hover:text-white transition-colors">Privacy Policy</a>
+                <a href="/terms" className="text-slate-400 hover:text-white transition-colors">Terms of Service</a>
+                <a href="mailto:support@quizforge.app" className="text-slate-400 hover:text-white transition-colors">Contact</a>
+              </div>
+            </div>
+          </footer>
         </div>
       )}
       
