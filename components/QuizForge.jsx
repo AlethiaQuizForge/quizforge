@@ -1334,9 +1334,9 @@ ${quizContent.substring(0, 40000)}
                 🎯 AI-Powered Assessment Platform
               </div>
               <h1 className="text-3xl md:text-5xl font-bold text-white leading-tight mb-4 md:mb-6">
-                Turn Course Materials into <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">Smart Quizzes</span> in Seconds
+                Turn Course Materials into <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">Smart Quizzes & Exams</span> in Seconds
               </h1>
-              <p className="text-base md:text-xl text-indigo-200 mb-6">Upload slides, readings, or case studies. Our AI generates questions that test real understanding.</p>
+              <p className="text-base md:text-xl text-indigo-200 mb-6">Upload slides, readings, or case studies. Our AI generates quizzes for students or full exams for your class.</p>
               <div className="flex flex-col sm:flex-row flex-wrap gap-3">
                 {isLoggedIn ? (
                   <button onClick={() => setPage(getDashboard())} className="px-6 py-3 bg-white text-indigo-900 rounded-xl font-semibold hover:bg-indigo-100 shadow-lg text-center">
@@ -1395,21 +1395,21 @@ ${quizContent.substring(0, 40000)}
                       <div className="text-xl">📤</div>
                       <div>
                         <h4 className="font-semibold text-slate-900 text-xs">Upload</h4>
-                        <p className="text-slate-500 text-xs">PDFs, slides, or notes</p>
+                        <p className="text-slate-500 text-xs">Lecture slides, PDFs, or notes</p>
                       </div>
                     </div>
                     <div className="bg-white/80 rounded-xl p-3 flex items-center gap-3">
                       <div className="text-xl">🧠</div>
                       <div>
-                        <h4 className="font-semibold text-slate-900 text-xs">Generate</h4>
-                        <p className="text-slate-500 text-xs">AI creates quiz instantly</p>
+                        <h4 className="font-semibold text-slate-900 text-xs">Generate Quizzes & Exams</h4>
+                        <p className="text-slate-500 text-xs">AI creates assessments instantly</p>
                       </div>
                     </div>
                     <div className="bg-white/80 rounded-xl p-3 flex items-center gap-3">
                       <div className="text-xl">📊</div>
                       <div>
                         <h4 className="font-semibold text-slate-900 text-xs">Assign & Track</h4>
-                        <p className="text-slate-500 text-xs">Share code, view results</p>
+                        <p className="text-slate-500 text-xs">Share with class, view results</p>
                       </div>
                     </div>
                   </div>
