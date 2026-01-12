@@ -91,7 +91,7 @@ export default function PrivacyPolicy() {
             If you have questions about this Privacy Policy, please contact us at:
           </p>
           <p className="text-slate-600 mb-4">
-            <strong>Email:</strong> privacy@quizforge.app<br />
+            <strong>Email:</strong> privacy@quizforgeapp.com<br />
           </p>
         </div>
         

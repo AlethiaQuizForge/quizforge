@@ -121,7 +121,7 @@ export default function TermsOfService() {
           <h2 className="text-xl font-semibold text-slate-900 mt-8 mb-4">16. Contact</h2>
           <p className="text-slate-600 mb-4">
             For questions about these Terms, contact us at:<br />
-            <strong>Email:</strong> legal@quizforge.app
+            <strong>Email:</strong> legal@quizforgeapp.com
           </p>
         </div>
         
