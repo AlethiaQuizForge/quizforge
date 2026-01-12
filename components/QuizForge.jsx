@@ -519,34 +519,23 @@ export default function QuizForge() {
         const controller = new AbortController();
         setUploadController(controller);
         
-        const imageContent = pageImages.map(img => ({
-          type: 'image',
-          source: { type: 'base64', media_type: 'image/jpeg', data: img }
-        }));
-        
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
+        // Use server-side API route for vision (keeps API key secure)
+        const response = await fetch('/api/vision', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           signal: controller.signal,
-          body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 8000,
-            messages: [{
-              role: 'user',
-              content: [
-                ...imageContent,
-                { type: 'text', text: 'Extract ALL text and describe all visual content from these PDF pages. Output as clean text.' }
-              ]
-            }]
-          })
+          body: JSON.stringify({ images: pageImages })
         });
         
         setUploadController(null);
         
-        if (!response.ok) throw new Error(`Vision API error for ${file.name}`);
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Vision API error for ${file.name}`);
+        }
         
         const data = await response.json();
-        const visionText = data.content.filter(b => b.type === 'text').map(b => b.text).join('\n\n');
+        const visionText = data.text || '';
         
         if (visionText.length > 200) {
           return { success: true, text: visionText, name: file.name };
