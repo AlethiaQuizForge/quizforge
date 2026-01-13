@@ -78,7 +78,9 @@ export default function QuizForge() {
   const [questionBank, setQuestionBank] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
   const [studentProgress, setStudentProgress] = useState({
-    quizzesTaken: 0, totalScore: 0, totalQuestions: 0, topicHistory: {}, recentScores: []
+    quizzesTaken: 0, totalScore: 0, totalQuestions: 0, topicHistory: {}, recentScores: [],
+    currentStreak: 0, longestStreak: 0, lastPracticeDate: null,
+    achievements: []
   });
   
   const [classes, setClasses] = useState([]);
@@ -110,6 +112,10 @@ export default function QuizForge() {
   const [uploadController, setUploadController] = useState(null);
   const [sharedQuizMode, setSharedQuizMode] = useState(false);
   const [sharedQuizData, setSharedQuizData] = useState(null);
+  const [isActionLoading, setIsActionLoading] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [editingQuestion, setEditingQuestion] = useState(null);
+  const [quizTagInput, setQuizTagInput] = useState('');
   const fileInputRef = useRef(null);
   
   const cancelUpload = () => {
@@ -539,52 +545,92 @@ export default function QuizForge() {
     setTimeout(() => setToast(null), 3000);
   };
   
-  // Share quiz function
+  // Share quiz function - uses existing shareId to prevent database bloat
   const shareQuiz = async (quiz) => {
     try {
-      const shareId = `s${Date.now()}`;
+      let shareId = quiz.shareId;
       
-      // Warn if quiz is very large (>50 questions)
-      const questionsToShare = quiz.questions.length > 50 
-        ? quiz.questions.slice(0, 50) 
-        : quiz.questions;
-      
-      if (quiz.questions.length > 50) {
-        showToast(`ℹ️ Sharing first 50 of ${quiz.questions.length} questions`, 'info');
+      // Only create new share if quiz doesn't have one
+      if (!shareId) {
+        shareId = `s${Date.now()}`;
+        
+        const questionsToShare = quiz.questions.length > 50 
+          ? quiz.questions.slice(0, 50) 
+          : quiz.questions;
+        
+        if (quiz.questions.length > 50) {
+          showToast(`ℹ️ Sharing first 50 of ${quiz.questions.length} questions`, 'info');
+        }
+        
+        const shareData = {
+          id: shareId,
+          name: quiz.name,
+          questions: questionsToShare,
+          subject: quiz.subject || 'General',
+          createdBy: user?.name || 'Anonymous',
+          createdAt: Date.now()
+        };
+        
+        const result = await storage.set(`shared-${shareId}`, JSON.stringify(shareData));
+        
+        if (!result) {
+          showToast('❌ Could not save quiz to database', 'error');
+          return null;
+        }
+        
+        // Update quiz with shareId to prevent future duplicates
+        const updatedQuiz = { ...quiz, shareId };
+        setQuizzes(prev => prev.map(q => q.id === quiz.id ? updatedQuiz : q));
+        if (currentQuiz.id === quiz.id) {
+          setCurrentQuiz(updatedQuiz);
+        }
       }
+      
+      const shareUrl = `${window.location.origin}?quiz=${shareId}`;
+      
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        showToast('🔗 Share link copied to clipboard!', 'success');
+      } catch (clipboardErr) {
+        setModalInput(shareUrl);
+        setModal('share-link');
+      }
+      
+      return shareId;
+    } catch (err) {
+      console.error('Share error:', err);
+      showToast(`❌ Share failed: ${err.message || 'Unknown error'}`, 'error');
+      return null;
+    }
+  };
+  
+  // Get or create shareId for a quiz (used by social share buttons)
+  const getShareUrl = async (quiz) => {
+    let shareId = quiz.shareId;
+    
+    if (!shareId) {
+      shareId = `s${Date.now()}`;
       
       const shareData = {
         id: shareId,
         name: quiz.name,
-        questions: questionsToShare,
+        questions: quiz.questions.slice(0, 50),
         subject: quiz.subject || 'General',
         createdBy: user?.name || 'Anonymous',
         createdAt: Date.now()
       };
       
-      const result = await storage.set(`shared-${shareId}`, JSON.stringify(shareData));
+      await storage.set(`shared-${shareId}`, JSON.stringify(shareData));
       
-      if (!result) {
-        showToast('❌ Could not save quiz to database', 'error');
-        return;
+      // Update quiz with shareId
+      const updatedQuiz = { ...quiz, shareId };
+      setQuizzes(prev => prev.map(q => q.id === quiz.id ? updatedQuiz : q));
+      if (currentQuiz.id === quiz.id) {
+        setCurrentQuiz(updatedQuiz);
       }
-      
-      const shareUrl = `${window.location.origin}${window.location.pathname}?quiz=${shareId}`;
-      
-      // Try to copy to clipboard, but always show modal as backup
-      try {
-        await navigator.clipboard.writeText(shareUrl);
-        showToast('🔗 Share link copied to clipboard!', 'success');
-      } catch (clipboardErr) {
-        // Clipboard failed - show modal with link instead
-        console.log('Clipboard access denied, showing modal');
-        setModalInput(shareUrl);
-        setModal('share-link');
-      }
-    } catch (err) {
-      console.error('Share error:', err);
-      showToast(`❌ Share failed: ${err.message || 'Unknown error'}`, 'error');
     }
+    
+    return `${window.location.origin}?quiz=${shareId}`;
   };
 
   const navigate = (newPage, type = null) => {
@@ -995,13 +1041,16 @@ ${quizContent.substring(0, 40000)}
   };
 
   const joinClass = () => {
+    setIsActionLoading(true);
     const code = joinCodeInput.toUpperCase().trim();
     if (!code) {
       showToast('⚠️ Please enter a class code', 'error');
+      setIsActionLoading(false);
       return;
     }
     if (!user?.name) {
       showToast('⚠️ Please log in first', 'error');
+      setIsActionLoading(false);
       return;
     }
     const foundClass = classes.find(c => c.code === code);
@@ -1009,6 +1058,7 @@ ${quizContent.substring(0, 40000)}
       // Check if already joined
       if (joinedClasses.some(c => c.id === foundClass.id)) {
         showToast('ℹ️ You already joined this class', 'info');
+        setIsActionLoading(false);
         return;
       }
       const studentName = user.name;
@@ -1020,6 +1070,134 @@ ${quizContent.substring(0, 40000)}
     } else {
       showToast('❌ Invalid class code. Check with your teacher.', 'error');
     }
+    setIsActionLoading(false);
+  };
+
+  // Leave class function
+  const leaveClass = (classId) => {
+    setIsActionLoading(true);
+    const classToLeave = joinedClasses.find(c => c.id === classId);
+    if (classToLeave) {
+      // Remove student from class
+      const updatedClass = {
+        ...classToLeave,
+        students: classToLeave.students.filter(s => s.name !== user?.name)
+      };
+      setClasses(prev => prev.map(c => c.id === classId ? updatedClass : c));
+      setJoinedClasses(prev => prev.filter(c => c.id !== classId));
+      showToast(`Left "${classToLeave.name}"`, 'info');
+    }
+    setIsActionLoading(false);
+    setModal(null);
+  };
+
+  // Duplicate quiz function
+  const duplicateQuiz = (quiz) => {
+    const newQuiz = {
+      ...quiz,
+      id: `q${Date.now()}`,
+      name: `${quiz.name} (Copy)`,
+      shareId: null, // Reset shareId for new quiz
+      createdAt: Date.now()
+    };
+    setQuizzes(prev => [...prev, newQuiz]);
+    showToast(`✅ Quiz duplicated!`, 'success');
+    setModal(null);
+  };
+
+  // Edit quiz question
+  const saveQuestionEdit = (quizId, questionIndex, updatedQuestion) => {
+    setQuizzes(prev => prev.map(q => {
+      if (q.id === quizId) {
+        const newQuestions = [...q.questions];
+        newQuestions[questionIndex] = updatedQuestion;
+        return { ...q, questions: newQuestions, shareId: null }; // Reset shareId on edit
+      }
+      return q;
+    }));
+    if (currentQuiz.id === quizId) {
+      setCurrentQuiz(prev => {
+        const newQuestions = [...prev.questions];
+        newQuestions[questionIndex] = updatedQuestion;
+        return { ...prev, questions: newQuestions, shareId: null };
+      });
+    }
+    setEditingQuestion(null);
+    showToast('✅ Question updated!', 'success');
+  };
+
+  // Delete question from quiz
+  const deleteQuestion = (quizId, questionIndex) => {
+    setQuizzes(prev => prev.map(q => {
+      if (q.id === quizId) {
+        const newQuestions = q.questions.filter((_, i) => i !== questionIndex);
+        return { ...q, questions: newQuestions, shareId: null };
+      }
+      return q;
+    }));
+    if (currentQuiz.id === quizId) {
+      setCurrentQuiz(prev => ({
+        ...prev,
+        questions: prev.questions.filter((_, i) => i !== questionIndex),
+        shareId: null
+      }));
+    }
+    showToast('Question deleted', 'info');
+  };
+
+  // Achievement definitions
+  const ACHIEVEMENTS = [
+    { id: 'first_quiz', name: '🎯 First Quiz', description: 'Complete your first quiz', check: (p) => p.quizzesTaken >= 1 },
+    { id: 'streak_3', name: '🔥 On Fire', description: '3 day practice streak', check: (p) => p.currentStreak >= 3 },
+    { id: 'streak_7', name: '⚡ Week Warrior', description: '7 day practice streak', check: (p) => p.currentStreak >= 7 },
+    { id: 'quiz_10', name: '📚 Dedicated Learner', description: 'Complete 10 quizzes', check: (p) => p.quizzesTaken >= 10 },
+    { id: 'quiz_50', name: '🏆 Quiz Master', description: 'Complete 50 quizzes', check: (p) => p.quizzesTaken >= 50 },
+    { id: 'perfect_score', name: '💯 Perfect!', description: 'Get 100% on a quiz', check: (p, score, total) => score === total },
+    { id: 'high_avg', name: '⭐ Star Student', description: 'Maintain 80%+ average', check: (p) => p.totalQuestions > 0 && (p.totalScore / p.totalQuestions) >= 0.8 }
+  ];
+
+  // Check and award achievements
+  const checkAchievements = (progress, score = 0, total = 0) => {
+    const newAchievements = [];
+    ACHIEVEMENTS.forEach(a => {
+      if (!progress.achievements?.includes(a.id) && a.check(progress, score, total)) {
+        newAchievements.push(a.id);
+        showToast(`🏆 Achievement: ${a.name}!`, 'success');
+      }
+    });
+    return [...(progress.achievements || []), ...newAchievements];
+  };
+
+  // Update practice streak
+  const updateStreak = (progress) => {
+    const today = new Date().toDateString();
+    const lastPractice = progress.lastPracticeDate ? new Date(progress.lastPracticeDate).toDateString() : null;
+    
+    if (lastPractice === today) {
+      return progress; // Already practiced today
+    }
+    
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const isConsecutive = lastPractice === yesterday.toDateString();
+    
+    const newStreak = isConsecutive ? progress.currentStreak + 1 : 1;
+    const longestStreak = Math.max(progress.longestStreak || 0, newStreak);
+    
+    return {
+      ...progress,
+      currentStreak: newStreak,
+      longestStreak,
+      lastPracticeDate: Date.now()
+    };
+  };
+
+  // Limit question bank size (keep most recent 500)
+  const limitQuestionBank = (questions) => {
+    if (questions.length > 500) {
+      return questions.slice(-500);
+    }
+    return questions;
   };
 
   const assignQuiz = (quizId, weight = 10, dueDate = null) => {
@@ -1105,9 +1283,31 @@ ${quizContent.substring(0, 40000)}
     if (quizState.currentQuestion < currentQuiz.questions.length - 1) {
       setQuizState(s => ({ ...s, currentQuestion: s.currentQuestion + 1, selectedAnswer: null }));
     } else {
-      setStudentProgress(p => ({ ...p, quizzesTaken: p.quizzesTaken + 1, recentScores: [...p.recentScores.slice(-7), Math.round((quizState.score / currentQuiz.questions.length) * 100)] }));
+      // Quiz completed - update progress with streak and achievements
+      const score = quizState.score;
+      const total = currentQuiz.questions.length;
+      
+      setStudentProgress(p => {
+        // Update streak
+        let updatedProgress = updateStreak(p);
+        
+        // Update stats
+        updatedProgress = {
+          ...updatedProgress,
+          quizzesTaken: updatedProgress.quizzesTaken + 1,
+          totalScore: updatedProgress.totalScore + score,
+          totalQuestions: updatedProgress.totalQuestions + total,
+          recentScores: [...updatedProgress.recentScores.slice(-7), Math.round((score / total) * 100)]
+        };
+        
+        // Check achievements
+        updatedProgress.achievements = checkAchievements(updatedProgress, score, total);
+        
+        return updatedProgress;
+      });
+      
       if (currentAssignment) {
-        submitQuizResult(currentAssignment.id, quizState.score, currentQuiz.questions.length, quizState.results);
+        submitQuizResult(currentAssignment.id, score, total, quizState.results);
         setCurrentAssignment(null);
       }
       setPage('quiz-results');
@@ -1115,9 +1315,9 @@ ${quizContent.substring(0, 40000)}
   };
 
   const publishQuiz = () => {
-    const published = { ...currentQuiz, published: true };
+    const published = { ...currentQuiz, published: true, tags: quizTagInput ? quizTagInput.split(',').map(t => t.trim()).filter(t => t) : [] };
     setQuizzes(prev => [...prev, published]);
-    setQuestionBank(prev => [...prev, ...currentQuiz.questions]);
+    setQuestionBank(prev => limitQuestionBank([...prev, ...currentQuiz.questions]));
     
     // Clear quiz form for next quiz
     setQuizContent('');
@@ -1127,6 +1327,7 @@ ${quizContent.substring(0, 40000)}
     setDifficulty('mixed');
     setTopicFocus('');
     setQuestionStyle('concept');
+    setQuizTagInput('');
     
     showToast('✅ Quiz published!', 'success');
     
@@ -1140,10 +1341,28 @@ ${quizContent.substring(0, 40000)}
   };
   
   const deleteQuiz = (quizId) => {
+    setIsActionLoading(true);
     setQuizzes(prev => prev.filter(q => q.id !== quizId));
-    // Also remove questions from bank that came from this quiz
     showToast('🗑️ Quiz deleted', 'info');
     setModal(null);
+    setIsActionLoading(false);
+  };
+
+  // Retry only wrong answers
+  const retryWrongAnswers = () => {
+    const wrongQuestions = quizState.results
+      .map((r, i) => ({ ...currentQuiz.questions[i], wasWrong: !r.correct }))
+      .filter(q => q.wasWrong)
+      .map(q => ({ ...q, options: shuffleArray([...q.options]) }));
+    
+    if (wrongQuestions.length === 0) {
+      showToast('🎉 No wrong answers to retry!', 'success');
+      return;
+    }
+    
+    setCurrentQuiz(prev => ({ ...prev, questions: wrongQuestions }));
+    setQuizState({ currentQuestion: 0, selectedAnswer: null, answeredQuestions: new Set(), score: 0, results: [] });
+    setPage('take-quiz');
   };
 
   const startPractice = (topic) => {
@@ -1166,8 +1385,8 @@ ${quizContent.substring(0, 40000)}
 
   const resetData = async () => {
     setQuestionBank([]); setQuizzes([]); setClasses([]); setJoinedClasses([]); setAssignments([]); setSubmissions([]);
-    setStudentProgress({ quizzesTaken: 0, totalScore: 0, totalQuestions: 0, topicHistory: {}, recentScores: [] });
-    setQuizContent(''); setQuizSubject(''); setQuizNameInput(''); setJoinCodeInput('');
+    setStudentProgress({ quizzesTaken: 0, totalScore: 0, totalQuestions: 0, topicHistory: {}, recentScores: [], currentStreak: 0, longestStreak: 0, lastPracticeDate: null, achievements: [] });
+    setQuizContent(''); setQuizSubject(''); setQuizNameInput(''); setJoinCodeInput(''); setQuizTagInput('');
     setCurrentClass(null); setCurrentQuiz({ id: null, name: '', questions: [], published: false });
     
     // Clear saved data
@@ -1574,6 +1793,112 @@ ${quizContent.substring(0, 40000)}
                 )}
               </>
             )}
+          </div>
+        </div>
+      )}
+      
+      {/* EDIT QUESTION MODAL */}
+      {editingQuestion && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setEditingQuestion(null)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-slate-900">Edit Question</h2>
+              <button onClick={() => setEditingQuestion(null)} className="text-slate-400 hover:text-slate-600 text-2xl">×</button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Question</label>
+                <textarea 
+                  value={editingQuestion.question.question}
+                  onChange={e => setEditingQuestion(prev => ({ ...prev, question: { ...prev.question, question: e.target.value } }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
+                  rows={3}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Topic</label>
+                  <input 
+                    type="text"
+                    value={editingQuestion.question.topic}
+                    onChange={e => setEditingQuestion(prev => ({ ...prev, question: { ...prev.question, topic: e.target.value } }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Difficulty</label>
+                  <select 
+                    value={editingQuestion.question.difficulty}
+                    onChange={e => setEditingQuestion(prev => ({ ...prev, question: { ...prev.question, difficulty: e.target.value } }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  >
+                    <option value="Basic">Basic</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Options (click to set correct answer)</label>
+                <div className="space-y-2">
+                  {editingQuestion.question.options.map((opt, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <button 
+                        type="button"
+                        onClick={() => setEditingQuestion(prev => ({
+                          ...prev,
+                          question: {
+                            ...prev.question,
+                            options: prev.question.options.map((o, j) => ({ ...o, isCorrect: j === i }))
+                          }
+                        }))}
+                        className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 ${opt.isCorrect ? 'bg-green-500 text-white' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}`}
+                      >
+                        {String.fromCharCode(65 + i)}
+                      </button>
+                      <input 
+                        type="text"
+                        value={opt.text}
+                        onChange={e => setEditingQuestion(prev => ({
+                          ...prev,
+                          question: {
+                            ...prev.question,
+                            options: prev.question.options.map((o, j) => j === i ? { ...o, text: e.target.value } : o)
+                          }
+                        }))}
+                        className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${opt.isCorrect ? 'border-green-300 bg-green-50' : 'border-slate-300'}`}
+                      />
+                      {opt.isCorrect && <span className="text-green-600">✓</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Explanation</label>
+                <textarea 
+                  value={editingQuestion.question.explanation}
+                  onChange={e => setEditingQuestion(prev => ({ ...prev, question: { ...prev.question, explanation: e.target.value } }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
+                  rows={2}
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-3 mt-6">
+              <button onClick={() => setEditingQuestion(null)} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg">
+                Cancel
+              </button>
+              <button 
+                onClick={() => saveQuestionEdit(editingQuestion.quizId, editingQuestion.index, editingQuestion.question)}
+                className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium"
+              >
+                Save Changes
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -2135,15 +2460,30 @@ ${quizContent.substring(0, 40000)}
             <div className="max-w-7xl mx-auto flex justify-between items-center">
               <div className="flex items-center gap-4 md:gap-8">
                 <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('landing')}><span className="text-xl">⚡</span><span className="font-bold text-slate-900 hidden sm:inline">QuizForge</span></div>
-                <button onClick={() => setPage('teacher-dashboard')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Dashboard</button>
-                <button onClick={() => setPage('create-quiz')} className="text-slate-600 hover:text-slate-900 text-sm font-medium hidden sm:block">Create</button>
-                <button onClick={() => setPage('class-manager')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Classes</button>
+                <div className="hidden sm:flex items-center gap-4">
+                  <button onClick={() => setPage('teacher-dashboard')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Dashboard</button>
+                  <button onClick={() => setPage('create-quiz')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Create</button>
+                  <button onClick={() => setPage('class-manager')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Classes</button>
+                </div>
               </div>
-              <button onClick={() => setPage('profile')} className="flex items-center gap-2 px-3 py-1 bg-purple-100 hover:bg-purple-200 text-purple-700 text-sm font-medium rounded-full">
-                <span className="w-6 h-6 bg-purple-500 text-white rounded-full flex items-center justify-center text-xs">{user?.name?.charAt(0).toUpperCase() || '?'}</span>
-                <span className="hidden sm:inline">{user?.name || 'Teacher'}</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setPage('profile')} className="flex items-center gap-2 px-3 py-1 bg-purple-100 hover:bg-purple-200 text-purple-700 text-sm font-medium rounded-full">
+                  <span className="w-6 h-6 bg-purple-500 text-white rounded-full flex items-center justify-center text-xs">{user?.name?.charAt(0).toUpperCase() || '?'}</span>
+                  <span className="hidden sm:inline">{user?.name || 'Teacher'}</span>
+                </button>
+                <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="sm:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
+                  {mobileMenuOpen ? '✕' : '☰'}
+                </button>
+              </div>
             </div>
+            {/* Mobile menu */}
+            {mobileMenuOpen && (
+              <div className="sm:hidden border-t border-slate-200 mt-3 pt-3 pb-2 space-y-2">
+                <button onClick={() => { setPage('teacher-dashboard'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg">📊 Dashboard</button>
+                <button onClick={() => { setPage('create-quiz'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg">⚡ Create Quiz</button>
+                <button onClick={() => { setPage('class-manager'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg">👥 Classes</button>
+              </div>
+            )}
           </nav>
           <div className="max-w-7xl mx-auto px-6 py-8">
             <div className="flex justify-between items-start mb-8">
@@ -2227,14 +2567,27 @@ ${quizContent.substring(0, 40000)}
             <div className="max-w-7xl mx-auto flex justify-between items-center">
               <div className="flex items-center gap-4 md:gap-8">
                 <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('landing')}><span className="text-xl">⚡</span><span className="font-bold text-slate-900 hidden sm:inline">QuizForge</span></div>
-                <button onClick={() => setPage('creator-dashboard')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Dashboard</button>
-                <button onClick={() => setPage('create-quiz')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Create</button>
+                <div className="hidden sm:flex items-center gap-4">
+                  <button onClick={() => setPage('creator-dashboard')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Dashboard</button>
+                  <button onClick={() => setPage('create-quiz')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Create</button>
+                </div>
               </div>
-              <button onClick={() => setPage('profile')} className="flex items-center gap-2 px-3 py-1 bg-amber-100 hover:bg-amber-200 text-amber-700 text-sm font-medium rounded-full">
-                <span className="w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center text-xs">{user?.name?.charAt(0).toUpperCase() || '?'}</span>
-                <span className="hidden sm:inline">{user?.name || 'Creator'}</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setPage('profile')} className="flex items-center gap-2 px-3 py-1 bg-amber-100 hover:bg-amber-200 text-amber-700 text-sm font-medium rounded-full">
+                  <span className="w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center text-xs">{user?.name?.charAt(0).toUpperCase() || '?'}</span>
+                  <span className="hidden sm:inline">{user?.name || 'Creator'}</span>
+                </button>
+                <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="sm:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
+                  {mobileMenuOpen ? '✕' : '☰'}
+                </button>
+              </div>
             </div>
+            {mobileMenuOpen && (
+              <div className="sm:hidden border-t border-slate-200 mt-3 pt-3 pb-2 space-y-2">
+                <button onClick={() => { setPage('creator-dashboard'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg">📊 Dashboard</button>
+                <button onClick={() => { setPage('create-quiz'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg">✨ Create Quiz</button>
+              </div>
+            )}
           </nav>
           <div className="max-w-7xl mx-auto px-6 py-8">
             <div className="flex justify-between items-start mb-8">
@@ -2244,6 +2597,14 @@ ${quizContent.substring(0, 40000)}
               </div>
               <button onClick={() => setPage('create-quiz')} className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg font-medium hover:from-amber-400 hover:to-orange-400 shadow-lg">✨ Create Quiz</button>
             </div>
+            
+            {/* Streak display for creators */}
+            {studentProgress.currentStreak > 0 && (
+              <div className="mb-6 bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-3 rounded-xl inline-flex items-center gap-2">
+                <span className="text-xl">🔥</span>
+                <span className="font-bold">{studentProgress.currentStreak} Day Streak!</span>
+              </div>
+            )}
             
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5"><p className="text-3xl font-bold text-amber-600">{quizzes.length}</p><p className="text-sm text-slate-500">Quizzes Created</p></div>
@@ -2279,9 +2640,15 @@ ${quizContent.substring(0, 40000)}
                         <div key={quiz.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl group">
                           <div>
                             <p className="font-medium text-slate-900">{quiz.name}</p>
-                            <p className="text-sm text-slate-500">{pluralize(quiz.questions.length, 'question')}</p>
+                            <div className="flex gap-2 items-center">
+                              <p className="text-sm text-slate-500">{pluralize(quiz.questions.length, 'question')}</p>
+                              {quiz.tags?.length > 0 && quiz.tags.map((tag, i) => (
+                                <span key={i} className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded">#{tag}</span>
+                              ))}
+                            </div>
                           </div>
                           <div className="flex gap-2 items-center">
+                            <button onClick={() => duplicateQuiz(quiz)} className="px-2 py-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity" title="Duplicate">📋</button>
                             <button onClick={() => setModal({ type: 'delete-confirm', quizId: quiz.id, quizName: quiz.name })} className="px-2 py-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity" title="Delete">🗑️</button>
                             <button onClick={() => shareQuiz(quiz)} className="px-3 py-1.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg text-sm" title="Share quiz">🔗 Share</button>
                             <button onClick={() => { setCurrentQuiz(quiz); setPage('review-quiz'); }} className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm">View</button>
@@ -2733,19 +3100,61 @@ ${quizContent.substring(0, 40000)}
             <div className="max-w-7xl mx-auto flex justify-between items-center">
               <div className="flex items-center gap-4 md:gap-8">
                 <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('landing')}><span className="text-xl">⚡</span><span className="font-bold text-slate-900 hidden sm:inline">QuizForge</span></div>
-                <button onClick={() => setPage('student-dashboard')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Dashboard</button>
-                <button onClick={() => setPage('create-quiz')} className="text-slate-600 hover:text-slate-900 text-sm font-medium hidden sm:block">Create</button>
-                <button onClick={() => setPage('student-classes')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Classes</button>
+                <div className="hidden sm:flex items-center gap-4">
+                  <button onClick={() => setPage('student-dashboard')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Dashboard</button>
+                  <button onClick={() => setPage('create-quiz')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Create</button>
+                  <button onClick={() => setPage('student-classes')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Classes</button>
+                </div>
               </div>
-              <button onClick={() => setPage('profile')} className="flex items-center gap-2 px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-sm font-medium rounded-full">
-                <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs">{user?.name?.charAt(0).toUpperCase() || '?'}</span>
-                <span className="hidden sm:inline">{user?.name || 'Student'}</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setPage('profile')} className="flex items-center gap-2 px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-sm font-medium rounded-full">
+                  <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs">{user?.name?.charAt(0).toUpperCase() || '?'}</span>
+                  <span className="hidden sm:inline">{user?.name || 'Student'}</span>
+                </button>
+                <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="sm:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
+                  {mobileMenuOpen ? '✕' : '☰'}
+                </button>
+              </div>
             </div>
+            {mobileMenuOpen && (
+              <div className="sm:hidden border-t border-slate-200 mt-3 pt-3 pb-2 space-y-2">
+                <button onClick={() => { setPage('student-dashboard'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg">📊 Dashboard</button>
+                <button onClick={() => { setPage('create-quiz'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg">⚡ Create Quiz</button>
+                <button onClick={() => { setPage('student-classes'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg">👥 Classes</button>
+              </div>
+            )}
           </nav>
           <div className="max-w-7xl mx-auto px-6 py-8">
-            <h1 className="text-2xl font-bold text-slate-900 mb-1">Hey{user?.name ? `, ${user.name.split(' ')[0]}` : ' there'}! 👋</h1>
-            <p className="text-slate-600 mb-8">Ready to practice?</p>
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900 mb-1">Hey{user?.name ? `, ${user.name.split(' ')[0]}` : ' there'}! 👋</h1>
+                <p className="text-slate-600">Ready to practice?</p>
+              </div>
+              {studentProgress.currentStreak > 0 && (
+                <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-xl flex items-center gap-2">
+                  <span className="text-xl">🔥</span>
+                  <div>
+                    <p className="text-sm font-bold">{studentProgress.currentStreak} Day Streak!</p>
+                    <p className="text-xs opacity-80">Best: {studentProgress.longestStreak || studentProgress.currentStreak}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Achievement badges */}
+            {studentProgress.achievements?.length > 0 && (
+              <div className="mb-6 flex flex-wrap gap-2">
+                {studentProgress.achievements.map(aId => {
+                  const achievement = ACHIEVEMENTS.find(a => a.id === aId);
+                  return achievement ? (
+                    <span key={aId} className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm" title={achievement.description}>
+                      {achievement.name}
+                    </span>
+                  ) : null;
+                })}
+              </div>
+            )}
+            
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5"><p className="text-3xl font-bold text-indigo-600">{studentProgress.quizzesTaken}</p><p className="text-sm text-slate-500">Quizzes Taken</p></div>
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5"><p className="text-3xl font-bold text-green-600">{avgScore}%</p><p className="text-sm text-slate-500">Average Score</p></div>
@@ -2762,18 +3171,19 @@ ${quizContent.substring(0, 40000)}
                       const assignedClass = classes.find(c => c.id === a.classId);
                       const isOverdue = a.dueDate && new Date(a.dueDate) < new Date();
                       const isDueSoon = a.dueDate && !isOverdue && (new Date(a.dueDate) - new Date()) < 24 * 60 * 60 * 1000;
+                      const estimatedTime = quiz ? Math.ceil(quiz.questions.length * 1.5) : null;
                       return (
                         <div key={a.id} className={`flex items-center justify-between p-4 rounded-lg mb-2 ${isOverdue ? 'bg-red-50 border border-red-200' : 'bg-amber-50'}`}>
                           <div>
                             <p className="font-medium text-slate-900">{quiz?.name}</p>
-                            <p className="text-sm text-slate-500">{quiz ? pluralize(quiz.questions.length, 'question') : '?'} • From: {assignedClass?.name || 'Unknown class'}</p>
+                            <p className="text-sm text-slate-500">{quiz ? pluralize(quiz.questions.length, 'question') : '?'} • {estimatedTime ? `~${estimatedTime} min` : ''} • From: {assignedClass?.name || 'Unknown class'}</p>
                             {a.dueDate && (
                               <p className={`text-xs mt-1 ${isOverdue ? 'text-red-600 font-medium' : isDueSoon ? 'text-amber-600 font-medium' : 'text-slate-500'}`}>
                                 {isOverdue ? '⚠️ Overdue!' : isDueSoon ? '⏰ Due soon:' : '📅 Due:'} {new Date(a.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                               </p>
                             )}
                           </div>
-                          <button onClick={() => startAssignment(a)} className={`px-4 py-2 text-white rounded-lg font-medium ${isOverdue ? 'bg-red-500 hover:bg-red-400' : 'bg-amber-500 hover:bg-amber-400'}`}>
+                          <button onClick={() => startAssignment(a)} disabled={isActionLoading} className={`px-4 py-2 text-white rounded-lg font-medium ${isOverdue ? 'bg-red-500 hover:bg-red-400' : 'bg-amber-500 hover:bg-amber-400'} disabled:opacity-50`}>
                             {isOverdue ? 'Complete Now!' : 'Start →'}
                           </button>
                         </div>
@@ -2925,7 +3335,23 @@ ${quizContent.substring(0, 40000)}
                   const pending = clsAssignments.filter(a => !submissions.some(s => s.assignmentId === a.id && s.studentName === user?.name));
                   return (
                     <div key={cls.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 mb-4">
-                      <h4 className="font-semibold text-slate-900">{cls.name}</h4><p className="text-sm text-slate-500 mb-3">{clsAssignments.length} quizzes • {pending.length} pending</p>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-semibold text-slate-900">{cls.name}</h4>
+                          <p className="text-sm text-slate-500 mb-3">{clsAssignments.length} quizzes • {pending.length} pending</p>
+                        </div>
+                        <button 
+                          onClick={() => setModal({ 
+                            type: 'confirm', 
+                            title: 'Leave Class?', 
+                            message: `Are you sure you want to leave "${cls.name}"? You won't receive any more assignments from this class.`, 
+                            onConfirm: () => leaveClass(cls.id) 
+                          })}
+                          className="px-3 py-1 text-xs bg-slate-100 hover:bg-red-100 text-slate-500 hover:text-red-600 rounded"
+                        >
+                          Leave
+                        </button>
+                      </div>
                       {pending.length > 0 && <div className="p-3 bg-amber-50 rounded-lg"><p className="text-sm text-amber-800">📋 {pending.length} quiz{pending.length > 1 ? 'zes' : ''} to complete</p></div>}
                     </div>
                   );
@@ -3075,6 +3501,17 @@ ${quizContent.substring(0, 40000)}
                     <p className="text-xs text-slate-400 mt-1">Leave empty for all topics</p>
                   </div>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Tags <span className="text-slate-400 font-normal">(optional, comma-separated)</span></label>
+                  <input
+                    type="text"
+                    value={quizTagInput}
+                    onChange={e => setQuizTagInput(e.target.value)}
+                    placeholder="e.g., midterm, chapter5, economics"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                  <p className="text-xs text-slate-400 mt-1">Organize quizzes with tags</p>
+                </div>
                 <button type="button" onClick={generateQuestions} disabled={quizContent.length < 100 || uploadProgress.active} className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:from-slate-400 disabled:to-slate-400 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-lg">⚡ Generate Quiz with AI</button>
               </div>
             </div>
@@ -3134,6 +3571,12 @@ ${quizContent.substring(0, 40000)}
                     >
                       🔗 Share
                     </button>
+                    <button 
+                      onClick={() => duplicateQuiz(currentQuiz)}
+                      className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium"
+                    >
+                      📋 Duplicate
+                    </button>
                     {userType === 'teacher' && (
                       <button 
                         onClick={() => classes.length > 0 ? setModal({ type: 'select', title: 'Assign Quiz' }) : showToast('Create a class first', 'error')} 
@@ -3157,19 +3600,47 @@ ${quizContent.substring(0, 40000)}
                 ) : (
                   <>
                     <button onClick={() => shareQuiz(currentQuiz)} className="px-4 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg">🔗 Share</button>
-                    <button onClick={() => { setQuestionBank(prev => [...prev, ...currentQuiz.questions]); showToast('✅ Added to bank!', 'success'); }} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg">🗃️ Save Only</button>
+                    <button onClick={() => { setQuestionBank(prev => limitQuestionBank([...prev, ...currentQuiz.questions])); showToast('✅ Added to bank!', 'success'); }} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg">🗃️ Save Only</button>
                     <button onClick={publishQuiz} className="px-5 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg font-medium">✓ Publish</button>
                   </>
                 )}
               </div>
             </div>
+            
+            {/* Quiz Tags */}
+            {currentQuiz.tags?.length > 0 && (
+              <div className="flex gap-2 mb-4 flex-wrap">
+                {currentQuiz.tags.map((tag, i) => (
+                  <span key={i} className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm">#{tag}</span>
+                ))}
+              </div>
+            )}
+            
             <div className="space-y-4">
               {currentQuiz.questions.map((q, i) => (
                 <div key={i} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-bold">{i + 1}</span>
-                    <span className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-full">{q.topic}</span>
-                    <span className={`px-2 py-1 text-xs rounded-full ${q.difficulty === 'Basic' ? 'bg-green-100 text-green-700' : q.difficulty === 'Intermediate' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>{q.difficulty}</span>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <span className="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-bold">{i + 1}</span>
+                      <span className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-full">{q.topic}</span>
+                      <span className={`px-2 py-1 text-xs rounded-full ${q.difficulty === 'Basic' ? 'bg-green-100 text-green-700' : q.difficulty === 'Intermediate' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>{q.difficulty}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => setEditingQuestion({ quizId: currentQuiz.id, index: i, question: { ...q } })}
+                        className="px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 rounded"
+                      >
+                        ✏️ Edit
+                      </button>
+                      {currentQuiz.questions.length > 1 && (
+                        <button 
+                          onClick={() => setModal({ type: 'confirm', title: 'Delete Question?', message: 'This cannot be undone.', onConfirm: () => deleteQuestion(currentQuiz.id, i) })}
+                          className="px-2 py-1 text-xs bg-red-50 hover:bg-red-100 text-red-600 rounded"
+                        >
+                          🗑️
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <p className="text-slate-900 font-medium mb-3">{q.question}</p>
                   <div className="grid md:grid-cols-2 gap-2 mb-3">
@@ -3287,7 +3758,7 @@ ${quizContent.substring(0, 40000)}
                 <div className="w-full bg-slate-700 rounded-full h-4 mb-8 overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-500 to-orange-500" style={{ width: `${percentage}%` }} /></div>
                 
                 {/* Action buttons row */}
-                <div className="flex justify-center gap-3 mb-6">
+                <div className="flex flex-wrap justify-center gap-3 mb-6">
                   {/* Review Answers Button */}
                   <button 
                     onClick={() => setModal({ type: 'review-answers', results: quizState.results, questions: currentQuiz.questions })}
@@ -3296,28 +3767,21 @@ ${quizContent.substring(0, 40000)}
                     📋 Review Answers
                   </button>
                   
-                  {/* Share Results Button - for all users */}
+                  {/* Retry Wrong Answers - only if there were wrong answers */}
+                  {quizState.results.some(r => !r.correct) && (
+                    <button 
+                      onClick={retryWrongAnswers}
+                      className="px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 rounded-lg text-sm flex items-center gap-2"
+                    >
+                      🔄 Retry Wrong ({quizState.results.filter(r => !r.correct).length})
+                    </button>
+                  )}
+                  
+                  {/* Share Results Button - uses getShareUrl to prevent duplicates */}
                   <button 
                     onClick={async () => {
                       try {
-                        // Create share link for the quiz
-                        const shareId = `s${Date.now()}`;
-                        const questionsToShare = currentQuiz.questions.length > 50 
-                          ? currentQuiz.questions.slice(0, 50) 
-                          : currentQuiz.questions;
-                        
-                        const shareData = {
-                          id: shareId,
-                          name: currentQuiz.name,
-                          questions: questionsToShare,
-                          subject: currentQuiz.subject || 'General',
-                          createdBy: user?.name || 'Anonymous',
-                          createdAt: Date.now()
-                        };
-                        
-                        await storage.set(`shared-${shareId}`, JSON.stringify(shareData));
-                        
-                        const shareUrl = `${window.location.origin}?quiz=${shareId}`;
+                        const shareUrl = await getShareUrl(currentQuiz);
                         const text = `🎯 I scored ${percentage}% on "${currentQuiz.name}"!\n\nThink you can beat my score? Try it here:`;
                         
                         if (navigator.share) {
@@ -3344,21 +3808,11 @@ ${quizContent.substring(0, 40000)}
                   </button>
                 </div>
                 
-                {/* Social Share Buttons */}
+                {/* Social Share Buttons - all use same shareId */}
                 <div className="flex justify-center gap-2 mb-6">
                   <button
                     onClick={async () => {
-                      const shareId = `s${Date.now()}`;
-                      const shareData = {
-                        id: shareId,
-                        name: currentQuiz.name,
-                        questions: currentQuiz.questions.slice(0, 50),
-                        subject: currentQuiz.subject || 'General',
-                        createdBy: user?.name || 'Anonymous',
-                        createdAt: Date.now()
-                      };
-                      await storage.set(`shared-${shareId}`, JSON.stringify(shareData));
-                      const shareUrl = `${window.location.origin}?quiz=${shareId}`;
+                      const shareUrl = await getShareUrl(currentQuiz);
                       const text = `🎯 I scored ${percentage}% on "${currentQuiz.name}"! Can you beat me?`;
                       window.open(`https://wa.me/?text=${encodeURIComponent(text + '\n' + shareUrl)}`, '_blank');
                     }}
@@ -3369,17 +3823,7 @@ ${quizContent.substring(0, 40000)}
                   </button>
                   <button
                     onClick={async () => {
-                      const shareId = `s${Date.now()}`;
-                      const shareData = {
-                        id: shareId,
-                        name: currentQuiz.name,
-                        questions: currentQuiz.questions.slice(0, 50),
-                        subject: currentQuiz.subject || 'General',
-                        createdBy: user?.name || 'Anonymous',
-                        createdAt: Date.now()
-                      };
-                      await storage.set(`shared-${shareId}`, JSON.stringify(shareData));
-                      const shareUrl = `${window.location.origin}?quiz=${shareId}`;
+                      const shareUrl = await getShareUrl(currentQuiz);
                       const text = `🎯 I scored ${percentage}% on "${currentQuiz.name}"! Can you beat me?`;
                       window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`, '_blank');
                     }}
@@ -3390,17 +3834,7 @@ ${quizContent.substring(0, 40000)}
                   </button>
                   <button
                     onClick={async () => {
-                      const shareId = `s${Date.now()}`;
-                      const shareData = {
-                        id: shareId,
-                        name: currentQuiz.name,
-                        questions: currentQuiz.questions.slice(0, 50),
-                        subject: currentQuiz.subject || 'General',
-                        createdBy: user?.name || 'Anonymous',
-                        createdAt: Date.now()
-                      };
-                      await storage.set(`shared-${shareId}`, JSON.stringify(shareData));
-                      const shareUrl = `${window.location.origin}?quiz=${shareId}`;
+                      const shareUrl = await getShareUrl(currentQuiz);
                       window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, '_blank');
                     }}
                     className="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm"
