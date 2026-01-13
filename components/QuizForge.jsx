@@ -80,7 +80,11 @@ export default function QuizForge() {
   const [studentProgress, setStudentProgress] = useState({
     quizzesTaken: 0, totalScore: 0, totalQuestions: 0, topicHistory: {}, recentScores: [],
     currentStreak: 0, longestStreak: 0, lastPracticeDate: null,
-    achievements: []
+    achievements: [],
+    // For progress charts
+    dailyHistory: [], // [{ date: '2026-01-13', quizzes: 2, avgScore: 85 }, ...]
+    // For spaced repetition
+    questionHistory: {} // { questionId: { lastSeen: timestamp, correctCount: 0, wrongCount: 0, nextReview: timestamp } }
   });
   
   const [classes, setClasses] = useState([]);
@@ -116,7 +120,18 @@ export default function QuizForge() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [quizTagInput, setQuizTagInput] = useState('');
+  
+  // A+ Features
+  const [darkMode, setDarkMode] = useState(false);
+  const [timedMode, setTimedMode] = useState(false);
+  const [timeLimit, setTimeLimit] = useState(null); // seconds remaining
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
+  const [showAnalytics, setShowAnalytics] = useState(null); // quiz id for analytics
+  const [showProgressChart, setShowProgressChart] = useState(false);
+  
   const fileInputRef = useRef(null);
+  const timerRef = useRef(null);
   
   const cancelUpload = () => {
     if (uploadController) {
@@ -174,7 +189,7 @@ export default function QuizForge() {
               setAssignments(data.assignments || []);
               setSubmissions(data.submissions || []);
               setQuestionBank(data.questionBank || []);
-              setStudentProgress(data.studentProgress || { quizzesTaken: 0, totalScore: 0, totalQuestions: 0, topicHistory: {}, recentScores: [] });
+              setStudentProgress(data.studentProgress || { quizzesTaken: 0, totalScore: 0, totalQuestions: 0, topicHistory: {}, recentScores: [], currentStreak: 0, longestStreak: 0, lastPracticeDate: null, achievements: [], dailyHistory: [], questionHistory: {} });
             }
           }
         } catch (err) {
@@ -213,6 +228,62 @@ export default function QuizForge() {
     }
   }, [quizzes, classes, joinedClasses, assignments, submissions, questionBank, studentProgress, user, isLoggedIn, isLoading]);
   
+  // Dark mode effect - sync with system and localStorage
+  useEffect(() => {
+    const savedDarkMode = localStorage.getItem('quizforge-darkmode');
+    if (savedDarkMode !== null) {
+      setDarkMode(savedDarkMode === 'true');
+    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      setDarkMode(true);
+    }
+  }, []);
+  
+  useEffect(() => {
+    localStorage.setItem('quizforge-darkmode', darkMode.toString());
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
+  
+  // Timer effect for timed quiz mode
+  useEffect(() => {
+    if (timedMode && timeLimit > 0 && page === 'take-quiz') {
+      timerRef.current = setInterval(() => {
+        setTimeLimit(prev => {
+          if (prev <= 1) {
+            clearInterval(timerRef.current);
+            // Time's up - auto-submit
+            showToast('⏱️ Time is up!', 'error');
+            setPage('quiz-results');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timerRef.current);
+    }
+  }, [timedMode, page]);
+  
+  // Check for first-time user (show onboarding)
+  useEffect(() => {
+    if (isLoggedIn && user && !isLoading) {
+      const hasSeenOnboarding = localStorage.getItem(`quizforge-onboarding-${user.email}`);
+      if (!hasSeenOnboarding && studentProgress.quizzesTaken === 0) {
+        setShowOnboarding(true);
+        setOnboardingStep(0);
+      }
+    }
+  }, [isLoggedIn, user, isLoading]);
+  
+  // Format time for display
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+  
   const handleLogin = async () => {
     setAuthError('');
     if (!authForm.email.trim()) {
@@ -248,7 +319,7 @@ export default function QuizForge() {
           setAssignments(data.assignments || []);
           setSubmissions(data.submissions || []);
           setQuestionBank(data.questionBank || []);
-          setStudentProgress(data.studentProgress || { quizzesTaken: 0, totalScore: 0, totalQuestions: 0, topicHistory: {}, recentScores: [] });
+          setStudentProgress(data.studentProgress || { quizzesTaken: 0, totalScore: 0, totalQuestions: 0, topicHistory: {}, recentScores: [], currentStreak: 0, longestStreak: 0, lastPracticeDate: null, achievements: [], dailyHistory: [], questionHistory: {} });
         }
         
         showToast(`Welcome back, ${userData.name}!`, 'success');
@@ -384,7 +455,7 @@ export default function QuizForge() {
           setAssignments(data.assignments || []);
           setSubmissions(data.submissions || []);
           setQuestionBank(data.questionBank || []);
-          setStudentProgress(data.studentProgress || { quizzesTaken: 0, totalScore: 0, totalQuestions: 0, topicHistory: {}, recentScores: [] });
+          setStudentProgress(data.studentProgress || { quizzesTaken: 0, totalScore: 0, totalQuestions: 0, topicHistory: {}, recentScores: [], currentStreak: 0, longestStreak: 0, lastPracticeDate: null, achievements: [], dailyHistory: [], questionHistory: {} });
         }
         
         showToast(`Welcome back, ${userData.name}!`, 'success');
@@ -453,7 +524,7 @@ export default function QuizForge() {
           setAssignments(data.assignments || []);
           setSubmissions(data.submissions || []);
           setQuestionBank(data.questionBank || []);
-          setStudentProgress(data.studentProgress || { quizzesTaken: 0, totalScore: 0, totalQuestions: 0, topicHistory: {}, recentScores: [] });
+          setStudentProgress(data.studentProgress || { quizzesTaken: 0, totalScore: 0, totalQuestions: 0, topicHistory: {}, recentScores: [], currentStreak: 0, longestStreak: 0, lastPracticeDate: null, achievements: [], dailyHistory: [], questionHistory: {} });
         }
         
         showToast(`Welcome back, ${userData.name}!`, 'success');
@@ -534,7 +605,7 @@ export default function QuizForge() {
     setAssignments([]);
     setSubmissions([]);
     setQuestionBank([]);
-    setStudentProgress({ quizzesTaken: 0, totalScore: 0, totalQuestions: 0, topicHistory: {}, recentScores: [] });
+    setStudentProgress({ quizzesTaken: 0, totalScore: 0, totalQuestions: 0, topicHistory: {}, recentScores: [], currentStreak: 0, longestStreak: 0, lastPracticeDate: null, achievements: [], dailyHistory: [], questionHistory: {} });
     setAuthForm({ name: '', email: '', password: '', role: 'student' });
     setPage('landing');
     showToast('Logged out successfully', 'info');
@@ -1200,6 +1271,167 @@ ${quizContent.substring(0, 40000)}
     return questions;
   };
 
+  // ============ A+ FEATURES ============
+  
+  // Spaced Repetition: Calculate next review time based on performance
+  const calculateNextReview = (correctCount, wrongCount) => {
+    const ratio = correctCount / Math.max(1, correctCount + wrongCount);
+    // If getting it right consistently, space out reviews more
+    const daysUntilReview = ratio > 0.8 ? 7 : ratio > 0.6 ? 3 : ratio > 0.4 ? 1 : 0.5;
+    return Date.now() + (daysUntilReview * 24 * 60 * 60 * 1000);
+  };
+  
+  // Update spaced repetition data for a question
+  const updateQuestionHistory = (questionId, wasCorrect) => {
+    setStudentProgress(prev => {
+      const history = { ...prev.questionHistory };
+      const existing = history[questionId] || { correctCount: 0, wrongCount: 0, lastSeen: 0 };
+      history[questionId] = {
+        lastSeen: Date.now(),
+        correctCount: existing.correctCount + (wasCorrect ? 1 : 0),
+        wrongCount: existing.wrongCount + (wasCorrect ? 0 : 1),
+        nextReview: calculateNextReview(
+          existing.correctCount + (wasCorrect ? 1 : 0),
+          existing.wrongCount + (wasCorrect ? 0 : 1)
+        )
+      };
+      return { ...prev, questionHistory: history };
+    });
+  };
+  
+  // Get questions due for review (spaced repetition)
+  const getQuestionsForReview = () => {
+    const now = Date.now();
+    const history = studentProgress.questionHistory || {};
+    return questionBank.filter(q => {
+      const qHistory = history[q.id];
+      if (!qHistory) return true; // Never seen - should review
+      return qHistory.nextReview <= now;
+    });
+  };
+  
+  // Start spaced repetition practice
+  const startSpacedPractice = () => {
+    const dueQuestions = getQuestionsForReview();
+    if (dueQuestions.length === 0) {
+      showToast('🎉 No questions due for review! Great job keeping up!', 'success');
+      return;
+    }
+    const selected = shuffleArray(dueQuestions).slice(0, Math.min(10, dueQuestions.length))
+      .map(q => ({ ...q, options: shuffleArray([...q.options]) }));
+    setCurrentQuiz({ id: `review_${Date.now()}`, name: 'Spaced Repetition Review', questions: selected, isSpacedRepetition: true });
+    setQuizState({ currentQuestion: 0, selectedAnswer: null, answeredQuestions: new Set(), score: 0, results: [] });
+    setPage('take-quiz');
+  };
+  
+  // Update daily history for progress charts
+  const updateDailyHistory = (score, total) => {
+    const today = new Date().toISOString().split('T')[0];
+    setStudentProgress(prev => {
+      const history = [...(prev.dailyHistory || [])];
+      const todayIndex = history.findIndex(h => h.date === today);
+      
+      if (todayIndex >= 0) {
+        // Update today's entry
+        const existing = history[todayIndex];
+        const newTotal = existing.quizzes + 1;
+        const newAvg = Math.round(((existing.avgScore * existing.quizzes) + Math.round((score / total) * 100)) / newTotal);
+        history[todayIndex] = { date: today, quizzes: newTotal, avgScore: newAvg };
+      } else {
+        // Add new entry for today
+        history.push({ date: today, quizzes: 1, avgScore: Math.round((score / total) * 100) });
+      }
+      
+      // Keep last 30 days
+      return { ...prev, dailyHistory: history.slice(-30) };
+    });
+  };
+  
+  // Quiz Analytics: Calculate question difficulty based on student performance
+  const getQuizAnalytics = (quizId) => {
+    const quiz = quizzes.find(q => q.id === quizId);
+    if (!quiz) return null;
+    
+    // Get all submissions for this quiz
+    const quizAssignments = assignments.filter(a => a.quizId === quizId);
+    const quizSubmissions = submissions.filter(s => quizAssignments.some(a => a.id === s.assignmentId));
+    
+    if (quizSubmissions.length === 0) {
+      return { quiz, submissions: 0, questions: quiz.questions.map(q => ({ ...q, correctRate: null, attempts: 0 })) };
+    }
+    
+    // Calculate per-question stats
+    const questionStats = quiz.questions.map((q, i) => {
+      let correct = 0;
+      let total = 0;
+      
+      quizSubmissions.forEach(sub => {
+        if (sub.answers && sub.answers[i]) {
+          total++;
+          if (sub.answers[i].correct) correct++;
+        }
+      });
+      
+      return {
+        ...q,
+        questionIndex: i,
+        attempts: total,
+        correctRate: total > 0 ? Math.round((correct / total) * 100) : null
+      };
+    });
+    
+    // Sort by difficulty (lowest correct rate = hardest)
+    const hardestQuestions = [...questionStats]
+      .filter(q => q.correctRate !== null)
+      .sort((a, b) => a.correctRate - b.correctRate)
+      .slice(0, 5);
+    
+    const avgScore = quizSubmissions.length > 0 
+      ? Math.round(quizSubmissions.reduce((sum, s) => sum + s.percentage, 0) / quizSubmissions.length)
+      : 0;
+    
+    return {
+      quiz,
+      submissions: quizSubmissions.length,
+      avgScore,
+      questions: questionStats,
+      hardestQuestions
+    };
+  };
+  
+  // Complete onboarding
+  const completeOnboarding = () => {
+    if (user?.email) {
+      localStorage.setItem(`quizforge-onboarding-${user.email}`, 'true');
+    }
+    setShowOnboarding(false);
+    setOnboardingStep(0);
+  };
+  
+  // Start timed quiz
+  const startTimedQuiz = (quiz, minutes = 10) => {
+    const shuffledQuestions = shuffleArray([...quiz.questions])
+      .slice(0, Math.min(quiz.questions.length, 20))
+      .map(q => ({ ...q, options: shuffleArray([...q.options]) }));
+    
+    setCurrentQuiz({ ...quiz, questions: shuffledQuestions });
+    setQuizState({ currentQuestion: 0, selectedAnswer: null, answeredQuestions: new Set(), score: 0, results: [] });
+    setTimedMode(true);
+    setTimeLimit(minutes * 60);
+    setPage('take-quiz');
+  };
+  
+  // Stop timer when leaving quiz
+  const stopTimer = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+    setTimedMode(false);
+    setTimeLimit(null);
+  };
+
+  // ============ END A+ FEATURES ============
+
   const assignQuiz = (quizId, weight = 10, dueDate = null) => {
     if (!currentClass && classes.length > 0) {
       setCurrentClass(classes[0]);
@@ -1286,6 +1518,20 @@ ${quizContent.substring(0, 40000)}
       // Quiz completed - update progress with streak and achievements
       const score = quizState.score;
       const total = currentQuiz.questions.length;
+      
+      // Stop timer if timed mode
+      stopTimer();
+      
+      // Update spaced repetition data for each question
+      quizState.results.forEach((result, i) => {
+        const question = currentQuiz.questions[i];
+        if (question?.id) {
+          updateQuestionHistory(question.id, result.correct);
+        }
+      });
+      
+      // Update daily history for progress charts
+      updateDailyHistory(score, total);
       
       setStudentProgress(p => {
         // Update streak
@@ -1446,7 +1692,16 @@ ${quizContent.substring(0, 40000)}
   }
 
   return (
-    <div className="min-h-screen">
+    <div className={`min-h-screen ${darkMode ? 'dark bg-slate-900' : ''}`}>
+      {/* Dark Mode Toggle - Fixed position */}
+      <button 
+        onClick={() => setDarkMode(!darkMode)}
+        className="fixed bottom-6 left-6 z-50 p-3 bg-slate-800 dark:bg-white text-white dark:text-slate-900 rounded-full shadow-lg hover:scale-110 transition-transform"
+        title={darkMode ? 'Light Mode' : 'Dark Mode'}
+      >
+        {darkMode ? '☀️' : '🌙'}
+      </button>
+      
       {/* Toast */}
       {toast && (
         <div className={`fixed bottom-6 right-6 ${toast.type === 'success' ? 'bg-green-600' : toast.type === 'error' ? 'bg-red-600' : 'bg-indigo-600'} text-white px-6 py-3 rounded-xl shadow-lg z-50`}>
@@ -1651,6 +1906,69 @@ ${quizContent.substring(0, 40000)}
                 <div className="flex gap-3">
                   <button onClick={() => setModal(null)} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg">Cancel</button>
                   <button onClick={() => deleteQuiz(modal.quizId)} className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-400 text-white rounded-lg font-medium">Delete</button>
+                </div>
+              </>
+            )}
+            
+            {/* Confirm Modal */}
+            {modal?.type === 'confirm' && (
+              <>
+                <div className="text-center mb-4">
+                  <h3 className="text-xl font-bold text-slate-900">{modal.title}</h3>
+                  <p className="text-slate-600 mt-1">{modal.message}</p>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => setModal(null)} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg">Cancel</button>
+                  <button onClick={() => { modal.onConfirm?.(); setModal(null); }} className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium">Confirm</button>
+                </div>
+              </>
+            )}
+            
+            {/* Timed Quiz Setup Modal */}
+            {modal?.type === 'timed-setup' && (
+              <>
+                <div className="text-center mb-4">
+                  <div className="text-5xl mb-2">⏱️</div>
+                  <h3 className="text-xl font-bold text-slate-900">Timed Quiz</h3>
+                  <p className="text-slate-600 mt-1">Simulate real exam conditions</p>
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Time Limit</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[5, 10, 15, 20, 30, 45].map(mins => (
+                      <button 
+                        key={mins}
+                        onClick={() => setModalInput(mins.toString())}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition ${modalInput === mins.toString() ? 'bg-indigo-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}
+                      >
+                        {mins} min
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Questions</label>
+                  <p className="text-sm text-slate-500">Up to 20 random questions from your bank</p>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => { setModal(null); setModalInput(''); }} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg">Cancel</button>
+                  <button 
+                    onClick={() => {
+                      const mins = parseInt(modalInput) || 10;
+                      const questions = shuffleArray([...questionBank]).slice(0, 20).map(q => ({ ...q, options: shuffleArray([...q.options]) }));
+                      setCurrentQuiz({ id: `timed_${Date.now()}`, name: `Timed Practice (${mins} min)`, questions });
+                      setQuizState({ currentQuestion: 0, selectedAnswer: null, answeredQuestions: new Set(), score: 0, results: [] });
+                      setTimedMode(true);
+                      setTimeLimit(mins * 60);
+                      setModal(null);
+                      setModalInput('');
+                      setPage('take-quiz');
+                    }} 
+                    disabled={!modalInput}
+                    className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-300 text-white rounded-lg font-medium"
+                  >
+                    Start Quiz ⏱️
+                  </button>
                 </div>
               </>
             )}
@@ -1897,6 +2215,294 @@ ${quizContent.substring(0, 40000)}
                 className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium"
               >
                 Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ONBOARDING MODAL */}
+      {showOnboarding && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-8 w-full max-w-lg shadow-2xl">
+            {onboardingStep === 0 && (
+              <>
+                <div className="text-6xl text-center mb-4">👋</div>
+                <h2 className="text-2xl font-bold text-center text-slate-900 mb-2">Welcome to QuizForge!</h2>
+                <p className="text-slate-600 text-center mb-6">Let's take a quick tour to help you get started.</p>
+                <div className="flex gap-3">
+                  <button onClick={completeOnboarding} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg">Skip</button>
+                  <button onClick={() => setOnboardingStep(1)} className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium">Start Tour →</button>
+                </div>
+              </>
+            )}
+            {onboardingStep === 1 && (
+              <>
+                <div className="text-6xl text-center mb-4">📚</div>
+                <h2 className="text-xl font-bold text-center text-slate-900 mb-2">Step 1: Upload Materials</h2>
+                <p className="text-slate-600 text-center mb-6">Upload your lecture slides, PDFs, or any course materials. Our AI will analyze them to create smart quiz questions.</p>
+                <div className="bg-slate-50 rounded-xl p-4 mb-6">
+                  <div className="flex items-center gap-3 text-sm text-slate-600">
+                    <span>✓</span><span>Supports PDF, PowerPoint, Word, and images</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-slate-600 mt-2">
+                    <span>✓</span><span>Multi-file upload supported</span>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => setOnboardingStep(0)} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg">← Back</button>
+                  <button onClick={() => setOnboardingStep(2)} className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium">Next →</button>
+                </div>
+              </>
+            )}
+            {onboardingStep === 2 && (
+              <>
+                <div className="text-6xl text-center mb-4">⚡</div>
+                <h2 className="text-xl font-bold text-center text-slate-900 mb-2">Step 2: Generate Questions</h2>
+                <p className="text-slate-600 text-center mb-6">Choose the number of questions, difficulty level, and whether to focus on concepts or case details.</p>
+                <div className="bg-slate-50 rounded-xl p-4 mb-6">
+                  <div className="flex items-center gap-3 text-sm text-slate-600">
+                    <span>🧠</span><span><strong>Concept-focused:</strong> Tests underlying theories</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-slate-600 mt-2">
+                    <span>📋</span><span><strong>Case-based:</strong> Tests specific case details</span>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => setOnboardingStep(1)} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg">← Back</button>
+                  <button onClick={() => setOnboardingStep(3)} className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium">Next →</button>
+                </div>
+              </>
+            )}
+            {onboardingStep === 3 && (
+              <>
+                <div className="text-6xl text-center mb-4">🎯</div>
+                <h2 className="text-xl font-bold text-center text-slate-900 mb-2">Step 3: Practice & Share</h2>
+                <p className="text-slate-600 text-center mb-6">Practice your quizzes, track your progress, and share with friends or students.</p>
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-4 mb-6 border border-amber-200">
+                  <div className="flex items-center gap-3 text-sm text-slate-700">
+                    <span>🔥</span><span>Build streaks for daily practice</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-slate-700 mt-2">
+                    <span>🏆</span><span>Earn achievements as you improve</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-slate-700 mt-2">
+                    <span>📊</span><span>Track your progress over time</span>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => setOnboardingStep(2)} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg">← Back</button>
+                  <button onClick={() => { completeOnboarding(); setPage('create-quiz'); }} className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg font-medium">Create Your First Quiz! 🎉</button>
+                </div>
+              </>
+            )}
+            <div className="flex justify-center gap-2 mt-6">
+              {[0, 1, 2, 3].map(step => (
+                <div key={step} className={`w-2 h-2 rounded-full ${onboardingStep === step ? 'bg-indigo-600' : 'bg-slate-300'}`} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* QUIZ ANALYTICS MODAL (for teachers) */}
+      {showAnalytics && (() => {
+        const analytics = getQuizAnalytics(showAnalytics);
+        if (!analytics) return null;
+        return (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowAnalytics(null)}>
+            <div className="bg-white rounded-2xl p-6 w-full max-w-3xl max-h-[85vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-slate-900">📊 Quiz Analytics</h2>
+                <button onClick={() => setShowAnalytics(null)} className="text-slate-400 hover:text-slate-600 text-2xl">×</button>
+              </div>
+              
+              <div className="mb-6">
+                <h3 className="font-semibold text-slate-900 text-lg">{analytics.quiz.name}</h3>
+                <p className="text-slate-500">{analytics.quiz.questions.length} questions</p>
+              </div>
+              
+              {/* Overview Stats */}
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="bg-indigo-50 rounded-xl p-4 text-center">
+                  <p className="text-3xl font-bold text-indigo-600">{analytics.submissions}</p>
+                  <p className="text-sm text-slate-600">Submissions</p>
+                </div>
+                <div className="bg-green-50 rounded-xl p-4 text-center">
+                  <p className="text-3xl font-bold text-green-600">{analytics.avgScore || '--'}%</p>
+                  <p className="text-sm text-slate-600">Average Score</p>
+                </div>
+                <div className="bg-amber-50 rounded-xl p-4 text-center">
+                  <p className="text-3xl font-bold text-amber-600">{analytics.hardestQuestions.length}</p>
+                  <p className="text-sm text-slate-600">Hard Questions</p>
+                </div>
+              </div>
+              
+              {analytics.submissions === 0 ? (
+                <div className="text-center py-8 bg-slate-50 rounded-xl">
+                  <div className="text-4xl mb-3">📭</div>
+                  <p className="text-slate-600">No submissions yet. Assign this quiz to see analytics.</p>
+                </div>
+              ) : (
+                <>
+                  {/* Hardest Questions */}
+                  {analytics.hardestQuestions.length > 0 && (
+                    <div className="mb-6">
+                      <h4 className="font-semibold text-slate-900 mb-3">🔥 Most Challenging Questions</h4>
+                      <div className="space-y-3">
+                        {analytics.hardestQuestions.map((q, i) => (
+                          <div key={i} className="bg-red-50 border border-red-200 rounded-lg p-4">
+                            <div className="flex justify-between items-start mb-2">
+                              <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">Q{q.questionIndex + 1}</span>
+                              <span className="text-red-600 font-bold">{q.correctRate}% correct</span>
+                            </div>
+                            <p className="text-slate-800 text-sm">{q.question}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* All Questions Performance */}
+                  <div>
+                    <h4 className="font-semibold text-slate-900 mb-3">📈 Question Performance</h4>
+                    <div className="space-y-2">
+                      {analytics.questions.map((q, i) => (
+                        <div key={i} className="flex items-center gap-3 py-2 border-b border-slate-100">
+                          <span className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-sm font-bold text-slate-600">{i + 1}</span>
+                          <div className="flex-1">
+                            <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                              <div 
+                                className={`h-full rounded-full ${q.correctRate === null ? 'bg-slate-300' : q.correctRate >= 70 ? 'bg-green-500' : q.correctRate >= 40 ? 'bg-amber-500' : 'bg-red-500'}`}
+                                style={{ width: `${q.correctRate || 0}%` }}
+                              />
+                            </div>
+                          </div>
+                          <span className={`w-16 text-right text-sm font-medium ${q.correctRate === null ? 'text-slate-400' : q.correctRate >= 70 ? 'text-green-600' : q.correctRate >= 40 ? 'text-amber-600' : 'text-red-600'}`}>
+                            {q.correctRate !== null ? `${q.correctRate}%` : '—'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+              
+              <div className="mt-6 pt-4 border-t border-slate-200">
+                <button onClick={() => setShowAnalytics(null)} className="w-full px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg">
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* PROGRESS CHART MODAL */}
+      {showProgressChart && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowProgressChart(false)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[85vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-slate-900">📈 Your Progress</h2>
+              <button onClick={() => setShowProgressChart(false)} className="text-slate-400 hover:text-slate-600 text-2xl">×</button>
+            </div>
+            
+            {/* Stats Overview */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+              <div className="bg-indigo-50 rounded-xl p-3 text-center">
+                <p className="text-2xl font-bold text-indigo-600">{studentProgress.quizzesTaken}</p>
+                <p className="text-xs text-slate-600">Total Quizzes</p>
+              </div>
+              <div className="bg-green-50 rounded-xl p-3 text-center">
+                <p className="text-2xl font-bold text-green-600">{avgScore}%</p>
+                <p className="text-xs text-slate-600">Avg Score</p>
+              </div>
+              <div className="bg-orange-50 rounded-xl p-3 text-center">
+                <p className="text-2xl font-bold text-orange-600">{studentProgress.currentStreak}</p>
+                <p className="text-xs text-slate-600">Current Streak</p>
+              </div>
+              <div className="bg-amber-50 rounded-xl p-3 text-center">
+                <p className="text-2xl font-bold text-amber-600">{studentProgress.longestStreak || 0}</p>
+                <p className="text-xs text-slate-600">Best Streak</p>
+              </div>
+            </div>
+            
+            {/* Progress Chart */}
+            <div className="mb-6">
+              <h4 className="font-semibold text-slate-900 mb-3">Last 30 Days</h4>
+              {(studentProgress.dailyHistory || []).length === 0 ? (
+                <div className="text-center py-8 bg-slate-50 rounded-xl">
+                  <div className="text-4xl mb-3">📊</div>
+                  <p className="text-slate-600">Complete some quizzes to see your progress chart!</p>
+                </div>
+              ) : (
+                <div className="bg-slate-50 rounded-xl p-4">
+                  {/* Simple bar chart */}
+                  <div className="flex items-end gap-1 h-32">
+                    {(studentProgress.dailyHistory || []).slice(-14).map((day, i) => (
+                      <div key={i} className="flex-1 flex flex-col items-center">
+                        <div 
+                          className={`w-full rounded-t ${day.avgScore >= 80 ? 'bg-green-500' : day.avgScore >= 60 ? 'bg-amber-500' : 'bg-red-500'}`}
+                          style={{ height: `${day.avgScore}%` }}
+                          title={`${day.date}: ${day.avgScore}% (${day.quizzes} quizzes)`}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex justify-between mt-2 text-xs text-slate-500">
+                    <span>{(studentProgress.dailyHistory || []).slice(-14)[0]?.date?.slice(5) || ''}</span>
+                    <span>Today</span>
+                  </div>
+                  <div className="flex justify-center gap-4 mt-4 text-xs">
+                    <span className="flex items-center gap-1"><span className="w-3 h-3 bg-green-500 rounded" /> 80%+</span>
+                    <span className="flex items-center gap-1"><span className="w-3 h-3 bg-amber-500 rounded" /> 60-79%</span>
+                    <span className="flex items-center gap-1"><span className="w-3 h-3 bg-red-500 rounded" /> &lt;60%</span>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Recent Scores */}
+            <div className="mb-6">
+              <h4 className="font-semibold text-slate-900 mb-3">Recent Quiz Scores</h4>
+              {studentProgress.recentScores.length === 0 ? (
+                <p className="text-slate-500 text-sm">No quizzes completed yet</p>
+              ) : (
+                <div className="flex gap-2 flex-wrap">
+                  {studentProgress.recentScores.slice(-8).map((score, i) => (
+                    <span 
+                      key={i} 
+                      className={`px-3 py-1 rounded-full text-sm font-medium ${score >= 80 ? 'bg-green-100 text-green-700' : score >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}
+                    >
+                      {score}%
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            {/* Achievements */}
+            <div>
+              <h4 className="font-semibold text-slate-900 mb-3">🏆 Achievements ({(studentProgress.achievements || []).length}/{ACHIEVEMENTS.length})</h4>
+              <div className="grid grid-cols-2 gap-2">
+                {ACHIEVEMENTS.map(a => {
+                  const earned = (studentProgress.achievements || []).includes(a.id);
+                  return (
+                    <div 
+                      key={a.id} 
+                      className={`p-3 rounded-lg border ${earned ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200 opacity-50'}`}
+                    >
+                      <div className="font-medium text-sm">{a.name}</div>
+                      <div className="text-xs text-slate-500">{a.description}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            
+            <div className="mt-6 pt-4 border-t border-slate-200">
+              <button onClick={() => setShowProgressChart(false)} className="w-full px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg">
+                Close
               </button>
             </div>
           </div>
@@ -2541,15 +3147,24 @@ ${quizContent.substring(0, 40000)}
                           <span className="px-2 py-1 bg-slate-100 rounded">{assignedTo} class{assignedTo !== 1 ? 'es' : ''}</span>
                           <span className="px-2 py-1 bg-slate-100 rounded">{totalSubmissions} submissions</span>
                         </div>
-                        <button 
-                          onClick={() => {
-                            setCurrentQuiz(quiz);
-                            setPage('review-quiz');
-                          }} 
-                          className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium"
-                        >
-                          View Quiz →
-                        </button>
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => setShowAnalytics(quiz.id)}
+                            className="flex-1 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg text-sm font-medium"
+                            title="View quiz analytics"
+                          >
+                            📊 Analytics
+                          </button>
+                          <button 
+                            onClick={() => {
+                              setCurrentQuiz(quiz);
+                              setPage('review-quiz');
+                            }} 
+                            className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium"
+                          >
+                            View →
+                          </button>
+                        </div>
                       </div>
                     );
                   })}
@@ -3192,7 +3807,13 @@ ${quizContent.substring(0, 40000)}
                   </div>
                 )}
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                  <div className="flex justify-between items-center mb-4"><h3 className="font-semibold text-slate-900">Self Practice</h3><span className="text-sm text-slate-500">{questionBank.length} questions</span></div>
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-semibold text-slate-900">Self Practice</h3>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => setShowProgressChart(true)} className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm">📈 Progress</button>
+                      <span className="text-sm text-slate-500">{questionBank.length} questions</span>
+                    </div>
+                  </div>
                   {questionBank.length === 0 ? (
                     <div className="text-center py-8">
                       <div className="text-5xl mb-4">📚</div><h4 className="text-lg font-semibold text-slate-900 mb-2">No Practice Questions Yet</h4><p className="text-slate-600 mb-6">Upload materials or join a class</p>
@@ -3203,10 +3824,38 @@ ${quizContent.substring(0, 40000)}
                     </div>
                   ) : (
                     <div>
+                      {/* Spaced Repetition */}
+                      {(() => {
+                        const dueCount = getQuestionsForReview().length;
+                        if (dueCount > 0) {
+                          return (
+                            <button onClick={startSpacedPractice} className="w-full p-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 rounded-xl text-left flex justify-between items-center text-white mb-3">
+                              <div><p className="font-semibold">🧠 Smart Review</p><p className="text-sm text-purple-100">{dueCount} questions due for review</p></div>
+                              <span className="text-2xl">→</span>
+                            </button>
+                          );
+                        }
+                        return null;
+                      })()}
+                      
                       <button onClick={() => startPractice('all')} className="w-full p-4 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-400 hover:to-purple-400 rounded-xl text-left flex justify-between items-center text-white mb-3">
                         <div><p className="font-semibold">🎯 Practice All Topics</p><p className="text-sm text-indigo-100">{questionBank.length} questions from all your materials</p></div>
                         <span className="text-2xl">→</span>
                       </button>
+                      
+                      {/* Timed Mode Option */}
+                      <button 
+                        onClick={() => setModal({ 
+                          type: 'timed-setup', 
+                          questions: questionBank,
+                          title: 'Start Timed Quiz'
+                        })} 
+                        className="w-full p-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 rounded-xl text-left flex justify-between items-center text-white mb-3"
+                      >
+                        <div><p className="font-semibold">⏱️ Timed Practice</p><p className="text-sm text-amber-100">Simulate real exam conditions</p></div>
+                        <span className="text-2xl">→</span>
+                      </button>
+                      
                       {/* Show top topics with 2+ questions */}
                       {(() => {
                         const topicCounts = {};
@@ -3683,6 +4332,7 @@ ${quizContent.substring(0, 40000)}
             <div className="max-w-3xl mx-auto px-6 py-8">
               <div className="flex items-center justify-between mb-6">
                 <button onClick={() => {
+                  stopTimer(); // Stop timer when exiting
                   if (sharedQuizMode && !isLoggedIn) {
                     setSharedQuizMode(false);
                     setSharedQuizData(null);
@@ -3693,6 +4343,12 @@ ${quizContent.substring(0, 40000)}
                   }
                 }} className="text-slate-400 hover:text-white">✕ Exit</button>
                 <div className="flex items-center gap-4">
+                  {/* Timer display for timed mode */}
+                  {timedMode && timeLimit !== null && (
+                    <span className={`px-3 py-1 rounded-full text-sm font-bold flex items-center gap-2 ${timeLimit <= 60 ? 'bg-red-500/20 text-red-400 animate-pulse' : timeLimit <= 180 ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-700 text-white'}`}>
+                      ⏱️ {formatTime(timeLimit)}
+                    </span>
+                  )}
                   <span className="text-slate-400 text-sm">{quizState.currentQuestion + 1} / {currentQuiz.questions.length}</span>
                   <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm font-medium">✓ {quizState.score} correct</span>
                 </div>
