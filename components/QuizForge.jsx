@@ -166,6 +166,7 @@ export default function QuizForge() {
   const [sharedQuizMode, setSharedQuizMode] = useState(false);
   const [sharedQuizData, setSharedQuizData] = useState(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [quizTagInput, setQuizTagInput] = useState('');
@@ -1585,6 +1586,7 @@ ${quizContent.substring(0, 40000)}
       showToast('⚠️ Please enter a class name', 'error');
       return;
     }
+    setIsActionLoading(true);
     const newClass = {
       id: `class_${Date.now()}`,
       name: modalInput.trim(),
@@ -1606,6 +1608,8 @@ ${quizContent.substring(0, 40000)}
     } catch (e) {
       console.error('Error saving class to Firestore:', e);
       showToast('❌ Failed to create class. Please try again.', 'error');
+    } finally {
+      setIsActionLoading(false);
     }
   };
 
@@ -1690,17 +1694,17 @@ ${quizContent.substring(0, 40000)}
       // Update in Firestore
       try {
         await updateDoc(doc(db, 'classes', classId), { students: updatedStudents });
+        // Update local state only on success
+        setClasses(prev => prev.map(c => c.id === classId ? { ...c, students: updatedStudents } : c));
+        setJoinedClasses(prev => prev.filter(c => c.id !== classId));
+        showToast(`Left "${classToLeave.name}"`, 'info');
+        setModal(null);
       } catch (e) {
         console.error('Error updating class in Firestore:', e);
+        showToast('❌ Failed to leave class. Please try again.', 'error');
       }
-
-      // Update local state
-      setClasses(prev => prev.map(c => c.id === classId ? { ...c, students: updatedStudents } : c));
-      setJoinedClasses(prev => prev.filter(c => c.id !== classId));
-      showToast(`Left "${classToLeave.name}"`, 'info');
     }
     setIsActionLoading(false);
-    setModal(null);
   };
 
   // Duplicate quiz function
@@ -2034,12 +2038,15 @@ ${quizContent.substring(0, 40000)}
     setSubmissions(prev => [...prev, submission]);
 
     // Save to Firestore for teachers to access
+    setPendingSyncCount(c => c + 1);
     try {
       await setDoc(doc(db, 'submissions', submission.id), submission);
     } catch (e) {
       console.error('Error saving submission to Firestore:', e);
-      // Don't show error to student - their result is saved locally
-      // Teacher will see it when network is restored
+      // Show subtle indicator that sync is pending
+      showToast('📡 Results saved locally. Will sync when online.', 'info');
+    } finally {
+      setPendingSyncCount(c => Math.max(0, c - 1));
     }
   };
 
@@ -2315,13 +2322,21 @@ ${quizContent.substring(0, 40000)}
   return (
     <div className={`min-h-screen ${darkMode ? 'dark bg-slate-900' : ''}`}>
       {/* Dark Mode Toggle - Fixed position */}
-      <button 
+      <button
         onClick={() => setDarkMode(!darkMode)}
         className="fixed bottom-6 left-6 z-50 p-3 bg-slate-800 dark:bg-white text-white dark:text-slate-900 rounded-full shadow-lg hover:scale-110 transition-transform"
         title={darkMode ? 'Light Mode' : 'Dark Mode'}
       >
         {darkMode ? '☀️' : '🌙'}
       </button>
+
+      {/* Sync Indicator */}
+      {pendingSyncCount > 0 && (
+        <div className="fixed bottom-6 left-20 z-50 px-3 py-2 bg-amber-500 text-white text-sm rounded-full shadow-lg flex items-center gap-2 animate-pulse">
+          <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
+          Syncing...
+        </div>
+      )}
       
       {/* Toast */}
       {toast && (
@@ -2348,14 +2363,22 @@ ${quizContent.substring(0, 40000)}
                   type="text"
                   value={modalInput}
                   onChange={e => setModalInput(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && modal.onConfirm()}
+                  onKeyDown={e => e.key === 'Enter' && !isActionLoading && modal.onConfirm()}
                   placeholder={modal.placeholder}
                   className="w-full px-4 py-3 border-2 border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl mb-4 focus:border-indigo-500 dark:focus:border-indigo-400 focus:outline-none"
                   autoFocus
+                  disabled={isActionLoading}
                 />
                 <div className="flex gap-3">
-                  <button onClick={() => { setModal(null); setModalInput(''); }} className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg">Cancel</button>
-                  <button onClick={modal.onConfirm} className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium">{modal.confirmText}</button>
+                  <button onClick={() => { setModal(null); setModalInput(''); }} disabled={isActionLoading} className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg disabled:opacity-50">Cancel</button>
+                  <button onClick={modal.onConfirm} disabled={isActionLoading} className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+                    {isActionLoading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
+                        Saving...
+                      </span>
+                    ) : modal.confirmText}
+                  </button>
                 </div>
               </>
             )}
