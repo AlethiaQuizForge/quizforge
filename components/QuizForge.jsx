@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import * as mammoth from 'mammoth';
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, GoogleAuthProvider, OAuthProvider, signInWithPopup } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs, updateDoc, addDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs, updateDoc, addDoc, onSnapshot } from 'firebase/firestore';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -132,7 +132,24 @@ export default function QuizForge() {
   
   const fileInputRef = useRef(null);
   const timerRef = useRef(null);
-  
+
+  // Network error helper - wraps async operations with error handling
+  const withNetworkRetry = async (operation, errorMessage = 'Network error. Please try again.') => {
+    try {
+      return await operation();
+    } catch (error) {
+      console.error('Network operation failed:', error);
+      if (error.code === 'unavailable' || error.message?.includes('network') || error.message?.includes('fetch')) {
+        showToast('📡 ' + errorMessage + ' Check your internet connection.', 'error');
+      } else if (error.code === 'permission-denied') {
+        showToast('🔒 Permission denied. Please log in again.', 'error');
+      } else {
+        showToast('❌ ' + errorMessage, 'error');
+      }
+      throw error;
+    }
+  };
+
   const cancelUpload = () => {
     if (uploadController) {
       uploadController.abort();
@@ -306,6 +323,56 @@ export default function QuizForge() {
     }
   }, [quizzes, classes, joinedClasses, assignments, submissions, questionBank, studentProgress, user, isLoggedIn, isLoading]);
   
+  // Real-time listener for class roster updates (teachers only)
+  useEffect(() => {
+    if (!isLoggedIn || userType !== 'teacher' || classes.length === 0) return;
+
+    // Set up listeners for each class the teacher owns
+    const unsubscribes = classes.map(cls => {
+      return onSnapshot(doc(db, 'classes', cls.id), (docSnapshot) => {
+        if (docSnapshot.exists()) {
+          const updatedClassData = docSnapshot.data();
+          setClasses(prev => prev.map(c =>
+            c.id === cls.id ? { ...c, ...updatedClassData } : c
+          ));
+        }
+      }, (error) => {
+        console.log('Class listener error:', error);
+      });
+    });
+
+    return () => unsubscribes.forEach(unsub => unsub());
+  }, [isLoggedIn, userType, classes.length]); // Only re-subscribe when class count changes
+
+  // Real-time listener for submission updates (teachers only)
+  useEffect(() => {
+    if (!isLoggedIn || userType !== 'teacher' || assignments.length === 0) return;
+
+    const assignmentIds = assignments.map(a => a.id);
+    if (assignmentIds.length === 0) return;
+
+    // Listen to submissions collection for teacher's assignments
+    const submissionsRef = collection(db, 'submissions');
+    const unsubscribes = assignmentIds.map(assignmentId => {
+      const q = query(submissionsRef, where('assignmentId', '==', assignmentId));
+      return onSnapshot(q, (snapshot) => {
+        snapshot.docChanges().forEach(change => {
+          if (change.type === 'added') {
+            const newSub = { id: change.doc.id, ...change.doc.data() };
+            setSubmissions(prev => {
+              if (prev.some(s => s.id === newSub.id)) return prev;
+              return [...prev, newSub];
+            });
+          }
+        });
+      }, (error) => {
+        console.log('Submissions listener error:', error);
+      });
+    });
+
+    return () => unsubscribes.forEach(unsub => unsub());
+  }, [isLoggedIn, userType, assignments.length]);
+
   // Dark mode effect - sync with system and localStorage
   useEffect(() => {
     const savedDarkMode = localStorage.getItem('quizforge-darkmode');
@@ -1367,7 +1434,11 @@ ${quizContent.substring(0, 40000)}
       }
     } catch (e) {
       console.error('Error joining class:', e);
-      showToast('❌ Error joining class. Please try again.', 'error');
+      if (e.code === 'unavailable' || e.message?.includes('network') || e.message?.includes('offline')) {
+        showToast('📡 Network error. Check your connection and try again.', 'error');
+      } else {
+        showToast('❌ Error joining class. Please try again.', 'error');
+      }
     }
 
     setIsActionLoading(false);
@@ -1696,12 +1767,18 @@ ${quizContent.substring(0, 40000)}
     // Save assignment to Firestore for students to access
     try {
       await setDoc(doc(db, 'assignments', newAssignment.id), newAssignment);
+      setAssignments(prev => [...prev, newAssignment]);
+      showToast(`✅ "${quiz?.name}" assigned to ${targetClass.name}!`, 'success');
     } catch (e) {
       console.error('Error saving assignment to Firestore:', e);
+      if (e.code === 'unavailable' || e.message?.includes('network')) {
+        showToast('📡 Network error. Assignment saved locally but may not sync to students.', 'error');
+        setAssignments(prev => [...prev, newAssignment]); // Still save locally
+      } else {
+        showToast('❌ Error assigning quiz. Please try again.', 'error');
+        return;
+      }
     }
-
-    setAssignments(prev => [...prev, newAssignment]);
-    showToast(`✅ "${quiz?.name}" assigned to ${targetClass.name}!`, 'success');
     setModal(null);
     setModalInput('');
   };
@@ -1726,6 +1803,8 @@ ${quizContent.substring(0, 40000)}
       await setDoc(doc(db, 'submissions', submission.id), submission);
     } catch (e) {
       console.error('Error saving submission to Firestore:', e);
+      // Don't show error to student - their result is saved locally
+      // Teacher will see it when network is restored
     }
   };
 
@@ -1823,17 +1902,29 @@ ${quizContent.substring(0, 40000)}
         setCurrentAssignment(null);
       }
 
-      // Increment times taken for shared quizzes
+      // Increment times taken and update leaderboard for shared quizzes
       if (currentQuiz.id && currentQuiz.id.startsWith('s')) {
         try {
           const result = await storage.get(`shared-${currentQuiz.id}`);
           if (result && result.value) {
             const sharedData = JSON.parse(result.value);
             sharedData.timesTaken = (sharedData.timesTaken || 0) + 1;
+
+            // Update leaderboard (top 10 scores)
+            const playerName = user?.name || 'Anonymous';
+            const playerScore = Math.round((score / total) * 100);
+            const leaderboard = sharedData.leaderboard || [];
+            const newEntry = { name: playerName, score: playerScore, date: Date.now() };
+
+            // Add new entry and keep top 10
+            leaderboard.push(newEntry);
+            leaderboard.sort((a, b) => b.score - a.score || a.date - b.date);
+            sharedData.leaderboard = leaderboard.slice(0, 10);
+
             await storage.set(`shared-${currentQuiz.id}`, JSON.stringify(sharedData));
-            // Update local state so UI shows updated count
+            // Update local state so UI shows updated count and leaderboard
             setSharedQuizData(sharedData);
-            setCurrentQuiz(q => ({ ...q, timesTaken: sharedData.timesTaken }));
+            setCurrentQuiz(q => ({ ...q, timesTaken: sharedData.timesTaken, leaderboard: sharedData.leaderboard }));
           }
         } catch (e) {
           console.log('Could not update times taken:', e);
@@ -4782,6 +4873,36 @@ ${quizContent.substring(0, 40000)}
                   </button>
                 </div>
                 
+                {/* Leaderboard for shared quizzes */}
+                {currentQuiz.leaderboard && currentQuiz.leaderboard.length > 0 && (
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-6 mb-6 text-left">
+                    <h3 className="text-white font-semibold mb-4 flex items-center gap-2">🏆 Leaderboard</h3>
+                    <div className="space-y-2">
+                      {currentQuiz.leaderboard.slice(0, 5).map((entry, i) => {
+                        const isCurrentUser = entry.name === (user?.name || 'Anonymous') && entry.score === percentage;
+                        return (
+                          <div key={i} className={`flex items-center justify-between p-2 rounded-lg ${isCurrentUser ? 'bg-amber-500/20 border border-amber-500/30' : 'bg-white/5'}`}>
+                            <div className="flex items-center gap-3">
+                              <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${i === 0 ? 'bg-amber-500 text-white' : i === 1 ? 'bg-slate-400 text-white' : i === 2 ? 'bg-amber-700 text-white' : 'bg-slate-600 text-slate-300'}`}>
+                                {i + 1}
+                              </span>
+                              <span className={`${isCurrentUser ? 'text-amber-300 font-medium' : 'text-slate-300'}`}>
+                                {entry.name} {isCurrentUser && '(You)'}
+                              </span>
+                            </div>
+                            <span className={`font-bold ${entry.score >= 80 ? 'text-green-400' : entry.score >= 60 ? 'text-amber-400' : 'text-red-400'}`}>
+                              {entry.score}%
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {currentQuiz.leaderboard.length > 5 && (
+                      <p className="text-slate-500 text-xs mt-3 text-center">+{currentQuiz.leaderboard.length - 5} more players</p>
+                    )}
+                  </div>
+                )}
+
                 {/* Show sign-up prompt for non-logged-in users who took a shared quiz */}
                 {sharedQuizMode && !isLoggedIn && (
                   <div className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-xl p-6 mb-6 text-left">
