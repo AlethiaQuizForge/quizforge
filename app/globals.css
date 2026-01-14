@@ -7,49 +7,51 @@
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
-/* Dark mode overrides */
+/* Dark mode overrides - improved contrast for WCAG AA compliance */
 .dark {
   color-scheme: dark;
 }
 
 .dark .bg-white {
-  background-color: #1e293b !important;
+  background-color: #1e293b;
 }
 
 .dark .bg-slate-100 {
-  background-color: #0f172a !important;
+  background-color: #0f172a;
 }
 
 .dark .bg-slate-50 {
-  background-color: #1e293b !important;
+  background-color: #1e293b;
 }
 
 .dark .text-slate-900 {
-  color: #f1f5f9 !important;
+  color: #f1f5f9;
 }
 
 .dark .text-slate-800 {
-  color: #e2e8f0 !important;
+  color: #e2e8f0;
 }
 
 .dark .text-slate-700 {
-  color: #cbd5e1 !important;
+  color: #cbd5e1;
 }
 
+/* Improved contrast: slate-600 maps to a lighter color for better readability */
 .dark .text-slate-600 {
-  color: #94a3b8 !important;
+  color: #cbd5e1;
 }
 
+/* Improved contrast: slate-500 maps to a lighter color for better readability */
 .dark .text-slate-500 {
-  color: #64748b !important;
+  color: #94a3b8;
 }
 
 .dark .border-slate-200 {
-  border-color: #334155 !important;
+  border-color: #334155;
 }
 
 .dark .border-slate-300 {
-  border-color: #475569 !important;
+  border-color: #475569;
 }
 
 .dark input,
@@ -60,12 +62,13 @@
   border-color: #475569;
 }
 
+/* Improved placeholder contrast for better visibility */
 .dark input::placeholder,
 .dark textarea::placeholder {
-  color: #64748b;
+  color: #94a3b8;
 }
 
 /* Preserve gradients and accent colors in dark mode */
 .dark .bg-gradient-to-br.from-indigo-900 {
-  background: linear-gradient(to bottom right, #312e81, #1e1b4b, #0f172a) !important;
+  background: linear-gradient(to bottom right, #312e81, #1e1b4b, #0f172a);
 }
