@@ -69,6 +69,16 @@ export default function QuizForge() {
   // Helper for grammar
   const pluralize = (count, word) => count === 1 ? `${count} ${word}` : `${count} ${word}s`;
 
+  // Helper to estimate quiz time (assumes ~30 seconds per question for multiple choice, ~20 for true/false)
+  const estimateQuizTime = (questions) => {
+    if (!questions || questions.length === 0) return '0 min';
+    const totalSeconds = questions.reduce((acc, q) => {
+      return acc + (q.type === 'true-false' ? 20 : 30);
+    }, 0);
+    const minutes = Math.ceil(totalSeconds / 60);
+    return minutes <= 1 ? '~1 min' : `~${minutes} min`;
+  };
+
   // Auth state
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
@@ -99,6 +109,7 @@ export default function QuizForge() {
   const [difficulty, setDifficulty] = useState('mixed');
   const [topicFocus, setTopicFocus] = useState('');
   const [questionStyle, setQuestionStyle] = useState('concept');
+  const [questionType, setQuestionType] = useState('multiple-choice'); // 'multiple-choice' or 'true-false'
   
   const [generation, setGeneration] = useState({ isGenerating: false, step: '', progress: 0, error: null });
   const [currentQuiz, setCurrentQuiz] = useState({ id: null, name: '', questions: [], published: false });
@@ -410,7 +421,107 @@ export default function QuizForge() {
       return () => clearInterval(timerRef.current);
     }
   }, [timedMode, page]);
-  
+
+  // Keyboard shortcuts for quiz navigation
+  useEffect(() => {
+    if (page !== 'take-quiz') return;
+
+    const handleKeyDown = (e) => {
+      const isAnswered = quizState.answeredQuestions.has(quizState.currentQuestion);
+
+      // Number keys 1-4 to select answer (only if not answered yet)
+      if (!isAnswered && e.key >= '1' && e.key <= '4') {
+        const optionIndex = parseInt(e.key) - 1;
+        const q = currentQuiz?.questions?.[quizState.currentQuestion];
+        if (q && optionIndex < q.options.length) {
+          setQuizState(s => ({ ...s, selectedAnswer: optionIndex }));
+        }
+      }
+
+      // Enter to check answer or go to next
+      if (e.key === 'Enter') {
+        if (!isAnswered && quizState.selectedAnswer !== null) {
+          checkAnswer();
+        } else if (isAnswered) {
+          nextQuestion();
+        }
+      }
+
+      // Arrow keys for navigation (only after answering)
+      if (isAnswered) {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+          nextQuestion();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [page, quizState.currentQuestion, quizState.selectedAnswer, quizState.answeredQuestions, currentQuiz]);
+
+  // Quiz progress persistence to localStorage
+  const QUIZ_PROGRESS_KEY = 'quizforge-quiz-progress';
+
+  // Save quiz progress to localStorage when taking a quiz
+  useEffect(() => {
+    if (page === 'take-quiz' && currentQuiz?.id && quizState.answeredQuestions.size > 0) {
+      const progressData = {
+        quizId: currentQuiz.id,
+        quizName: currentQuiz.name,
+        questions: currentQuiz.questions,
+        currentQuestion: quizState.currentQuestion,
+        answeredQuestions: Array.from(quizState.answeredQuestions),
+        score: quizState.score,
+        results: quizState.results,
+        savedAt: Date.now()
+      };
+      localStorage.setItem(QUIZ_PROGRESS_KEY, JSON.stringify(progressData));
+    }
+  }, [page, currentQuiz, quizState]);
+
+  // Clear saved progress when quiz is completed
+  useEffect(() => {
+    if (page === 'quiz-results') {
+      localStorage.removeItem(QUIZ_PROGRESS_KEY);
+    }
+  }, [page]);
+
+  // Check for saved progress on mount
+  const checkSavedProgress = () => {
+    try {
+      const saved = localStorage.getItem(QUIZ_PROGRESS_KEY);
+      if (saved) {
+        const progress = JSON.parse(saved);
+        // Only offer to resume if saved within last 24 hours
+        if (Date.now() - progress.savedAt < 24 * 60 * 60 * 1000) {
+          return progress;
+        }
+        localStorage.removeItem(QUIZ_PROGRESS_KEY);
+      }
+    } catch (e) {
+      console.error('Error reading saved progress:', e);
+    }
+    return null;
+  };
+
+  // Resume from saved progress
+  const resumeSavedProgress = (progress) => {
+    setCurrentQuiz({
+      id: progress.quizId,
+      name: progress.quizName,
+      questions: progress.questions
+    });
+    setQuizState({
+      currentQuestion: progress.currentQuestion,
+      selectedAnswer: null,
+      answeredQuestions: new Set(progress.answeredQuestions),
+      score: progress.score,
+      results: progress.results
+    });
+    setModal(null);
+    setPage('take-quiz');
+  };
+
   // Check for first-time user (show onboarding)
   useEffect(() => {
     if (isLoggedIn && user && !isLoading) {
@@ -421,7 +532,17 @@ export default function QuizForge() {
       }
     }
   }, [isLoggedIn, user, isLoading]);
-  
+
+  // Check for saved quiz progress on dashboard load
+  useEffect(() => {
+    if (isLoggedIn && !isLoading && (page === 'student-dashboard' || page === 'teacher-dashboard' || page === 'creator-dashboard')) {
+      const savedProgress = checkSavedProgress();
+      if (savedProgress && !modal) {
+        setModal({ type: 'resume-quiz', progress: savedProgress });
+      }
+    }
+  }, [isLoggedIn, isLoading, page]);
+
   // Format time for display
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -856,7 +977,69 @@ export default function QuizForge() {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
-  
+
+  // Export quiz to PDF
+  const exportQuizToPDF = (quiz, includeAnswers = false) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Please allow popups to export PDF', 'error');
+      return;
+    }
+
+    const questionsHTML = quiz.questions.map((q, idx) => {
+      const optionsHTML = q.options.map((opt, optIdx) => {
+        const letter = String.fromCharCode(65 + optIdx);
+        const isCorrect = opt.isCorrect && includeAnswers;
+        return `<div style="margin: 8px 0; padding: 8px 12px; border: 1px solid ${isCorrect ? '#22c55e' : '#e2e8f0'}; border-radius: 8px; background: ${isCorrect ? '#f0fdf4' : 'white'};">
+          <strong>${letter}.</strong> ${opt.text} ${isCorrect ? '✓' : ''}
+        </div>`;
+      }).join('');
+
+      const explanationHTML = includeAnswers && q.explanation
+        ? `<div style="margin-top: 12px; padding: 12px; background: #eff6ff; border-radius: 8px; border-left: 4px solid #3b82f6;">
+            <strong>Explanation:</strong> ${q.explanation}
+          </div>`
+        : '';
+
+      return `
+        <div style="page-break-inside: avoid; margin-bottom: 32px;">
+          <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+            ${q.topic ? `<span style="background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 12px; font-size: 12px;">${q.topic}</span>` : ''}
+            ${q.difficulty ? `<span style="background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 12px; font-size: 12px;">${q.difficulty}</span>` : ''}
+          </div>
+          <p style="font-weight: 600; margin-bottom: 12px;"><strong>${idx + 1}.</strong> ${q.question}</p>
+          ${optionsHTML}
+          ${explanationHTML}
+        </div>
+      `;
+    }).join('');
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${quiz.name} - QuizForge</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px; line-height: 1.6; }
+          h1 { color: #1e293b; border-bottom: 2px solid #6366f1; padding-bottom: 12px; }
+          .meta { color: #64748b; margin-bottom: 32px; }
+          @media print { body { padding: 20px; } }
+        </style>
+      </head>
+      <body>
+        <h1>${quiz.name}</h1>
+        <p class="meta">${quiz.questions.length} questions${quiz.subject ? ` • ${quiz.subject}` : ''}${includeAnswers ? ' • Answer Key' : ''}</p>
+        ${questionsHTML}
+        <footer style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #94a3b8; font-size: 12px;">
+          Generated with QuizForge • quizforgeapp.com
+        </footer>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
   // Share quiz function - uses existing shareId to prevent database bloat
   const shareQuiz = async (quiz) => {
     try {
@@ -1294,7 +1477,8 @@ ${quizContent.substring(0, 40000)}
           numQuestions,
           difficulty,
           topicFocus: topicFocus.trim(),
-          questionStyle
+          questionStyle,
+          questionType
         })
       });
 
@@ -2236,7 +2420,7 @@ ${quizContent.substring(0, 40000)}
                 <div className="text-center mb-4">
                   <div className="text-5xl mb-2">🎉</div>
                   <h3 className="text-xl font-bold text-slate-900 dark:text-white">Quiz Created!</h3>
-                  <p className="text-slate-600 dark:text-slate-300 mt-1">"{modal.quiz.name}" • {pluralize(modal.quiz.questions.length, 'question')}</p>
+                  <p className="text-slate-600 dark:text-slate-300 mt-1">"{modal.quiz.name}" • {pluralize(modal.quiz.questions.length, 'question')} • {estimateQuizTime(modal.quiz.questions)}</p>
                 </div>
 
                 <div className="space-y-3 mb-6">
@@ -2267,7 +2451,7 @@ ${quizContent.substring(0, 40000)}
                     <span className="text-2xl">🎯</span>
                     <div>
                       <span className="font-semibold block">Practice Now</span>
-                      <span className="text-amber-100 text-sm">Test yourself with this quiz</span>
+                      <span className="text-amber-100 text-sm">{estimateQuizTime(modal.quiz.questions.slice(0, 10))} • 10 questions max</span>
                     </div>
                   </button>
 
@@ -2324,7 +2508,70 @@ ${quizContent.substring(0, 40000)}
                 </div>
               </>
             )}
-            
+
+            {/* Resume Quiz Modal */}
+            {modal?.type === 'resume-quiz' && (
+              <>
+                <div className="text-center mb-4">
+                  <div className="text-5xl mb-2">📝</div>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">Resume Quiz?</h3>
+                  <p className="text-slate-600 dark:text-slate-300 mt-1">You have an unfinished quiz:</p>
+                  <p className="text-slate-900 dark:text-white font-medium mt-2">"{modal.progress?.quizName}"</p>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+                    {modal.progress?.answeredQuestions?.length || 0} of {modal.progress?.questions?.length || 0} questions answered
+                  </p>
+                </div>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => resumeSavedProgress(modal.progress)}
+                    className="w-full px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium"
+                  >
+                    Continue Quiz
+                  </button>
+                  <button
+                    onClick={() => {
+                      localStorage.removeItem(QUIZ_PROGRESS_KEY);
+                      setModal(null);
+                    }}
+                    className="w-full px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg"
+                  >
+                    Discard & Start Fresh
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Export PDF Modal */}
+            {modal?.type === 'export-pdf' && (
+              <>
+                <div className="text-center mb-4">
+                  <div className="text-5xl mb-2">📄</div>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">Export to PDF</h3>
+                  <p className="text-slate-600 dark:text-slate-300 mt-1">"{modal.quiz?.name}"</p>
+                </div>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => { exportQuizToPDF(modal.quiz, false); setModal(null); }}
+                    className="w-full px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium flex items-center justify-center gap-2"
+                  >
+                    📝 Quiz Only (for students)
+                  </button>
+                  <button
+                    onClick={() => { exportQuizToPDF(modal.quiz, true); setModal(null); }}
+                    className="w-full px-4 py-3 bg-green-600 hover:bg-green-500 text-white rounded-lg font-medium flex items-center justify-center gap-2"
+                  >
+                    ✅ With Answer Key (for teachers)
+                  </button>
+                  <button
+                    onClick={() => setModal(null)}
+                    className="w-full px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
+
             {/* Timed Quiz Setup Modal */}
             {modal?.type === 'timed-setup' && (
               <>
@@ -2998,6 +3245,12 @@ ${quizContent.substring(0, 40000)}
                   <p className="text-slate-200 text-xs leading-relaxed">With n firms sharing profit, each gets π/n. As n increases, cooperation value shrinks while deviation gains remain attractive.</p>
                 </div>
               </div>
+
+              {/* Social Proof */}
+              <div className="mt-6 flex items-center justify-center gap-2 text-indigo-300/80 text-sm">
+                <span>🎓</span>
+                <span>Used by students at <strong className="text-white">Copenhagen Business School</strong></span>
+              </div>
             </div>
           </div>
 
@@ -3529,7 +3782,7 @@ ${quizContent.substring(0, 40000)}
                     return (
                       <div key={quiz.id} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
                         <h4 className="font-semibold text-slate-900 dark:text-white mb-1">{quiz.name}</h4>
-                        <p className="text-sm text-slate-500 dark:text-slate-300 mb-3">{pluralize(quiz.questions.length, 'question')}</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-300 mb-3">{pluralize(quiz.questions.length, 'question')} • {estimateQuizTime(quiz.questions)}</p>
                         <div className="flex gap-2 text-xs text-slate-500 dark:text-slate-300 mb-4">
                           <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded">{assignedTo} class{assignedTo !== 1 ? 'es' : ''}</span>
                           <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded">{totalSubmissions} submissions</span>
@@ -3643,7 +3896,7 @@ ${quizContent.substring(0, 40000)}
                           <div>
                             <p className="font-medium text-slate-900 dark:text-white">{quiz.name}</p>
                             <div className="flex gap-2 items-center">
-                              <p className="text-sm text-slate-500 dark:text-slate-300">{pluralize(quiz.questions.length, 'question')}</p>
+                              <p className="text-sm text-slate-500 dark:text-slate-300">{pluralize(quiz.questions.length, 'question')} • {estimateQuizTime(quiz.questions)}</p>
                               {quiz.tags?.length > 0 && quiz.tags.map((tag, i) => (
                                 <span key={i} className="text-xs px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 rounded">#{tag}</span>
                               ))}
@@ -4285,7 +4538,7 @@ ${quizContent.substring(0, 40000)}
                         <div key={quiz.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl group">
                           <div>
                             <p className="font-medium text-slate-900 dark:text-white">{quiz.name}</p>
-                            <p className="text-sm text-slate-500 dark:text-slate-300">{pluralize(quiz.questions.length, 'question')}</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-300">{pluralize(quiz.questions.length, 'question')} • {estimateQuizTime(quiz.questions)}</p>
                           </div>
                           <div className="flex gap-2 items-center">
                             <button onClick={() => setModal({ type: 'delete-confirm', quizId: quiz.id, quizName: quiz.name })} className="px-2 py-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity" title="Delete">🗑️</button>
@@ -4426,7 +4679,25 @@ ${quizContent.substring(0, 40000)}
             <button onClick={() => setPage(getDashboard())} className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white mb-6 text-sm">← Back</button>
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-8">
               <div className="flex items-center gap-3 mb-6"><span className="text-3xl">⚡</span><h1 className="text-2xl font-bold text-slate-900 dark:text-white">Create New Quiz</h1></div>
-              {generation.error && <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-300"><strong>Error:</strong> {generation.error}</div>}
+              {generation.error && (
+                <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <p className="text-red-700 dark:text-red-300 font-medium mb-1">Generation Failed</p>
+                      <p className="text-red-600 dark:text-red-400 text-sm">{generation.error}</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setGeneration(g => ({ ...g, error: null }));
+                        generateQuestions();
+                      }}
+                      className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg font-medium text-sm whitespace-nowrap"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Quiz Name</label>
@@ -4528,6 +4799,15 @@ ${quizContent.substring(0, 40000)}
                 </div>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Question Type</label>
+                    <select value={questionType} onChange={e => setQuestionType(e.target.value)} className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl text-sm">
+                      <option value="multiple-choice">🔘 Multiple Choice (4 options)</option>
+                      <option value="true-false">✓✗ True/False</option>
+                      <option value="mixed">🔀 Mixed (both types)</option>
+                    </select>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{questionType === 'multiple-choice' ? 'Standard 4-option questions' : questionType === 'true-false' ? 'Quick true/false statements' : 'Mix of multiple choice and true/false'}</p>
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Question Style</label>
                     <select value={questionStyle} onChange={e => setQuestionStyle(e.target.value)} className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl text-sm">
                       <option value="concept">📚 Concept-focused</option>
@@ -4536,6 +4816,8 @@ ${quizContent.substring(0, 40000)}
                     </select>
                     <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{questionStyle === 'concept' ? 'Tests theories & frameworks, avoids case-specific details' : questionStyle === 'case' ? 'Tests specific examples from the material' : 'Mix of concepts and case examples'}</p>
                   </div>
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Topic Focus <span className="text-slate-400 dark:text-slate-500 font-normal">(optional)</span></label>
                     <input
@@ -4607,7 +4889,7 @@ ${quizContent.substring(0, 40000)}
             <div className="flex justify-between items-start mb-6">
               <div>
                 <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{currentQuiz.published ? '' : 'Review: '}{currentQuiz.name}</h1>
-                <p className="text-slate-600 dark:text-slate-300">{pluralize(currentQuiz.questions.length, 'question')} {currentQuiz.published && <span className="text-green-600 dark:text-green-400">• Published ✓</span>}</p>
+                <p className="text-slate-600 dark:text-slate-300">{pluralize(currentQuiz.questions.length, 'question')} • {estimateQuizTime(currentQuiz.questions)} {currentQuiz.published && <span className="text-green-600 dark:text-green-400">• Published ✓</span>}</p>
               </div>
               <div className="flex gap-3">
                 {currentQuiz.published ? (
@@ -4623,6 +4905,12 @@ ${quizContent.substring(0, 40000)}
                       className="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg font-medium"
                     >
                       📋 Duplicate
+                    </button>
+                    <button
+                      onClick={() => setModal({ type: 'export-pdf', quiz: currentQuiz })}
+                      className="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg font-medium"
+                    >
+                      📄 Export PDF
                     </button>
                     {userType === 'teacher' && (
                       <button
@@ -4671,6 +4959,7 @@ ${quizContent.substring(0, 40000)}
                       <span className="w-8 h-8 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center font-bold">{i + 1}</span>
                       <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs rounded-full">{q.topic}</span>
                       <span className={`px-2 py-1 text-xs rounded-full ${q.difficulty === 'Basic' ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300' : q.difficulty === 'Intermediate' ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300' : 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300'}`}>{q.difficulty}</span>
+                      {q.type === 'true-false' && <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 text-xs rounded-full">T/F</span>}
                     </div>
                     <div className="flex gap-2">
                       <button
@@ -4757,6 +5046,7 @@ ${quizContent.substring(0, 40000)}
                 <div className="flex gap-2 mb-4">
                   <span className="px-3 py-1 bg-indigo-500/20 text-indigo-300 text-sm rounded-full">{q.topic}</span>
                   <span className={`px-3 py-1 text-sm rounded-full ${q.difficulty === 'Basic' ? 'bg-green-500/20 text-green-400' : q.difficulty === 'Intermediate' ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'}`}>{q.difficulty}</span>
+                  {q.type === 'true-false' && <span className="px-3 py-1 bg-purple-500/20 text-purple-300 text-sm rounded-full">True/False</span>}
                 </div>
                 <h2 className="text-xl text-white font-medium mb-6">{q.question}</h2>
                 <div className="space-y-3">
