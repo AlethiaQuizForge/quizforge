@@ -2102,9 +2102,9 @@ ${quizContent.substring(0, 40000)}
       {/* Modal */}
       {modal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setModal(null); setModalInput(''); }}>
-          <div className={`bg-white rounded-2xl p-6 w-full mx-4 shadow-2xl ${modal?.type === 'review-answers' ? 'max-w-3xl max-h-[80vh] overflow-y-auto' : 'max-w-md'}`} onClick={e => e.stopPropagation()}>
-            {modal?.title && <h3 className="text-lg font-semibold mb-4">{modal.title}</h3>}
-            
+          <div className={`bg-white dark:bg-slate-800 rounded-2xl p-6 w-full mx-4 shadow-2xl ${modal?.type === 'review-answers' ? 'max-w-3xl max-h-[80vh] overflow-y-auto' : 'max-w-md'}`} onClick={e => e.stopPropagation()}>
+            {modal?.title && <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">{modal.title}</h3>}
+
             {/* Input Modal */}
             {modal.type === 'input' && (
               <>
@@ -2114,11 +2114,11 @@ ${quizContent.substring(0, 40000)}
                   onChange={e => setModalInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && modal.onConfirm()}
                   placeholder={modal.placeholder}
-                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl mb-4 focus:border-indigo-500 focus:outline-none"
+                  className="w-full px-4 py-3 border-2 border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl mb-4 focus:border-indigo-500 dark:focus:border-indigo-400 focus:outline-none"
                   autoFocus
                 />
                 <div className="flex gap-3">
-                  <button onClick={() => { setModal(null); setModalInput(''); }} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg">Cancel</button>
+                  <button onClick={() => { setModal(null); setModalInput(''); }} className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg">Cancel</button>
                   <button onClick={modal.onConfirm} className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium">{modal.confirmText}</button>
                 </div>
               </>
@@ -2129,66 +2129,66 @@ ${quizContent.substring(0, 40000)}
               <>
                 {!modal.selectedQuiz ? (
                   <>
-                    <p className="text-sm text-slate-600 mb-3">Select a quiz to assign:</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">Select a quiz to assign:</p>
                     <div className="space-y-2 mb-4 max-h-60 overflow-y-auto">
                       {quizzes.length > 0 ? quizzes.map(quiz => (
-                        <button 
-                          key={quiz.id} 
-                          onClick={() => setModal({ ...modal, selectedQuiz: quiz, weight: 10, dueDate: '' })} 
-                          className="w-full p-3 text-left bg-slate-50 hover:bg-indigo-50 rounded-lg border border-slate-200"
+                        <button
+                          key={quiz.id}
+                          onClick={() => setModal({ ...modal, selectedQuiz: quiz, weight: 10, dueDate: '' })}
+                          className="w-full p-3 text-left bg-slate-50 dark:bg-slate-700/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg border border-slate-200 dark:border-slate-600"
                         >
-                          <p className="font-medium">{quiz.name}</p>
-                          <p className="text-sm text-slate-500">{pluralize(quiz.questions.length, 'question')}</p>
+                          <p className="font-medium text-slate-900 dark:text-white">{quiz.name}</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400">{pluralize(quiz.questions.length, 'question')}</p>
                         </button>
                       )) : (
-                        <p className="text-slate-500 text-center py-4">No quizzes available. Create one first!</p>
+                        <p className="text-slate-500 dark:text-slate-400 text-center py-4">No quizzes available. Create one first!</p>
                       )}
                     </div>
-                    <button onClick={() => { setModal(null); setModalInput(''); }} className="w-full px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg">Cancel</button>
+                    <button onClick={() => { setModal(null); setModalInput(''); }} className="w-full px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg">Cancel</button>
                   </>
                 ) : (
                   <>
-                    <div className="bg-indigo-50 rounded-lg p-3 mb-4">
-                      <p className="font-medium text-indigo-900">{modal.selectedQuiz.name}</p>
-                      <p className="text-sm text-indigo-600">{pluralize(modal.selectedQuiz.questions.length, 'question')}</p>
+                    <div className="bg-indigo-50 dark:bg-indigo-900/30 rounded-lg p-3 mb-4">
+                      <p className="font-medium text-indigo-900 dark:text-indigo-300">{modal.selectedQuiz.name}</p>
+                      <p className="text-sm text-indigo-600 dark:text-indigo-400">{pluralize(modal.selectedQuiz.questions.length, 'question')}</p>
                     </div>
                     <div className="space-y-4 mb-4">
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Weight (%)</label>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Weight (%)</label>
                         <div className="flex gap-2">
                           {[10, 15, 20, 25].map(w => (
-                            <button 
+                            <button
                               key={w}
                               onClick={() => setModal({ ...modal, weight: w })}
-                              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${modal.weight === w ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${modal.weight === w ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'}`}
                             >
                               {w}%
                             </button>
                           ))}
-                          <input 
-                            type="number" 
-                            min="1" 
+                          <input
+                            type="number"
+                            min="1"
                             max="100"
                             value={modal.weight}
                             onChange={e => setModal({ ...modal, weight: parseInt(e.target.value) || 10 })}
-                            className="w-20 px-2 py-2 border border-slate-300 rounded-lg text-center text-sm"
+                            className="w-20 px-2 py-2 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg text-center text-sm"
                           />
                         </div>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Due Date (optional)</label>
-                        <input 
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Due Date (optional)</label>
+                        <input
                           type="datetime-local"
                           value={modal.dueDate}
                           onChange={e => setModal({ ...modal, dueDate: e.target.value })}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg text-sm"
                         />
                       </div>
                     </div>
                     <div className="flex gap-3">
-                      <button onClick={() => setModal({ ...modal, selectedQuiz: null })} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg">← Back</button>
-                      <button 
-                        onClick={() => assignQuiz(modal.selectedQuiz.id, modal.weight, modal.dueDate || null)} 
+                      <button onClick={() => setModal({ ...modal, selectedQuiz: null })} className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg">← Back</button>
+                      <button
+                        onClick={() => assignQuiz(modal.selectedQuiz.id, modal.weight, modal.dueDate || null)}
                         className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium"
                       >
                         Assign Quiz
@@ -2204,15 +2204,15 @@ ${quizContent.substring(0, 40000)}
               <>
                 <div className="text-center mb-4">
                   <div className="text-5xl mb-2">🔗</div>
-                  <p className="text-slate-600">Share this link with anyone!</p>
+                  <p className="text-slate-600 dark:text-slate-400">Share this link with anyone!</p>
                 </div>
-                <div className="bg-slate-100 rounded-lg p-3 mb-4 break-all text-sm font-mono text-slate-700">
+                <div className="bg-slate-100 dark:bg-slate-700 rounded-lg p-3 mb-4 break-all text-sm font-mono text-slate-700 dark:text-slate-300">
                   {modalInput}
                 </div>
                 <div className="flex gap-3">
-                  <button onClick={() => { setModal(null); setModalInput(''); }} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg">Close</button>
-                  <button onClick={() => { 
-                    navigator.clipboard.writeText(modalInput); 
+                  <button onClick={() => { setModal(null); setModalInput(''); }} className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg">Close</button>
+                  <button onClick={() => {
+                    navigator.clipboard.writeText(modalInput);
                     showToast('Copied!', 'success');
                   }} className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium">Copy Link</button>
                 </div>
@@ -2224,12 +2224,12 @@ ${quizContent.substring(0, 40000)}
               <>
                 <div className="text-center mb-4">
                   <div className="text-5xl mb-2">🎉</div>
-                  <h3 className="text-xl font-bold text-slate-900">Quiz Created!</h3>
-                  <p className="text-slate-600 mt-1">"{modal.quiz.name}" • {pluralize(modal.quiz.questions.length, 'question')}</p>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">Quiz Created!</h3>
+                  <p className="text-slate-600 dark:text-slate-400 mt-1">"{modal.quiz.name}" • {pluralize(modal.quiz.questions.length, 'question')}</p>
                 </div>
-                
+
                 <div className="space-y-3 mb-6">
-                  <button 
+                  <button
                     onClick={() => {
                       shareQuiz(modal.quiz);
                       setModal(null);
@@ -2242,8 +2242,8 @@ ${quizContent.substring(0, 40000)}
                       <span className="text-indigo-200 text-sm">Get a link anyone can use</span>
                     </div>
                   </button>
-                  
-                  <button 
+
+                  <button
                     onClick={() => {
                       const selected = shuffleArray([...modal.quiz.questions]).slice(0, 10).map(q => ({ ...q, options: shuffleArray([...q.options]) }));
                       setCurrentQuiz({ ...modal.quiz, questions: selected });
@@ -2259,56 +2259,56 @@ ${quizContent.substring(0, 40000)}
                       <span className="text-amber-100 text-sm">Test yourself with this quiz</span>
                     </div>
                   </button>
-                  
-                  <button 
+
+                  <button
                     onClick={() => {
                       setCurrentQuiz(modal.quiz);
                       setModal(null);
                       setPage('review-quiz');
                     }}
-                    className="w-full p-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-left flex items-center gap-4"
+                    className="w-full p-4 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-xl text-left flex items-center gap-4"
                   >
                     <span className="text-2xl">👁️</span>
                     <div>
                       <span className="font-semibold block">Review Questions</span>
-                      <span className="text-slate-500 text-sm">See all questions and answers</span>
+                      <span className="text-slate-500 dark:text-slate-400 text-sm">See all questions and answers</span>
                     </div>
                   </button>
                 </div>
-                
-                <button 
+
+                <button
                   onClick={() => { setModal(null); setPage(getDashboard()); }}
-                  className="w-full py-2 text-slate-500 hover:text-slate-700 text-sm"
+                  className="w-full py-2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 text-sm"
                 >
                   Go to Dashboard →
                 </button>
               </>
             )}
-            
+
             {/* Delete Confirmation Modal */}
             {modal?.type === 'delete-confirm' && (
               <>
                 <div className="text-center mb-4">
                   <div className="text-5xl mb-2">🗑️</div>
-                  <h3 className="text-xl font-bold text-slate-900">Delete Quiz?</h3>
-                  <p className="text-slate-600 mt-1">"{modal.quizName}" will be permanently deleted.</p>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">Delete Quiz?</h3>
+                  <p className="text-slate-600 dark:text-slate-400 mt-1">"{modal.quizName}" will be permanently deleted.</p>
                 </div>
                 <div className="flex gap-3">
-                  <button onClick={() => setModal(null)} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg">Cancel</button>
+                  <button onClick={() => setModal(null)} className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg">Cancel</button>
                   <button onClick={() => deleteQuiz(modal.quizId)} className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-400 text-white rounded-lg font-medium">Delete</button>
                 </div>
               </>
             )}
-            
+
             {/* Confirm Modal */}
             {modal?.type === 'confirm' && (
               <>
                 <div className="text-center mb-4">
-                  <h3 className="text-xl font-bold text-slate-900">{modal.title}</h3>
-                  <p className="text-slate-600 mt-1">{modal.message}</p>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">{modal.title}</h3>
+                  <p className="text-slate-600 dark:text-slate-400 mt-1">{modal.message}</p>
                 </div>
                 <div className="flex gap-3">
-                  <button onClick={() => setModal(null)} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg">Cancel</button>
+                  <button onClick={() => setModal(null)} className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg">Cancel</button>
                   <button onClick={() => { modal.onConfirm?.(); setModal(null); }} className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium">Confirm</button>
                 </div>
               </>
@@ -2319,17 +2319,17 @@ ${quizContent.substring(0, 40000)}
               <>
                 <div className="text-center mb-4">
                   <div className="text-5xl mb-2">⏱️</div>
-                  <h3 className="text-xl font-bold text-slate-900">Timed Quiz</h3>
-                  <p className="text-slate-600 mt-1">Simulate real exam conditions</p>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">Timed Quiz</h3>
+                  <p className="text-slate-600 dark:text-slate-400 mt-1">Simulate real exam conditions</p>
                 </div>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Time Limit</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Time Limit</label>
                   <div className="grid grid-cols-3 gap-2">
                     {[5, 10, 15, 20, 30, 45].map(mins => (
-                      <button 
+                      <button
                         key={mins}
                         onClick={() => setModalInput(mins.toString())}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition ${modalInput === mins.toString() ? 'bg-indigo-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition ${modalInput === mins.toString() ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300'}`}
                       >
                         {mins} min
                       </button>
@@ -2337,12 +2337,12 @@ ${quizContent.substring(0, 40000)}
                   </div>
                 </div>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Questions</label>
-                  <p className="text-sm text-slate-500">Up to 20 random questions from your bank</p>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Questions</label>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Up to 20 random questions from your bank</p>
                 </div>
                 <div className="flex gap-3">
-                  <button onClick={() => { setModal(null); setModalInput(''); }} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg">Cancel</button>
-                  <button 
+                  <button onClick={() => { setModal(null); setModalInput(''); }} className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg">Cancel</button>
+                  <button
                     onClick={() => {
                       const mins = parseInt(modalInput) || 10;
                       const questions = shuffleArray([...questionBank]).slice(0, 20).map(q => ({ ...q, options: shuffleArray([...q.options]) }));
@@ -2353,49 +2353,49 @@ ${quizContent.substring(0, 40000)}
                       setModal(null);
                       setModalInput('');
                       setPage('take-quiz');
-                    }} 
+                    }}
                     disabled={!modalInput}
-                    className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-300 text-white rounded-lg font-medium"
+                    className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-300 dark:disabled:bg-slate-600 text-white rounded-lg font-medium"
                   >
                     Start Quiz ⏱️
                   </button>
                 </div>
               </>
             )}
-            
+
             {/* Review Answers Modal */}
             {modal?.type === 'review-answers' && (
               <>
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xl font-bold text-slate-900">📋 Review Answers</h3>
-                  <button onClick={() => setModal(null)} className="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">📋 Review Answers</h3>
+                  <button onClick={() => setModal(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-2xl">&times;</button>
                 </div>
                 <div className="space-y-4">
                   {modal.results.map((result, idx) => {
                     const question = modal.questions[idx];
                     if (!question) return null;
                     return (
-                      <div key={idx} className={`p-4 rounded-xl border-2 ${result.correct ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                      <div key={idx} className={`p-4 rounded-xl border-2 ${result.correct ? 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800'}`}>
                         <div className="flex items-start gap-3 mb-2">
                           <span className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${result.correct ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
                             {result.correct ? '✓' : '✗'}
                           </span>
-                          <p className="font-medium text-slate-900">{question.question}</p>
+                          <p className="font-medium text-slate-900 dark:text-white">{question.question}</p>
                         </div>
                         <div className="ml-9 space-y-1">
                           {!result.correct && (
-                            <p className="text-sm"><span className="text-red-600">Your answer:</span> {question.options[result.selectedAnswer]?.text}</p>
+                            <p className="text-sm text-slate-700 dark:text-slate-300"><span className="text-red-600 dark:text-red-400">Your answer:</span> {question.options[result.selectedAnswer]?.text}</p>
                           )}
-                          <p className="text-sm"><span className="text-green-600">Correct:</span> {question.options.find(o => o.isCorrect)?.text}</p>
+                          <p className="text-sm text-slate-700 dark:text-slate-300"><span className="text-green-600 dark:text-green-400">Correct:</span> {question.options.find(o => o.isCorrect)?.text}</p>
                           {question.explanation && (
-                            <p className="text-sm text-slate-600 mt-2 italic">💡 {question.explanation}</p>
+                            <p className="text-sm text-slate-600 dark:text-slate-400 mt-2 italic">💡 {question.explanation}</p>
                           )}
                         </div>
                       </div>
                     );
                   })}
                 </div>
-                <button onClick={() => setModal(null)} className="w-full mt-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg font-medium">Close</button>
+                <button onClick={() => setModal(null)} className="w-full mt-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg font-medium">Close</button>
               </>
             )}
             
@@ -2404,48 +2404,48 @@ ${quizContent.substring(0, 40000)}
               <>
                 <div className="text-center mb-4">
                   <div className="text-5xl mb-2">🎉</div>
-                  <p className="text-slate-600">"{modal.quizName}" with {modal.questionCount} questions is ready!</p>
+                  <p className="text-slate-600 dark:text-slate-400">"{modal.quizName}" with {modal.questionCount} questions is ready!</p>
                 </div>
-                
+
                 {userType === 'teacher' ? (
                   <>
-                    <div className="bg-slate-50 rounded-xl p-4 mb-4">
-                      <h4 className="font-semibold text-slate-900 mb-3">What's Next?</h4>
+                    <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 mb-4">
+                      <h4 className="font-semibold text-slate-900 dark:text-white mb-3">What's Next?</h4>
                       <div className="space-y-3">
                         <div className="flex items-start gap-3">
-                          <span className="w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">1</span>
+                          <span className="w-6 h-6 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">1</span>
                           <div>
-                            <p className="font-medium text-slate-900">Create a Class</p>
-                            <p className="text-sm text-slate-500">Get a code to share with students</p>
+                            <p className="font-medium text-slate-900 dark:text-white">Create a Class</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Get a code to share with students</p>
                           </div>
                         </div>
                         <div className="flex items-start gap-3">
-                          <span className="w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">2</span>
+                          <span className="w-6 h-6 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">2</span>
                           <div>
-                            <p className="font-medium text-slate-900">Assign Quiz to Class</p>
-                            <p className="text-sm text-slate-500">Students will see it on their dashboard</p>
+                            <p className="font-medium text-slate-900 dark:text-white">Assign Quiz to Class</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Students will see it on their dashboard</p>
                           </div>
                         </div>
                         <div className="flex items-start gap-3">
-                          <span className="w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">3</span>
+                          <span className="w-6 h-6 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">3</span>
                           <div>
-                            <p className="font-medium text-slate-900">Track Results</p>
-                            <p className="text-sm text-slate-500">See scores as students complete</p>
+                            <p className="font-medium text-slate-900 dark:text-white">Track Results</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">See scores as students complete</p>
                           </div>
                         </div>
                       </div>
                     </div>
                     <div className="flex gap-3">
-                      <button 
-                        onClick={() => { setModal(null); setPage('teacher-dashboard'); }} 
-                        className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg"
+                      <button
+                        onClick={() => { setModal(null); setPage('teacher-dashboard'); }}
+                        className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg"
                       >
                         Go to Dashboard
                       </button>
-                      <button 
-                        onClick={() => { 
+                      <button
+                        onClick={() => {
                           setModal({ type: 'input', title: 'Create New Class', placeholder: 'Class name (e.g., Economics 101)', confirmText: 'Create', onConfirm: createClass });
-                        }} 
+                        }}
                         className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium"
                       >
                         Create Class →
@@ -2454,44 +2454,44 @@ ${quizContent.substring(0, 40000)}
                   </>
                 ) : (
                   <>
-                    <div className="bg-amber-50 rounded-xl p-4 mb-4">
-                      <h4 className="font-semibold text-slate-900 mb-3">What's Next?</h4>
+                    <div className="bg-amber-50 dark:bg-amber-900/30 rounded-xl p-4 mb-4">
+                      <h4 className="font-semibold text-slate-900 dark:text-white mb-3">What's Next?</h4>
                       <div className="space-y-3">
                         <div className="flex items-start gap-3">
-                          <span className="w-6 h-6 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">1</span>
+                          <span className="w-6 h-6 bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">1</span>
                           <div>
-                            <p className="font-medium text-slate-900">Practice Your Quiz</p>
-                            <p className="text-sm text-slate-500">Test the questions yourself</p>
+                            <p className="font-medium text-slate-900 dark:text-white">Practice Your Quiz</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Test the questions yourself</p>
                           </div>
                         </div>
                         <div className="flex items-start gap-3">
-                          <span className="w-6 h-6 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">2</span>
+                          <span className="w-6 h-6 bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">2</span>
                           <div>
-                            <p className="font-medium text-slate-900">Create More Quizzes</p>
-                            <p className="text-sm text-slate-500">Upload different content</p>
+                            <p className="font-medium text-slate-900 dark:text-white">Create More Quizzes</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Upload different content</p>
                           </div>
                         </div>
                         <div className="flex items-start gap-3">
-                          <span className="w-6 h-6 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">3</span>
+                          <span className="w-6 h-6 bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">3</span>
                           <div>
-                            <p className="font-medium text-slate-900">Track Your Progress</p>
-                            <p className="text-sm text-slate-500">See your practice scores improve</p>
+                            <p className="font-medium text-slate-900 dark:text-white">Track Your Progress</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">See your practice scores improve</p>
                           </div>
                         </div>
                       </div>
                     </div>
                     <div className="flex gap-3">
-                      <button 
-                        onClick={() => { setModal(null); setPage(getDashboard()); }} 
-                        className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg"
+                      <button
+                        onClick={() => { setModal(null); setPage(getDashboard()); }}
+                        className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg"
                       >
                         Go to Dashboard
                       </button>
-                      <button 
-                        onClick={() => { 
+                      <button
+                        onClick={() => {
                           setModal(null);
                           setPage('create-quiz');
-                        }} 
+                        }}
                         className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-white rounded-lg font-medium"
                       >
                         Create Another →
@@ -2504,43 +2504,43 @@ ${quizContent.substring(0, 40000)}
           </div>
         </div>
       )}
-      
+
       {/* EDIT QUESTION MODAL */}
       {editingQuestion && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setEditingQuestion(null)}>
-          <div className="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-slate-900">Edit Question</h2>
-              <button onClick={() => setEditingQuestion(null)} className="text-slate-400 hover:text-slate-600 text-2xl">×</button>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">Edit Question</h2>
+              <button onClick={() => setEditingQuestion(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-2xl">×</button>
             </div>
-            
+
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Question</label>
-                <textarea 
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Question</label>
+                <textarea
                   value={editingQuestion.question.question}
                   onChange={e => setEditingQuestion(prev => ({ ...prev, question: { ...prev.question, question: e.target.value } }))}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
                   rows={3}
                 />
               </div>
               
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Topic</label>
-                  <input 
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Topic</label>
+                  <input
                     type="text"
                     value={editingQuestion.question.topic}
                     onChange={e => setEditingQuestion(prev => ({ ...prev, question: { ...prev.question, topic: e.target.value } }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Difficulty</label>
-                  <select 
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Difficulty</label>
+                  <select
                     value={editingQuestion.question.difficulty}
                     onChange={e => setEditingQuestion(prev => ({ ...prev, question: { ...prev.question, difficulty: e.target.value } }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   >
                     <option value="Basic">Basic</option>
                     <option value="Intermediate">Intermediate</option>
@@ -2548,13 +2548,13 @@ ${quizContent.substring(0, 40000)}
                   </select>
                 </div>
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Options (click to set correct answer)</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Options (click to set correct answer)</label>
                 <div className="space-y-2">
                   {editingQuestion.question.options.map((opt, i) => (
                     <div key={i} className="flex items-center gap-2">
-                      <button 
+                      <button
                         type="button"
                         onClick={() => setEditingQuestion(prev => ({
                           ...prev,
@@ -2563,11 +2563,11 @@ ${quizContent.substring(0, 40000)}
                             options: prev.question.options.map((o, j) => ({ ...o, isCorrect: j === i }))
                           }
                         }))}
-                        className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 ${opt.isCorrect ? 'bg-green-500 text-white' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}`}
+                        className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 ${opt.isCorrect ? 'bg-green-500 text-white' : 'bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-500'}`}
                       >
                         {String.fromCharCode(65 + i)}
                       </button>
-                      <input 
+                      <input
                         type="text"
                         value={opt.text}
                         onChange={e => setEditingQuestion(prev => ({
@@ -2577,30 +2577,30 @@ ${quizContent.substring(0, 40000)}
                             options: prev.question.options.map((o, j) => j === i ? { ...o, text: e.target.value } : o)
                           }
                         }))}
-                        className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${opt.isCorrect ? 'border-green-300 bg-green-50' : 'border-slate-300'}`}
+                        className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-slate-700 dark:text-white ${opt.isCorrect ? 'border-green-300 dark:border-green-600 bg-green-50 dark:bg-green-900/30' : 'border-slate-300 dark:border-slate-600'}`}
                       />
-                      {opt.isCorrect && <span className="text-green-600">✓</span>}
+                      {opt.isCorrect && <span className="text-green-600 dark:text-green-400">✓</span>}
                     </div>
                   ))}
                 </div>
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Explanation</label>
-                <textarea 
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Explanation</label>
+                <textarea
                   value={editingQuestion.question.explanation}
                   onChange={e => setEditingQuestion(prev => ({ ...prev, question: { ...prev.question, explanation: e.target.value } }))}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
                   rows={2}
                 />
               </div>
             </div>
-            
+
             <div className="flex gap-3 mt-6">
-              <button onClick={() => setEditingQuestion(null)} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg">
+              <button onClick={() => setEditingQuestion(null)} className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg">
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={() => saveQuestionEdit(editingQuestion.quizId, editingQuestion.index, editingQuestion.question)}
                 className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium"
               >
@@ -2614,14 +2614,14 @@ ${quizContent.substring(0, 40000)}
       {/* ONBOARDING MODAL */}
       {showOnboarding && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-8 w-full max-w-lg shadow-2xl">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 w-full max-w-lg shadow-2xl">
             {onboardingStep === 0 && (
               <>
                 <div className="text-6xl text-center mb-4">👋</div>
-                <h2 className="text-2xl font-bold text-center text-slate-900 mb-2">Welcome to QuizForge!</h2>
-                <p className="text-slate-600 text-center mb-6">Let's take a quick tour to help you get started.</p>
+                <h2 className="text-2xl font-bold text-center text-slate-900 dark:text-white mb-2">Welcome to QuizForge!</h2>
+                <p className="text-slate-600 dark:text-slate-400 text-center mb-6">Let's take a quick tour to help you get started.</p>
                 <div className="flex gap-3">
-                  <button onClick={completeOnboarding} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg">Skip</button>
+                  <button onClick={completeOnboarding} className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 rounded-lg">Skip</button>
                   <button onClick={() => setOnboardingStep(1)} className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium">Start Tour →</button>
                 </div>
               </>
@@ -2629,18 +2629,18 @@ ${quizContent.substring(0, 40000)}
             {onboardingStep === 1 && (
               <>
                 <div className="text-6xl text-center mb-4">📚</div>
-                <h2 className="text-xl font-bold text-center text-slate-900 mb-2">Step 1: Upload Materials</h2>
-                <p className="text-slate-600 text-center mb-6">Upload your lecture slides, PDFs, or any course materials. Our AI will analyze them to create smart quiz questions.</p>
-                <div className="bg-slate-100 rounded-xl p-4 mb-6">
-                  <div className="flex items-center gap-3 text-sm text-slate-700">
-                    <span className="text-green-600">✓</span><span>Supports PDF, PowerPoint, Word, and images</span>
+                <h2 className="text-xl font-bold text-center text-slate-900 dark:text-white mb-2">Step 1: Upload Materials</h2>
+                <p className="text-slate-600 dark:text-slate-400 text-center mb-6">Upload your lecture slides, PDFs, or any course materials. Our AI will analyze them to create smart quiz questions.</p>
+                <div className="bg-slate-100 dark:bg-slate-700/50 rounded-xl p-4 mb-6">
+                  <div className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300">
+                    <span className="text-green-600 dark:text-green-400">✓</span><span>Supports PDF, PowerPoint, Word, and images</span>
                   </div>
-                  <div className="flex items-center gap-3 text-sm text-slate-700 mt-2">
-                    <span className="text-green-600">✓</span><span>Multi-file upload supported</span>
+                  <div className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300 mt-2">
+                    <span className="text-green-600 dark:text-green-400">✓</span><span>Multi-file upload supported</span>
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <button onClick={() => setOnboardingStep(0)} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg">← Back</button>
+                  <button onClick={() => setOnboardingStep(0)} className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 rounded-lg">← Back</button>
                   <button onClick={() => setOnboardingStep(2)} className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium">Next →</button>
                 </div>
               </>
@@ -2648,18 +2648,18 @@ ${quizContent.substring(0, 40000)}
             {onboardingStep === 2 && (
               <>
                 <div className="text-6xl text-center mb-4">⚡</div>
-                <h2 className="text-xl font-bold text-center text-slate-900 mb-2">Step 2: Generate Questions</h2>
-                <p className="text-slate-600 text-center mb-6">Choose the number of questions, difficulty level, and whether to focus on concepts or case details.</p>
-                <div className="bg-slate-100 rounded-xl p-4 mb-6">
-                  <div className="flex items-center gap-3 text-sm text-slate-700">
-                    <span>🧠</span><span><strong className="text-slate-800">Concept-focused:</strong> Tests underlying theories</span>
+                <h2 className="text-xl font-bold text-center text-slate-900 dark:text-white mb-2">Step 2: Generate Questions</h2>
+                <p className="text-slate-600 dark:text-slate-400 text-center mb-6">Choose the number of questions, difficulty level, and whether to focus on concepts or case details.</p>
+                <div className="bg-slate-100 dark:bg-slate-700/50 rounded-xl p-4 mb-6">
+                  <div className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300">
+                    <span>🧠</span><span><strong className="text-slate-800 dark:text-white">Concept-focused:</strong> Tests underlying theories</span>
                   </div>
-                  <div className="flex items-center gap-3 text-sm text-slate-700 mt-2">
-                    <span>📋</span><span><strong className="text-slate-800">Case-based:</strong> Tests specific case details</span>
+                  <div className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300 mt-2">
+                    <span>📋</span><span><strong className="text-slate-800 dark:text-white">Case-based:</strong> Tests specific case details</span>
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <button onClick={() => setOnboardingStep(1)} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg">← Back</button>
+                  <button onClick={() => setOnboardingStep(1)} className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 rounded-lg">← Back</button>
                   <button onClick={() => setOnboardingStep(3)} className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium">Next →</button>
                 </div>
               </>
@@ -2667,21 +2667,21 @@ ${quizContent.substring(0, 40000)}
             {onboardingStep === 3 && (
               <>
                 <div className="text-6xl text-center mb-4">🎯</div>
-                <h2 className="text-xl font-bold text-center text-slate-900 mb-2">Step 3: Practice & Share</h2>
-                <p className="text-slate-600 text-center mb-6">Practice your quizzes, track your progress, and share with friends or students.</p>
-                <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-4 mb-6 border border-amber-200">
-                  <div className="flex items-center gap-3 text-sm text-slate-700">
+                <h2 className="text-xl font-bold text-center text-slate-900 dark:text-white mb-2">Step 3: Practice & Share</h2>
+                <p className="text-slate-600 dark:text-slate-400 text-center mb-6">Practice your quizzes, track your progress, and share with friends or students.</p>
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/30 rounded-xl p-4 mb-6 border border-amber-200 dark:border-amber-700">
+                  <div className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300">
                     <span>🔥</span><span>Build streaks for daily practice</span>
                   </div>
-                  <div className="flex items-center gap-3 text-sm text-slate-700 mt-2">
+                  <div className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300 mt-2">
                     <span>🏆</span><span>Earn achievements as you improve</span>
                   </div>
-                  <div className="flex items-center gap-3 text-sm text-slate-700 mt-2">
+                  <div className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300 mt-2">
                     <span>📊</span><span>Track your progress over time</span>
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <button onClick={() => setOnboardingStep(2)} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg">← Back</button>
+                  <button onClick={() => setOnboardingStep(2)} className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 rounded-lg">← Back</button>
                   <button onClick={() => { completeOnboarding(); setPage('create-quiz'); }} className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg font-medium">Create Your First Quiz! 🎉</button>
                 </div>
               </>
@@ -2689,7 +2689,7 @@ ${quizContent.substring(0, 40000)}
             {onboardingStep > 0 && (
               <div className="flex justify-center gap-2 mt-6">
                 {[1, 2, 3].map(step => (
-                  <div key={step} className={`w-2.5 h-2.5 rounded-full transition-colors ${onboardingStep === step ? 'bg-indigo-600' : 'bg-slate-300'}`} />
+                  <div key={step} className={`w-2.5 h-2.5 rounded-full transition-colors ${onboardingStep === step ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-600'}`} />
                 ))}
               </div>
             )}
@@ -2703,74 +2703,74 @@ ${quizContent.substring(0, 40000)}
         if (!analytics) return null;
         return (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowAnalytics(null)}>
-            <div className="bg-white rounded-2xl p-6 w-full max-w-3xl max-h-[85vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-3xl max-h-[85vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-slate-900">📊 Quiz Analytics</h2>
-                <button onClick={() => setShowAnalytics(null)} className="text-slate-400 hover:text-slate-600 text-2xl">×</button>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">📊 Quiz Analytics</h2>
+                <button onClick={() => setShowAnalytics(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-2xl">×</button>
               </div>
-              
+
               <div className="mb-6">
-                <h3 className="font-semibold text-slate-900 text-lg">{analytics.quiz.name}</h3>
-                <p className="text-slate-500">{analytics.quiz.questions.length} questions</p>
+                <h3 className="font-semibold text-slate-900 dark:text-white text-lg">{analytics.quiz.name}</h3>
+                <p className="text-slate-500 dark:text-slate-400">{analytics.quiz.questions.length} questions</p>
               </div>
-              
+
               {/* Overview Stats */}
               <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="bg-indigo-50 rounded-xl p-4 text-center">
-                  <p className="text-3xl font-bold text-indigo-600">{analytics.submissions}</p>
-                  <p className="text-sm text-slate-600">Submissions</p>
+                <div className="bg-indigo-50 dark:bg-indigo-900/30 rounded-xl p-4 text-center">
+                  <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">{analytics.submissions}</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Submissions</p>
                 </div>
-                <div className="bg-green-50 rounded-xl p-4 text-center">
-                  <p className="text-3xl font-bold text-green-600">{analytics.avgScore || '--'}%</p>
-                  <p className="text-sm text-slate-600">Average Score</p>
+                <div className="bg-green-50 dark:bg-green-900/30 rounded-xl p-4 text-center">
+                  <p className="text-3xl font-bold text-green-600 dark:text-green-400">{analytics.avgScore || '--'}%</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Average Score</p>
                 </div>
-                <div className="bg-amber-50 rounded-xl p-4 text-center">
-                  <p className="text-3xl font-bold text-amber-600">{analytics.hardestQuestions.length}</p>
-                  <p className="text-sm text-slate-600">Hard Questions</p>
+                <div className="bg-amber-50 dark:bg-amber-900/30 rounded-xl p-4 text-center">
+                  <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">{analytics.hardestQuestions.length}</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Hard Questions</p>
                 </div>
               </div>
-              
+
               {analytics.submissions === 0 ? (
-                <div className="text-center py-8 bg-slate-50 rounded-xl">
+                <div className="text-center py-8 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
                   <div className="text-4xl mb-3">📭</div>
-                  <p className="text-slate-600">No submissions yet. Assign this quiz to see analytics.</p>
+                  <p className="text-slate-600 dark:text-slate-400">No submissions yet. Assign this quiz to see analytics.</p>
                 </div>
               ) : (
                 <>
                   {/* Hardest Questions */}
                   {analytics.hardestQuestions.length > 0 && (
                     <div className="mb-6">
-                      <h4 className="font-semibold text-slate-900 mb-3">🔥 Most Challenging Questions</h4>
+                      <h4 className="font-semibold text-slate-900 dark:text-white mb-3">🔥 Most Challenging Questions</h4>
                       <div className="space-y-3">
                         {analytics.hardestQuestions.map((q, i) => (
-                          <div key={i} className="bg-red-50 border border-red-200 rounded-lg p-4">
+                          <div key={i} className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4">
                             <div className="flex justify-between items-start mb-2">
-                              <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">Q{q.questionIndex + 1}</span>
-                              <span className="text-red-600 font-bold">{q.correctRate}% correct</span>
+                              <span className="px-2 py-1 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-400 text-xs rounded-full">Q{q.questionIndex + 1}</span>
+                              <span className="text-red-600 dark:text-red-400 font-bold">{q.correctRate}% correct</span>
                             </div>
-                            <p className="text-slate-800 text-sm">{q.question}</p>
+                            <p className="text-slate-800 dark:text-slate-300 text-sm">{q.question}</p>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
-                  
+
                   {/* All Questions Performance */}
                   <div>
-                    <h4 className="font-semibold text-slate-900 mb-3">📈 Question Performance</h4>
+                    <h4 className="font-semibold text-slate-900 dark:text-white mb-3">📈 Question Performance</h4>
                     <div className="space-y-2">
                       {analytics.questions.map((q, i) => (
-                        <div key={i} className="flex items-center gap-3 py-2 border-b border-slate-100">
-                          <span className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-sm font-bold text-slate-600">{i + 1}</span>
+                        <div key={i} className="flex items-center gap-3 py-2 border-b border-slate-100 dark:border-slate-700">
+                          <span className="w-8 h-8 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center text-sm font-bold text-slate-600 dark:text-slate-300">{i + 1}</span>
                           <div className="flex-1">
-                            <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-                              <div 
-                                className={`h-full rounded-full ${q.correctRate === null ? 'bg-slate-300' : q.correctRate >= 70 ? 'bg-green-500' : q.correctRate >= 40 ? 'bg-amber-500' : 'bg-red-500'}`}
+                            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${q.correctRate === null ? 'bg-slate-300 dark:bg-slate-600' : q.correctRate >= 70 ? 'bg-green-500' : q.correctRate >= 40 ? 'bg-amber-500' : 'bg-red-500'}`}
                                 style={{ width: `${q.correctRate || 0}%` }}
                               />
                             </div>
                           </div>
-                          <span className={`w-16 text-right text-sm font-medium ${q.correctRate === null ? 'text-slate-400' : q.correctRate >= 70 ? 'text-green-600' : q.correctRate >= 40 ? 'text-amber-600' : 'text-red-600'}`}>
+                          <span className={`w-16 text-right text-sm font-medium ${q.correctRate === null ? 'text-slate-400' : q.correctRate >= 70 ? 'text-green-600 dark:text-green-400' : q.correctRate >= 40 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400'}`}>
                             {q.correctRate !== null ? `${q.correctRate}%` : '—'}
                           </span>
                         </div>
@@ -2779,9 +2779,9 @@ ${quizContent.substring(0, 40000)}
                   </div>
                 </>
               )}
-              
-              <div className="mt-6 pt-4 border-t border-slate-200">
-                <button onClick={() => setShowAnalytics(null)} className="w-full px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg">
+
+              <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+                <button onClick={() => setShowAnalytics(null)} className="w-full px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg">
                   Close
                 </button>
               </div>
@@ -2793,47 +2793,47 @@ ${quizContent.substring(0, 40000)}
       {/* PROGRESS CHART MODAL */}
       {showProgressChart && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowProgressChart(false)}>
-          <div className="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[85vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-2xl max-h-[85vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-slate-900">📈 Your Progress</h2>
-              <button onClick={() => setShowProgressChart(false)} className="text-slate-400 hover:text-slate-600 text-2xl">×</button>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">📈 Your Progress</h2>
+              <button onClick={() => setShowProgressChart(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-2xl">×</button>
             </div>
             
             {/* Stats Overview */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-              <div className="bg-indigo-50 rounded-xl p-3 text-center">
-                <p className="text-2xl font-bold text-indigo-600">{studentProgress.quizzesTaken}</p>
-                <p className="text-xs text-slate-600">Total Quizzes</p>
+              <div className="bg-indigo-50 dark:bg-indigo-900/30 rounded-xl p-3 text-center">
+                <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{studentProgress.quizzesTaken}</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400">Total Quizzes</p>
               </div>
-              <div className="bg-green-50 rounded-xl p-3 text-center">
-                <p className="text-2xl font-bold text-green-600">{avgScore}%</p>
-                <p className="text-xs text-slate-600">Avg Score</p>
+              <div className="bg-green-50 dark:bg-green-900/30 rounded-xl p-3 text-center">
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">{avgScore}%</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400">Avg Score</p>
               </div>
-              <div className="bg-orange-50 rounded-xl p-3 text-center">
-                <p className="text-2xl font-bold text-orange-600">{studentProgress.currentStreak}</p>
-                <p className="text-xs text-slate-600">Current Streak</p>
+              <div className="bg-orange-50 dark:bg-orange-900/30 rounded-xl p-3 text-center">
+                <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{studentProgress.currentStreak}</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400">Current Streak</p>
               </div>
-              <div className="bg-amber-50 rounded-xl p-3 text-center">
-                <p className="text-2xl font-bold text-amber-600">{studentProgress.longestStreak || 0}</p>
-                <p className="text-xs text-slate-600">Best Streak</p>
+              <div className="bg-amber-50 dark:bg-amber-900/30 rounded-xl p-3 text-center">
+                <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{studentProgress.longestStreak || 0}</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400">Best Streak</p>
               </div>
             </div>
-            
+
             {/* Progress Chart */}
             <div className="mb-6">
-              <h4 className="font-semibold text-slate-900 mb-3">Last 30 Days</h4>
+              <h4 className="font-semibold text-slate-900 dark:text-white mb-3">Last 30 Days</h4>
               {(studentProgress.dailyHistory || []).length === 0 ? (
-                <div className="text-center py-8 bg-slate-50 rounded-xl">
+                <div className="text-center py-8 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
                   <div className="text-4xl mb-3">📊</div>
-                  <p className="text-slate-600">Complete some quizzes to see your progress chart!</p>
+                  <p className="text-slate-600 dark:text-slate-400">Complete some quizzes to see your progress chart!</p>
                 </div>
               ) : (
-                <div className="bg-slate-50 rounded-xl p-4">
+                <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4">
                   {/* Simple bar chart */}
                   <div className="flex items-end gap-1 h-32">
                     {(studentProgress.dailyHistory || []).slice(-14).map((day, i) => (
                       <div key={i} className="flex-1 flex flex-col items-center">
-                        <div 
+                        <div
                           className={`w-full rounded-t ${day.avgScore >= 80 ? 'bg-green-500' : day.avgScore >= 60 ? 'bg-amber-500' : 'bg-red-500'}`}
                           style={{ height: `${day.avgScore}%` }}
                           title={`${day.date}: ${day.avgScore}% (${day.quizzes} quizzes)`}
@@ -2841,11 +2841,11 @@ ${quizContent.substring(0, 40000)}
                       </div>
                     ))}
                   </div>
-                  <div className="flex justify-between mt-2 text-xs text-slate-500">
+                  <div className="flex justify-between mt-2 text-xs text-slate-500 dark:text-slate-400">
                     <span>{(studentProgress.dailyHistory || []).slice(-14)[0]?.date?.slice(5) || ''}</span>
                     <span>Today</span>
                   </div>
-                  <div className="flex justify-center gap-4 mt-4 text-xs">
+                  <div className="flex justify-center gap-4 mt-4 text-xs text-slate-600 dark:text-slate-400">
                     <span className="flex items-center gap-1"><span className="w-3 h-3 bg-green-500 rounded" /> 80%+</span>
                     <span className="flex items-center gap-1"><span className="w-3 h-3 bg-amber-500 rounded" /> 60-79%</span>
                     <span className="flex items-center gap-1"><span className="w-3 h-3 bg-red-500 rounded" /> &lt;60%</span>
@@ -2853,18 +2853,18 @@ ${quizContent.substring(0, 40000)}
                 </div>
               )}
             </div>
-            
+
             {/* Recent Scores */}
             <div className="mb-6">
-              <h4 className="font-semibold text-slate-900 mb-3">Recent Quiz Scores</h4>
+              <h4 className="font-semibold text-slate-900 dark:text-white mb-3">Recent Quiz Scores</h4>
               {studentProgress.recentScores.length === 0 ? (
-                <p className="text-slate-500 text-sm">No quizzes completed yet</p>
+                <p className="text-slate-500 dark:text-slate-400 text-sm">No quizzes completed yet</p>
               ) : (
                 <div className="flex gap-2 flex-wrap">
                   {studentProgress.recentScores.slice(-8).map((score, i) => (
-                    <span 
-                      key={i} 
-                      className={`px-3 py-1 rounded-full text-sm font-medium ${score >= 80 ? 'bg-green-100 text-green-700' : score >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}
+                    <span
+                      key={i}
+                      className={`px-3 py-1 rounded-full text-sm font-medium ${score >= 80 ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-400' : score >= 60 ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400' : 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-400'}`}
                     >
                       {score}%
                     </span>
@@ -2872,28 +2872,28 @@ ${quizContent.substring(0, 40000)}
                 </div>
               )}
             </div>
-            
+
             {/* Achievements */}
             <div>
-              <h4 className="font-semibold text-slate-900 mb-3">🏆 Achievements ({(studentProgress.achievements || []).length}/{ACHIEVEMENTS.length})</h4>
+              <h4 className="font-semibold text-slate-900 dark:text-white mb-3">🏆 Achievements ({(studentProgress.achievements || []).length}/{ACHIEVEMENTS.length})</h4>
               <div className="grid grid-cols-2 gap-2">
                 {ACHIEVEMENTS.map(a => {
                   const earned = (studentProgress.achievements || []).includes(a.id);
                   return (
-                    <div 
-                      key={a.id} 
-                      className={`p-3 rounded-lg border ${earned ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200 opacity-50'}`}
+                    <div
+                      key={a.id}
+                      className={`p-3 rounded-lg border ${earned ? 'bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-700' : 'bg-slate-50 dark:bg-slate-700/50 border-slate-200 dark:border-slate-600 opacity-50'}`}
                     >
-                      <div className="font-medium text-sm">{a.name}</div>
-                      <div className="text-xs text-slate-500">{a.description}</div>
+                      <div className="font-medium text-sm text-slate-900 dark:text-white">{a.name}</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400">{a.description}</div>
                     </div>
                   );
                 })}
               </div>
             </div>
-            
-            <div className="mt-6 pt-4 border-t border-slate-200">
-              <button onClick={() => setShowProgressChart(false)} className="w-full px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg">
+
+            <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+              <button onClick={() => setShowProgressChart(false)} className="w-full px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg">
                 Close
               </button>
             </div>
@@ -3297,129 +3297,129 @@ ${quizContent.substring(0, 40000)}
       
       {/* PROFILE PAGE */}
       {page === 'profile' && (
-        <div className="min-h-screen bg-slate-100">
-          <nav className="bg-white border-b border-slate-200 px-6 py-3 sticky top-0 z-40">
+        <div className="min-h-screen bg-slate-100 dark:bg-slate-900">
+          <nav className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3 sticky top-0 z-40">
             <div className="max-w-7xl mx-auto flex justify-between items-center">
               <div className="flex items-center gap-8">
                 <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('landing')}>
                   <span className="text-xl">⚡</span>
-                  <span className="font-bold text-slate-900">QuizForge</span>
+                  <span className="font-bold text-slate-900 dark:text-white">QuizForge</span>
                 </div>
-                <button onClick={() => setPage(getDashboard())} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Dashboard</button>
+                <button onClick={() => setPage(getDashboard())} className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-sm font-medium">Dashboard</button>
               </div>
-              <span className={`px-3 py-1 ${userType === 'teacher' ? 'bg-purple-100 text-purple-700' : userType === 'student' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'} text-xs font-medium rounded-full`}>
+              <span className={`px-3 py-1 ${userType === 'teacher' ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300' : userType === 'student' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300' : 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300'} text-xs font-medium rounded-full`}>
                 {userType === 'teacher' ? '👩‍🏫 Teacher' : userType === 'student' ? '👨‍🎓 Student' : '✨ Creator'}
               </span>
             </div>
           </nav>
           <div className="max-w-2xl mx-auto px-6 py-8">
-            <button onClick={() => setPage(getDashboard())} className="text-slate-600 hover:text-slate-900 mb-4 text-sm">← Back to Dashboard</button>
-            
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+            <button onClick={() => setPage(getDashboard())} className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white mb-4 text-sm">← Back to Dashboard</button>
+
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-8">
               <div className="flex items-center gap-4 mb-8">
                 <div className={`w-20 h-20 bg-gradient-to-br ${userType === 'creator' ? 'from-amber-500 to-orange-600' : 'from-indigo-500 to-purple-600'} rounded-full flex items-center justify-center text-white text-3xl font-bold`}>
                   {user?.name?.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-slate-900">{user?.name}</h1>
-                  <p className="text-slate-600">{user?.email}</p>
-                  <span className={`inline-block mt-1 px-2 py-1 ${userType === 'teacher' ? 'bg-purple-100 text-purple-700' : userType === 'student' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'} text-xs font-medium rounded-full`}>
+                  <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{user?.name}</h1>
+                  <p className="text-slate-600 dark:text-slate-400">{user?.email}</p>
+                  <span className={`inline-block mt-1 px-2 py-1 ${userType === 'teacher' ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300' : userType === 'student' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300' : 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300'} text-xs font-medium rounded-full`}>
                     {userType === 'teacher' ? '👩‍🏫 Teacher' : userType === 'student' ? '👨‍🎓 Student' : '✨ Quiz Creator'}
                   </span>
                 </div>
               </div>
               
-              <div className="border-t border-slate-200 pt-6">
-                <h2 className="font-semibold text-slate-900 mb-4">Your Stats</h2>
+              <div className="border-t border-slate-200 dark:border-slate-700 pt-6">
+                <h2 className="font-semibold text-slate-900 dark:text-white mb-4">Your Stats</h2>
                 <div className="grid grid-cols-2 gap-4">
                   {userType === 'teacher' ? (
                     <>
-                      <div className="p-4 bg-slate-50 rounded-xl">
-                        <p className="text-2xl font-bold text-indigo-600">{quizzes.length}</p>
-                        <p className="text-sm text-slate-600">Quizzes Created</p>
+                      <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                        <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{quizzes.length}</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">Quizzes Created</p>
                       </div>
-                      <div className="p-4 bg-slate-50 rounded-xl">
-                        <p className="text-2xl font-bold text-purple-600">{classes.length}</p>
-                        <p className="text-sm text-slate-600">Classes</p>
+                      <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                        <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{classes.length}</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">Classes</p>
                       </div>
-                      <div className="p-4 bg-slate-50 rounded-xl">
-                        <p className="text-2xl font-bold text-green-600">{classes.reduce((s, c) => s + c.students.length, 0)}</p>
-                        <p className="text-sm text-slate-600">Total Students</p>
+                      <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                        <p className="text-2xl font-bold text-green-600 dark:text-green-400">{classes.reduce((s, c) => s + c.students.length, 0)}</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">Total Students</p>
                       </div>
-                      <div className="p-4 bg-slate-50 rounded-xl">
-                        <p className="text-2xl font-bold text-amber-600">{submissions.length}</p>
-                        <p className="text-sm text-slate-600">Submissions</p>
+                      <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                        <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{submissions.length}</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">Submissions</p>
                       </div>
                     </>
                   ) : userType === 'student' ? (
                     <>
-                      <div className="p-4 bg-slate-50 rounded-xl">
-                        <p className="text-2xl font-bold text-indigo-600">{studentProgress.quizzesTaken}</p>
-                        <p className="text-sm text-slate-600">Quizzes Taken</p>
+                      <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                        <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{studentProgress.quizzesTaken}</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">Quizzes Taken</p>
                       </div>
-                      <div className="p-4 bg-slate-50 rounded-xl">
-                        <p className="text-2xl font-bold text-green-600">{avgScore}%</p>
-                        <p className="text-sm text-slate-600">Average Score</p>
+                      <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                        <p className="text-2xl font-bold text-green-600 dark:text-green-400">{avgScore}%</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">Average Score</p>
                       </div>
-                      <div className="p-4 bg-slate-50 rounded-xl">
-                        <p className="text-2xl font-bold text-purple-600">{joinedClasses.length}</p>
-                        <p className="text-sm text-slate-600">Classes Joined</p>
+                      <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                        <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{joinedClasses.length}</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">Classes Joined</p>
                       </div>
-                      <div className="p-4 bg-slate-50 rounded-xl">
-                        <p className="text-2xl font-bold text-amber-600">{studentProgress.totalQuestions}</p>
-                        <p className="text-sm text-slate-600">Questions Answered</p>
+                      <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                        <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{studentProgress.totalQuestions}</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">Questions Answered</p>
                       </div>
                     </>
                   ) : (
                     <>
-                      <div className="p-4 bg-slate-50 rounded-xl">
-                        <p className="text-2xl font-bold text-amber-600">{quizzes.length}</p>
-                        <p className="text-sm text-slate-600">Quizzes Created</p>
+                      <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                        <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{quizzes.length}</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">Quizzes Created</p>
                       </div>
-                      <div className="p-4 bg-slate-50 rounded-xl">
-                        <p className="text-2xl font-bold text-orange-600">{questionBank.length}</p>
-                        <p className="text-sm text-slate-600">Questions Generated</p>
+                      <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                        <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{questionBank.length}</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">Questions Generated</p>
                       </div>
-                      <div className="p-4 bg-slate-50 rounded-xl">
-                        <p className="text-2xl font-bold text-indigo-600">{studentProgress.quizzesTaken}</p>
-                        <p className="text-sm text-slate-600">Quizzes Practiced</p>
+                      <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                        <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{studentProgress.quizzesTaken}</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">Quizzes Practiced</p>
                       </div>
-                      <div className="p-4 bg-slate-50 rounded-xl">
-                        <p className="text-2xl font-bold text-green-600">{avgScore}%</p>
-                        <p className="text-sm text-slate-600">Practice Score</p>
+                      <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                        <p className="text-2xl font-bold text-green-600 dark:text-green-400">{avgScore}%</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">Practice Score</p>
                       </div>
                     </>
                   )}
                 </div>
               </div>
               
-              <div className="border-t border-slate-200 pt-6 mt-6">
-                <h2 className="font-semibold text-slate-900 mb-4">Account Actions</h2>
+              <div className="border-t border-slate-200 dark:border-slate-700 pt-6 mt-6">
+                <h2 className="font-semibold text-slate-900 dark:text-white mb-4">Account Actions</h2>
                 <div className="space-y-3">
                   <button
                     onClick={resetData}
-                    className="w-full p-3 bg-slate-50 hover:bg-slate-100 rounded-xl text-left flex items-center gap-3"
+                    className="w-full p-3 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl text-left flex items-center gap-3"
                   >
                     <span className="text-xl">🔄</span>
                     <div>
-                      <p className="font-medium text-slate-900">Reset All Data</p>
-                      <p className="text-sm text-slate-500">Clear all quizzes, classes, and progress</p>
+                      <p className="font-medium text-slate-900 dark:text-white">Reset All Data</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Clear all quizzes, classes, and progress</p>
                     </div>
                   </button>
                   <button
                     onClick={handleLogout}
-                    className="w-full p-3 bg-red-50 hover:bg-red-100 rounded-xl text-left flex items-center gap-3"
+                    className="w-full p-3 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-xl text-left flex items-center gap-3"
                   >
                     <span className="text-xl">🚪</span>
                     <div>
-                      <p className="font-medium text-red-700">Log Out</p>
-                      <p className="text-sm text-red-500">Sign out of your account</p>
+                      <p className="font-medium text-red-700 dark:text-red-400">Log Out</p>
+                      <p className="text-sm text-red-500 dark:text-red-400/70">Sign out of your account</p>
                     </div>
                   </button>
                 </div>
               </div>
-              
-              <div className="border-t border-slate-200 pt-4 mt-6 text-center text-xs text-slate-400">
+
+              <div className="border-t border-slate-200 dark:border-slate-700 pt-4 mt-6 text-center text-xs text-slate-400 dark:text-slate-500">
                 Account created {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'recently'}
               </div>
             </div>
@@ -3689,26 +3689,26 @@ ${quizContent.substring(0, 40000)}
 
       {/* CLASS MANAGER */}
       {page === 'class-manager' && (
-        <div className="min-h-screen bg-slate-100">
-          <nav className="bg-white border-b border-slate-200 px-6 py-3 sticky top-0 z-40">
+        <div className="min-h-screen bg-slate-100 dark:bg-slate-900">
+          <nav className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3 sticky top-0 z-40">
             <div className="max-w-7xl mx-auto flex justify-between items-center">
               <div className="flex items-center gap-8">
-                <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('landing')}><span className="text-xl">⚡</span><span className="font-bold text-slate-900">QuizForge</span></div>
-                <button onClick={() => setPage('teacher-dashboard')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Dashboard</button>
-                <button onClick={() => setPage('create-quiz')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Create Quiz</button>
-                <button onClick={() => setPage('class-manager')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Classes</button>
+                <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('landing')}><span className="text-xl">⚡</span><span className="font-bold text-slate-900 dark:text-white">QuizForge</span></div>
+                <button onClick={() => setPage('teacher-dashboard')} className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-sm font-medium">Dashboard</button>
+                <button onClick={() => setPage('create-quiz')} className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-sm font-medium">Create Quiz</button>
+                <button onClick={() => setPage('class-manager')} className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-sm font-medium">Classes</button>
               </div>
-              <button onClick={() => setPage('profile')} className="flex items-center gap-2 px-3 py-1 bg-purple-100 hover:bg-purple-200 text-purple-700 text-sm font-medium rounded-full">
+              <button onClick={() => setPage('profile')} className="flex items-center gap-2 px-3 py-1 bg-purple-100 dark:bg-purple-900/50 hover:bg-purple-200 dark:hover:bg-purple-900/70 text-purple-700 dark:text-purple-300 text-sm font-medium rounded-full">
                 <span className="w-6 h-6 bg-purple-500 text-white rounded-full flex items-center justify-center text-xs">{user?.name?.charAt(0).toUpperCase() || '?'}</span>
                 {user?.name || 'Teacher'}
               </button>
             </div>
           </nav>
           <div className="max-w-7xl mx-auto px-6 py-8">
-            <button onClick={() => setPage('teacher-dashboard')} className="text-slate-600 hover:text-slate-900 mb-4 text-sm">← Back</button>
+            <button onClick={() => setPage('teacher-dashboard')} className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white mb-4 text-sm">← Back</button>
             {classes.length === 0 ? (
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
-                <div className="text-5xl mb-4">👥</div><h3 className="text-lg font-semibold text-slate-900 mb-2">No Classes Yet</h3>
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-12 text-center">
+                <div className="text-5xl mb-4">👥</div><h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No Classes Yet</h3>
                 <button onClick={() => setModal({ type: 'input', title: 'Create New Class', placeholder: 'Class name (e.g., Economics 101)', confirmText: 'Create', onConfirm: createClass })} className="px-6 py-2 bg-indigo-600 text-white rounded-lg">Create Class</button>
               </div>
             ) : (() => {
@@ -3740,62 +3740,62 @@ ${quizContent.substring(0, 40000)}
               return (
                 <>
                   {/* Class Header */}
-                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+                  <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div>
                         {classes.length > 1 ? (
-                          <select 
-                            value={selectedClass?.id || ''} 
+                          <select
+                            value={selectedClass?.id || ''}
                             onChange={e => setCurrentClass(classes.find(c => c.id === e.target.value))}
-                            className="text-2xl font-bold text-slate-900 bg-transparent border-none cursor-pointer focus:outline-none"
+                            className="text-2xl font-bold text-slate-900 dark:text-white bg-transparent border-none cursor-pointer focus:outline-none"
                           >
                             {classes.map(cls => (
                               <option key={cls.id} value={cls.id}>{cls.name}</option>
                             ))}
                           </select>
                         ) : (
-                          <h1 className="text-2xl font-bold text-slate-900">{selectedClass?.name}</h1>
+                          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{selectedClass?.name}</h1>
                         )}
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-slate-500 text-sm">Join Code:</span>
-                          <span className="font-mono bg-indigo-100 px-2 py-0.5 rounded text-indigo-700 font-bold text-sm">{selectedClass?.code}</span>
-                          <button onClick={() => { navigator.clipboard.writeText(selectedClass?.code || ''); showToast('📋 Code copied!', 'success'); }} className="text-xs text-indigo-600 hover:text-indigo-800">Copy</button>
+                          <span className="text-slate-500 dark:text-slate-400 text-sm">Join Code:</span>
+                          <span className="font-mono bg-indigo-100 dark:bg-indigo-900/50 px-2 py-0.5 rounded text-indigo-700 dark:text-indigo-300 font-bold text-sm">{selectedClass?.code}</span>
+                          <button onClick={() => { navigator.clipboard.writeText(selectedClass?.code || ''); showToast('📋 Code copied!', 'success'); }} className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300">Copy</button>
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => setModal({ type: 'input', title: 'Create New Class', placeholder: 'Class name', confirmText: 'Create', onConfirm: createClass })} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 text-sm">+ New Class</button>
+                        <button onClick={() => setModal({ type: 'input', title: 'Create New Class', placeholder: 'Class name', confirmText: 'Create', onConfirm: createClass })} className="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-medium hover:bg-slate-200 dark:hover:bg-slate-600 text-sm">+ New Class</button>
                         <button onClick={() => quizzes.length > 0 ? setModal({ type: 'select', title: 'Assign Quiz to ' + selectedClass?.name }) : showToast('Create a quiz first', 'error')} className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-500 text-sm">+ Assign Quiz</button>
                       </div>
                     </div>
-                    
+
                     {/* Stats Row */}
-                    <div className="grid grid-cols-4 gap-4 mt-6 pt-6 border-t border-slate-100">
+                    <div className="grid grid-cols-4 gap-4 mt-6 pt-6 border-t border-slate-100 dark:border-slate-700">
                       <div className="text-center">
-                        <p className="text-2xl font-bold text-slate-900">{classStudents.length}</p>
-                        <p className="text-xs text-slate-500">Students</p>
+                        <p className="text-2xl font-bold text-slate-900 dark:text-white">{classStudents.length}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Students</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-2xl font-bold text-indigo-600">{classAssignmentsList.length}</p>
-                        <p className="text-xs text-slate-500">Assignments</p>
+                        <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{classAssignmentsList.length}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Assignments</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-2xl font-bold text-green-600">{classAvg || '--'}%</p>
-                        <p className="text-xs text-slate-500">Class Average</p>
+                        <p className="text-2xl font-bold text-green-600 dark:text-green-400">{classAvg || '--'}%</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Class Average</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-2xl font-bold text-amber-600">{classSubmissionsList.length}</p>
-                        <p className="text-xs text-slate-500">Submissions</p>
+                        <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{classSubmissionsList.length}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Submissions</p>
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Tabs */}
-                  <div className="flex gap-1 mb-6 bg-white rounded-lg p-1 shadow-sm border border-slate-200 w-fit">
+                  <div className="flex gap-1 mb-6 bg-white dark:bg-slate-800 rounded-lg p-1 shadow-sm border border-slate-200 dark:border-slate-700 w-fit">
                     {['assignments', 'students', 'gradebook'].map(tab => (
-                      <button 
+                      <button
                         key={tab}
                         onClick={() => setModalInput(tab)}
-                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${(modalInput || 'assignments') === tab ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${(modalInput || 'assignments') === tab ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
                       >
                         {tab === 'assignments' ? '📋 Assignments' : tab === 'students' ? '👥 Students' : '📊 Gradebook'}
                       </button>
@@ -4147,8 +4147,8 @@ ${quizContent.substring(0, 40000)}
             <div className="grid lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-6">
                 {pendingAssignments.length > 0 && (
-                  <div className="bg-white rounded-xl shadow-sm border-2 border-amber-300 p-6">
-                    <h3 className="font-semibold text-slate-900 mb-4">📋 Assigned Quizzes</h3>
+                  <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border-2 border-amber-300 dark:border-amber-600 p-6">
+                    <h3 className="font-semibold text-slate-900 dark:text-white mb-4">📋 Assigned Quizzes</h3>
                     {pendingAssignments.map(a => {
                       // Try local quiz first, then use assignment's embedded quiz data
                       const localQuiz = quizzes.find(q => q.id === a.quizId);
@@ -4159,12 +4159,12 @@ ${quizContent.substring(0, 40000)}
                       const isDueSoon = a.dueDate && !isOverdue && (new Date(a.dueDate) - new Date()) < 24 * 60 * 60 * 1000;
                       const estimatedTime = quizQuestions.length ? Math.ceil(quizQuestions.length * 1.5) : null;
                       return (
-                        <div key={a.id} className={`flex items-center justify-between p-4 rounded-lg mb-2 ${isOverdue ? 'bg-red-50 border border-red-200' : 'bg-amber-50'}`}>
+                        <div key={a.id} className={`flex items-center justify-between p-4 rounded-lg mb-2 ${isOverdue ? 'bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800' : 'bg-amber-50 dark:bg-amber-900/30'}`}>
                           <div>
-                            <p className="font-medium text-slate-900">{quizName}</p>
-                            <p className="text-sm text-slate-500">{quizQuestions.length ? pluralize(quizQuestions.length, 'question') : '?'} • {estimatedTime ? `~${estimatedTime} min` : ''} • From: {a.className || assignedClass?.name || 'Class'}</p>
+                            <p className="font-medium text-slate-900 dark:text-white">{quizName}</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">{quizQuestions.length ? pluralize(quizQuestions.length, 'question') : '?'} • {estimatedTime ? `~${estimatedTime} min` : ''} • From: {a.className || assignedClass?.name || 'Class'}</p>
                             {a.dueDate && (
-                              <p className={`text-xs mt-1 ${isOverdue ? 'text-red-600 font-medium' : isDueSoon ? 'text-amber-600 font-medium' : 'text-slate-500'}`}>
+                              <p className={`text-xs mt-1 ${isOverdue ? 'text-red-600 dark:text-red-400 font-medium' : isDueSoon ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
                                 {isOverdue ? '⚠️ Overdue!' : isDueSoon ? '⏰ Due soon:' : '📅 Due:'} {new Date(a.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                               </p>
                             )}
@@ -4177,20 +4177,20 @@ ${quizContent.substring(0, 40000)}
                     })}
                   </div>
                 )}
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-semibold text-slate-900">Self Practice</h3>
+                    <h3 className="font-semibold text-slate-900 dark:text-white">Self Practice</h3>
                     <div className="flex items-center gap-2">
-                      <button onClick={() => setShowProgressChart(true)} className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm">📈 Progress</button>
-                      <span className="text-sm text-slate-500">{questionBank.length} questions</span>
+                      <button onClick={() => setShowProgressChart(true)} className="px-3 py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 rounded-lg text-sm">📈 Progress</button>
+                      <span className="text-sm text-slate-500 dark:text-slate-400">{questionBank.length} questions</span>
                     </div>
                   </div>
                   {questionBank.length === 0 ? (
                     <div className="text-center py-8">
-                      <div className="text-5xl mb-4">📚</div><h4 className="text-lg font-semibold text-slate-900 mb-2">No Practice Questions Yet</h4><p className="text-slate-600 mb-6">Upload materials or join a class</p>
+                      <div className="text-5xl mb-4">📚</div><h4 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No Practice Questions Yet</h4><p className="text-slate-600 dark:text-slate-400 mb-6">Upload materials or join a class</p>
                       <div className="flex gap-3 justify-center">
                         <button onClick={() => setPage('create-quiz')} className="px-4 py-2 bg-indigo-600 text-white rounded-lg">Upload Material</button>
-                        <button onClick={() => setPage('student-classes')} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg">Join Class</button>
+                        <button onClick={() => setPage('student-classes')} className="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg">Join Class</button>
                       </div>
                     </div>
                   ) : (
@@ -4208,25 +4208,25 @@ ${quizContent.substring(0, 40000)}
                         }
                         return null;
                       })()}
-                      
+
                       <button onClick={() => startPractice('all')} className="w-full p-4 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-400 hover:to-purple-400 rounded-xl text-left flex justify-between items-center text-white mb-3">
                         <div><p className="font-semibold">🎯 Practice All Topics</p><p className="text-sm text-indigo-100">{questionBank.length} questions from all your materials</p></div>
                         <span className="text-2xl">→</span>
                       </button>
-                      
+
                       {/* Timed Mode Option */}
-                      <button 
-                        onClick={() => setModal({ 
-                          type: 'timed-setup', 
+                      <button
+                        onClick={() => setModal({
+                          type: 'timed-setup',
                           questions: questionBank,
                           title: 'Start Timed Quiz'
-                        })} 
+                        })}
                         className="w-full p-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 rounded-xl text-left flex justify-between items-center text-white mb-3"
                       >
                         <div><p className="font-semibold">⏱️ Timed Practice</p><p className="text-sm text-amber-100">Simulate real exam conditions</p></div>
                         <span className="text-2xl">→</span>
                       </button>
-                      
+
                       {/* Show top topics with 2+ questions */}
                       {(() => {
                         const topicCounts = {};
@@ -4235,11 +4235,11 @@ ${quizContent.substring(0, 40000)}
                         if (multiQuestionTopics.length === 0) return null;
                         return (
                           <div className="space-y-2">
-                            <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">Focus Areas</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Focus Areas</p>
                             {multiQuestionTopics.map(([topic, count]) => (
-                              <button key={topic} onClick={() => startPractice(topic)} className="w-full p-3 bg-slate-50 hover:bg-indigo-50 rounded-lg text-left flex justify-between items-center">
-                                <span className="font-medium text-slate-700">{topic}</span>
-                                <span className="text-sm text-slate-500">{count} questions</span>
+                              <button key={topic} onClick={() => startPractice(topic)} className="w-full p-3 bg-slate-50 dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg text-left flex justify-between items-center">
+                                <span className="font-medium text-slate-700 dark:text-slate-300">{topic}</span>
+                                <span className="text-sm text-slate-500 dark:text-slate-400">{count} questions</span>
                               </button>
                             ))}
                           </div>
