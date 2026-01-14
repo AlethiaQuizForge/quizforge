@@ -3071,7 +3071,15 @@ ${quizContent.substring(0, 40000)}
                     <h3 className="font-bold text-gray-900 text-lg mb-1">Study Smarter, Not Harder</h3>
                     <p className="text-gray-700 text-sm">Upload your course materials, past exams, or lecture notes — our AI generates practice exams tailored to your class. Perfect for exam prep!</p>
                   </div>
-                  <button onClick={() => { setAuthMode('signup'); setAuthForm(f => ({ ...f, role: 'student' })); setPage('auth'); }} className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-white rounded-lg font-semibold text-sm whitespace-nowrap shadow-md">
+                  <button onClick={() => {
+                    if (isLoggedIn) {
+                      setPage(getDashboard());
+                    } else {
+                      setAuthMode('signup');
+                      setAuthForm(f => ({ ...f, role: 'student' }));
+                      setPage('auth');
+                    }
+                  }} className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-white rounded-lg font-semibold text-sm whitespace-nowrap shadow-md">
                     Start Practicing →
                   </button>
                 </div>
