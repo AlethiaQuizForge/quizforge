@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import * as mammoth from 'mammoth';
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, GoogleAuthProvider, OAuthProvider, signInWithPopup } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -184,12 +184,39 @@ export default function QuizForge() {
             if (dataResult && dataResult.value) {
               const data = JSON.parse(dataResult.value);
               setQuizzes(data.quizzes || []);
-              setClasses(data.classes || []);
               setJoinedClasses(data.joinedClasses || []);
               setAssignments(data.assignments || []);
               setSubmissions(data.submissions || []);
               setQuestionBank(data.questionBank || []);
               setStudentProgress(data.studentProgress || { quizzesTaken: 0, totalScore: 0, totalQuestions: 0, topicHistory: {}, recentScores: [], currentStreak: 0, longestStreak: 0, lastPracticeDate: null, achievements: [], dailyHistory: [], questionHistory: {} });
+
+              // Sync classes from Firestore to get latest student data
+              const localClasses = data.classes || [];
+              if (localClasses.length > 0) {
+                try {
+                  const syncedClasses = await Promise.all(
+                    localClasses.map(async (cls) => {
+                      const classDoc = await getDoc(doc(db, 'classes', cls.id));
+                      if (classDoc.exists()) {
+                        return { ...cls, ...classDoc.data() };
+                      }
+                      // If not in Firestore yet, save it
+                      await setDoc(doc(db, 'classes', cls.id), {
+                        ...cls,
+                        teacherId: userData.email,
+                        teacherName: userData.name
+                      });
+                      return cls;
+                    })
+                  );
+                  setClasses(syncedClasses);
+                } catch (e) {
+                  console.log('Error syncing classes from Firestore:', e);
+                  setClasses(localClasses);
+                }
+              } else {
+                setClasses([]);
+              }
             }
           }
         } catch (err) {
@@ -1098,12 +1125,28 @@ ${quizContent.substring(0, 40000)}
     }
   };
 
-  const createClass = () => {
+  const createClass = async () => {
     if (!modalInput.trim()) {
       showToast('⚠️ Please enter a class name', 'error');
       return;
     }
-    const newClass = { id: `class_${Date.now()}`, name: modalInput.trim(), code: generateClassCode(), students: [], createdAt: Date.now() };
+    const newClass = {
+      id: `class_${Date.now()}`,
+      name: modalInput.trim(),
+      code: generateClassCode(),
+      students: [],
+      createdAt: Date.now(),
+      teacherId: user?.email || 'unknown',
+      teacherName: user?.name || 'Unknown Teacher'
+    };
+
+    // Save to global classes collection for cross-user lookup
+    try {
+      await setDoc(doc(db, 'classes', newClass.id), newClass);
+    } catch (e) {
+      console.error('Error saving class to Firestore:', e);
+    }
+
     setClasses(prev => [...prev, newClass]);
     setCurrentClass(newClass);
     showToast(`✅ Class "${newClass.name}" created! Code: ${newClass.code}`, 'success');
@@ -1111,7 +1154,7 @@ ${quizContent.substring(0, 40000)}
     setModalInput('');
   };
 
-  const joinClass = () => {
+  const joinClass = async () => {
     setIsActionLoading(true);
     const code = joinCodeInput.toUpperCase().trim();
     if (!code) {
@@ -1124,37 +1167,67 @@ ${quizContent.substring(0, 40000)}
       setIsActionLoading(false);
       return;
     }
-    const foundClass = classes.find(c => c.code === code);
-    if (foundClass) {
-      // Check if already joined
-      if (joinedClasses.some(c => c.id === foundClass.id)) {
-        showToast('ℹ️ You already joined this class', 'info');
-        setIsActionLoading(false);
-        return;
-      }
-      const studentName = user.name;
-      const updatedClass = { ...foundClass, students: [...foundClass.students, { id: `s_${Date.now()}`, name: studentName, joinedAt: Date.now() }] };
-      setClasses(prev => prev.map(c => c.id === foundClass.id ? updatedClass : c));
-      setJoinedClasses(prev => [...prev, updatedClass]);
-      showToast(`✅ Joined "${foundClass.name}"!`, 'success');
-      setJoinCodeInput('');
-    } else {
-      showToast('❌ Invalid class code. Check with your teacher.', 'error');
+
+    // Check if already joined locally first
+    const alreadyJoined = joinedClasses.find(c => c.code === code);
+    if (alreadyJoined) {
+      showToast('ℹ️ You already joined this class', 'info');
+      setIsActionLoading(false);
+      return;
     }
+
+    // Query Firestore for the class code
+    try {
+      const classesRef = collection(db, 'classes');
+      const q = query(classesRef, where('code', '==', code));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        const classDoc = querySnapshot.docs[0];
+        const foundClass = { id: classDoc.id, ...classDoc.data() };
+
+        // Add student to the class
+        const studentName = user.name;
+        const studentEmail = user.email;
+        const newStudent = { id: `s_${Date.now()}`, name: studentName, email: studentEmail, joinedAt: Date.now() };
+        const updatedStudents = [...(foundClass.students || []), newStudent];
+
+        // Update in Firestore
+        await updateDoc(doc(db, 'classes', foundClass.id), { students: updatedStudents });
+
+        // Update local state
+        const updatedClass = { ...foundClass, students: updatedStudents };
+        setJoinedClasses(prev => [...prev, updatedClass]);
+        showToast(`✅ Joined "${foundClass.name}" by ${foundClass.teacherName || 'teacher'}!`, 'success');
+        setJoinCodeInput('');
+      } else {
+        showToast('❌ Invalid class code. Check with your teacher.', 'error');
+      }
+    } catch (e) {
+      console.error('Error joining class:', e);
+      showToast('❌ Error joining class. Please try again.', 'error');
+    }
+
     setIsActionLoading(false);
   };
 
   // Leave class function
-  const leaveClass = (classId) => {
+  const leaveClass = async (classId) => {
     setIsActionLoading(true);
     const classToLeave = joinedClasses.find(c => c.id === classId);
     if (classToLeave) {
       // Remove student from class
-      const updatedClass = {
-        ...classToLeave,
-        students: classToLeave.students.filter(s => s.name !== user?.name)
-      };
-      setClasses(prev => prev.map(c => c.id === classId ? updatedClass : c));
+      const updatedStudents = (classToLeave.students || []).filter(s => s.email !== user?.email && s.name !== user?.name);
+
+      // Update in Firestore
+      try {
+        await updateDoc(doc(db, 'classes', classId), { students: updatedStudents });
+      } catch (e) {
+        console.error('Error updating class in Firestore:', e);
+      }
+
+      // Update local state
+      setClasses(prev => prev.map(c => c.id === classId ? { ...c, students: updatedStudents } : c));
       setJoinedClasses(prev => prev.filter(c => c.id !== classId));
       showToast(`Left "${classToLeave.name}"`, 'info');
     }
