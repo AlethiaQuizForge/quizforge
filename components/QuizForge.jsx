@@ -6,14 +6,14 @@ import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, GoogleAuthProvider, OAuthProvider, signInWithPopup } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs, updateDoc, addDoc, onSnapshot } from 'firebase/firestore';
 
-// Firebase configuration
+// Firebase configuration - uses env vars if available, falls back to defaults
 const firebaseConfig = {
-  apiKey: "AIzaSyAi6pp6BHnPBbTAqUn78ldOeXO_y6LGouY",
-  authDomain: "quizforge-58f79.firebaseapp.com",
-  projectId: "quizforge-58f79",
-  storageBucket: "quizforge-58f79.firebasestorage.app",
-  messagingSenderId: "437296472306",
-  appId: "1:437296472306:web:7cee86fa4aa7dbc16c306b"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyAi6pp6BHnPBbTAqUn78ldOeXO_y6LGouY",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "quizforge-58f79.firebaseapp.com",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "quizforge-58f79",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "quizforge-58f79.firebasestorage.app",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "437296472306",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:437296472306:web:7cee86fa4aa7dbc16c306b"
 };
 
 // Initialize Firebase (prevent multiple initializations)
