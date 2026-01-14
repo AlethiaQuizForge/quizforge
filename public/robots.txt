@@ -1,0 +1,21 @@
+# QuizForge robots.txt
+# https://www.quizforgeapp.com
+
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://www.quizforgeapp.com/sitemap.xml
+
+# Block API routes from indexing
+Disallow: /api/
+
+# Allow all major crawlers
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /

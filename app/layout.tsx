@@ -6,25 +6,46 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'QuizForge - AI-Powered Quiz Generator',
-  description: 'Turn course materials into smart quizzes & exams in seconds. Upload PDFs, slides, or notes and let AI generate high-quality assessment questions.',
-  keywords: 'quiz generator, AI quiz, education, assessment, teaching tools, exam generator',
+  title: {
+    default: 'QuizForge - AI-Powered Quiz Generator | Create Quizzes in Seconds',
+    template: '%s | QuizForge'
+  },
+  description: 'Free AI quiz generator for teachers and students. Turn PDFs, slides, and notes into smart quizzes in seconds. Used by students at Copenhagen Business School. No signup required to try!',
+  keywords: 'quiz generator, AI quiz, education, assessment, teaching tools, exam generator, free quiz maker, online quiz creator, study tool, flashcard alternative, test generator, CBS, Copenhagen Business School',
   manifest: '/manifest.json',
+  metadataBase: new URL('https://www.quizforgeapp.com'),
+  alternates: {
+    canonical: '/',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
     title: 'QuizForge',
   },
   openGraph: {
-    title: 'QuizForge - AI-Powered Quiz Generator',
-    description: 'Turn course materials into smart quizzes in seconds.',
+    title: 'QuizForge - Create AI-Powered Quizzes in Seconds',
+    description: 'Free quiz generator for teachers and students. Upload any document and get instant quizzes. Used at Copenhagen Business School.',
     type: 'website',
     siteName: 'QuizForge',
+    url: 'https://www.quizforgeapp.com',
+    locale: 'en_US',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'QuizForge - AI-Powered Quiz Generator',
-    description: 'Turn course materials into smart quizzes in seconds.',
+    title: 'QuizForge - AI Quiz Generator',
+    description: 'Turn any document into smart quizzes in seconds. Free for teachers and students.',
+    creator: '@quizforge',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
   },
   other: {
     'mobile-web-app-capable': 'yes',
