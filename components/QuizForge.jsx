@@ -2241,12 +2241,12 @@ ${quizContent.substring(0, 40000)}
                 <div className="text-6xl text-center mb-4">📚</div>
                 <h2 className="text-xl font-bold text-center text-slate-900 mb-2">Step 1: Upload Materials</h2>
                 <p className="text-slate-600 text-center mb-6">Upload your lecture slides, PDFs, or any course materials. Our AI will analyze them to create smart quiz questions.</p>
-                <div className="bg-slate-50 rounded-xl p-4 mb-6">
-                  <div className="flex items-center gap-3 text-sm text-slate-600">
-                    <span>✓</span><span>Supports PDF, PowerPoint, Word, and images</span>
+                <div className="bg-slate-100 rounded-xl p-4 mb-6">
+                  <div className="flex items-center gap-3 text-sm text-slate-700">
+                    <span className="text-green-600">✓</span><span>Supports PDF, PowerPoint, Word, and images</span>
                   </div>
-                  <div className="flex items-center gap-3 text-sm text-slate-600 mt-2">
-                    <span>✓</span><span>Multi-file upload supported</span>
+                  <div className="flex items-center gap-3 text-sm text-slate-700 mt-2">
+                    <span className="text-green-600">✓</span><span>Multi-file upload supported</span>
                   </div>
                 </div>
                 <div className="flex gap-3">
@@ -2260,12 +2260,12 @@ ${quizContent.substring(0, 40000)}
                 <div className="text-6xl text-center mb-4">⚡</div>
                 <h2 className="text-xl font-bold text-center text-slate-900 mb-2">Step 2: Generate Questions</h2>
                 <p className="text-slate-600 text-center mb-6">Choose the number of questions, difficulty level, and whether to focus on concepts or case details.</p>
-                <div className="bg-slate-50 rounded-xl p-4 mb-6">
-                  <div className="flex items-center gap-3 text-sm text-slate-600">
-                    <span>🧠</span><span><strong>Concept-focused:</strong> Tests underlying theories</span>
+                <div className="bg-slate-100 rounded-xl p-4 mb-6">
+                  <div className="flex items-center gap-3 text-sm text-slate-700">
+                    <span>🧠</span><span><strong className="text-slate-800">Concept-focused:</strong> Tests underlying theories</span>
                   </div>
-                  <div className="flex items-center gap-3 text-sm text-slate-600 mt-2">
-                    <span>📋</span><span><strong>Case-based:</strong> Tests specific case details</span>
+                  <div className="flex items-center gap-3 text-sm text-slate-700 mt-2">
+                    <span>📋</span><span><strong className="text-slate-800">Case-based:</strong> Tests specific case details</span>
                   </div>
                 </div>
                 <div className="flex gap-3">
@@ -2296,11 +2296,13 @@ ${quizContent.substring(0, 40000)}
                 </div>
               </>
             )}
-            <div className="flex justify-center gap-2 mt-6">
-              {[0, 1, 2, 3].map(step => (
-                <div key={step} className={`w-2 h-2 rounded-full ${onboardingStep === step ? 'bg-indigo-600' : 'bg-slate-300'}`} />
-              ))}
-            </div>
+            {onboardingStep > 0 && (
+              <div className="flex justify-center gap-2 mt-6">
+                {[1, 2, 3].map(step => (
+                  <div key={step} className={`w-2.5 h-2.5 rounded-full transition-colors ${onboardingStep === step ? 'bg-indigo-600' : 'bg-slate-300'}`} />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -2585,14 +2587,14 @@ ${quizContent.substring(0, 40000)}
                 </div>
                 <p className="text-white text-sm md:text-base font-medium mb-3">Why does cooperation become harder as the number of firms increases?</p>
                 <div className="space-y-1.5 mb-3">
-                  <div className="p-2 rounded-lg border bg-slate-800/30 border-slate-700 opacity-50"><div className="flex items-center gap-2"><span className="w-5 h-5 flex items-center justify-center rounded-full bg-slate-700 text-slate-300 text-xs font-bold">A</span><span className="text-white text-xs">More administrative complexity</span></div></div>
-                  <div className="p-2 rounded-lg border bg-green-500/20 border-green-500"><div className="flex items-center gap-2"><span className="w-5 h-5 flex items-center justify-center rounded-full bg-green-500 text-white text-xs font-bold">B</span><span className="text-white text-xs flex-1">Each firm's share shrinks, but deviation gains stay constant</span><span className="text-green-400 text-xs">✓</span></div></div>
-                  <div className="p-2 rounded-lg border bg-slate-800/30 border-slate-700 opacity-50"><div className="flex items-center gap-2"><span className="w-5 h-5 flex items-center justify-center rounded-full bg-slate-700 text-slate-300 text-xs font-bold">C</span><span className="text-white text-xs">Government pays more attention</span></div></div>
-                  <div className="p-2 rounded-lg border bg-slate-800/30 border-slate-700 opacity-50"><div className="flex items-center gap-2"><span className="w-5 h-5 flex items-center justify-center rounded-full bg-slate-700 text-slate-300 text-xs font-bold">D</span><span className="text-white text-xs">Communication costs increase</span></div></div>
+                  <div className="p-2 rounded-lg border bg-slate-800/50 border-slate-600 opacity-70"><div className="flex items-center gap-2"><span className="w-5 h-5 flex items-center justify-center rounded-full bg-slate-600 text-white text-xs font-bold">A</span><span className="text-white text-xs">More administrative complexity</span></div></div>
+                  <div className="p-2 rounded-lg border bg-green-500/30 border-green-400"><div className="flex items-center gap-2"><span className="w-5 h-5 flex items-center justify-center rounded-full bg-green-500 text-white text-xs font-bold">B</span><span className="text-white text-xs flex-1">Each firm's share shrinks, but deviation gains stay constant</span><span className="text-green-300 text-xs font-bold">✓</span></div></div>
+                  <div className="p-2 rounded-lg border bg-slate-800/50 border-slate-600 opacity-70"><div className="flex items-center gap-2"><span className="w-5 h-5 flex items-center justify-center rounded-full bg-slate-600 text-white text-xs font-bold">C</span><span className="text-white text-xs">Government pays more attention</span></div></div>
+                  <div className="p-2 rounded-lg border bg-slate-800/50 border-slate-600 opacity-70"><div className="flex items-center gap-2"><span className="w-5 h-5 flex items-center justify-center rounded-full bg-slate-600 text-white text-xs font-bold">D</span><span className="text-white text-xs">Communication costs increase</span></div></div>
                 </div>
-                <div className="p-2 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                  <p className="text-blue-400 font-medium text-xs mb-0.5">💡 Explanation</p>
-                  <p className="text-slate-300 text-xs leading-relaxed">With n firms sharing profit, each gets π/n. As n increases, cooperation value shrinks while deviation gains remain attractive.</p>
+                <div className="p-2 bg-blue-500/20 border border-blue-400/40 rounded-lg">
+                  <p className="text-blue-300 font-medium text-xs mb-0.5">💡 Explanation</p>
+                  <p className="text-slate-200 text-xs leading-relaxed">With n firms sharing profit, each gets π/n. As n increases, cooperation value shrinks while deviation gains remain attractive.</p>
                 </div>
               </div>
             </div>
@@ -2611,21 +2613,21 @@ ${quizContent.substring(0, 40000)}
                       <div className="text-xl">📤</div>
                       <div>
                         <h4 className="font-semibold text-slate-900 text-xs">Upload</h4>
-                        <p className="text-slate-500 text-xs">Lecture slides, PDFs, or notes</p>
+                        <p className="text-slate-600 text-xs">Lecture slides, PDFs, or notes</p>
                       </div>
                     </div>
                     <div className="bg-white/80 rounded-xl p-3 flex items-center gap-3">
                       <div className="text-xl">🧠</div>
                       <div>
                         <h4 className="font-semibold text-slate-900 text-xs">Generate Quizzes & Exams</h4>
-                        <p className="text-slate-500 text-xs">AI creates assessments instantly</p>
+                        <p className="text-slate-600 text-xs">AI creates assessments instantly</p>
                       </div>
                     </div>
                     <div className="bg-white/80 rounded-xl p-3 flex items-center gap-3">
                       <div className="text-xl">📊</div>
                       <div>
                         <h4 className="font-semibold text-slate-900 text-xs">Assign & Track</h4>
-                        <p className="text-slate-500 text-xs">Share with class, view results</p>
+                        <p className="text-slate-600 text-xs">Share with class, view results</p>
                       </div>
                     </div>
                   </div>
@@ -2639,21 +2641,21 @@ ${quizContent.substring(0, 40000)}
                       <div className="text-xl">📋</div>
                       <div>
                         <h4 className="font-semibold text-slate-900 text-xs">Join & Take</h4>
-                        <p className="text-slate-500 text-xs">Complete assigned quizzes</p>
+                        <p className="text-slate-600 text-xs">Complete assigned quizzes</p>
                       </div>
                     </div>
                     <div className="bg-white/80 rounded-xl p-3 flex items-center gap-3">
                       <div className="text-xl">📚</div>
                       <div>
                         <h4 className="font-semibold text-slate-900 text-xs">Create & Study</h4>
-                        <p className="text-slate-500 text-xs">Upload notes, practice exams</p>
+                        <p className="text-slate-600 text-xs">Upload notes, practice exams</p>
                       </div>
                     </div>
                     <div className="bg-white/80 rounded-xl p-3 flex items-center gap-3">
                       <div className="text-xl">🔗</div>
                       <div>
                         <h4 className="font-semibold text-slate-900 text-xs">Share & Compete</h4>
-                        <p className="text-slate-500 text-xs">Quiz friends, study together</p>
+                        <p className="text-slate-600 text-xs">Quiz friends, study together</p>
                       </div>
                     </div>
                   </div>
@@ -2832,30 +2834,6 @@ ${quizContent.substring(0, 40000)}
                 </button>
               </div>
               
-              {authMode === 'login' && (
-                <button
-                  onClick={async () => {
-                    if (!authForm.email.trim()) {
-                      setAuthError('Please enter your email address first');
-                      return;
-                    }
-                    try {
-                      await sendPasswordResetEmail(auth, authForm.email.trim());
-                      setAuthError('');
-                      alert('Password reset email sent! Check your inbox.');
-                    } catch (err) {
-                      if (err.code === 'auth/user-not-found') {
-                        setAuthError('No account found with this email');
-                      } else {
-                        setAuthError('Failed to send reset email. Please try again.');
-                      }
-                    }
-                  }}
-                  className="w-full mt-3 text-indigo-600 text-sm hover:underline"
-                >
-                  Forgot password?
-                </button>
-              )}
             </div>
             
             {/* Role Selection Modal for Social Login */}
@@ -4131,12 +4109,12 @@ ${quizContent.substring(0, 40000)}
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Question Style</label>
-                    <select value={questionStyle} onChange={e => setQuestionStyle(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-xl">
-                      <option value="concept">📚 Concept-focused (theories & frameworks)</option>
-                      <option value="mixed">🔀 Mixed (concepts + case examples)</option>
-                      <option value="case">📋 Case-based (specific examples)</option>
+                    <select value={questionStyle} onChange={e => setQuestionStyle(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm">
+                      <option value="concept">📚 Concept-focused</option>
+                      <option value="mixed">🔀 Mixed</option>
+                      <option value="case">📋 Case-based</option>
                     </select>
-                    <p className="text-xs text-slate-400 mt-1">Concept-focused avoids case-specific details</p>
+                    <p className="text-xs text-slate-400 mt-1">{questionStyle === 'concept' ? 'Tests theories & frameworks, avoids case-specific details' : questionStyle === 'case' ? 'Tests specific examples from the material' : 'Mix of concepts and case examples'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Topic Focus <span className="text-slate-400 font-normal">(optional)</span></label>
