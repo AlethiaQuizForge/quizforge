@@ -3783,6 +3783,23 @@ ${quizContent.substring(0, 40000)}
               <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5"><p className="text-3xl font-bold text-slate-900 dark:text-white">{classes.reduce((s, c) => s + c.students.length, 0)}</p><p className="text-sm text-slate-500 dark:text-slate-300">Students</p></div>
               <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5"><p className="text-3xl font-bold text-green-600 dark:text-green-400">{submissions.length > 0 ? Math.round(submissions.reduce((s, sub) => s + sub.percentage, 0) / submissions.length) : '--'}%</p><p className="text-sm text-slate-500 dark:text-slate-300">Avg Score</p></div>
             </div>
+            {/* Smart Review for Teachers */}
+            {(() => {
+              const dueCount = getQuestionsForReview().length;
+              if (dueCount > 0 && questionBank.length > 0) {
+                return (
+                  <button onClick={startSpacedPractice} className="w-full p-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 rounded-xl text-left flex justify-between items-center text-white mb-6">
+                    <div>
+                      <p className="font-semibold">🧠 Smart Review</p>
+                      <p className="text-sm text-purple-100">{dueCount} questions due for review - practice your own quizzes</p>
+                    </div>
+                    <span className="text-2xl">→</span>
+                  </button>
+                );
+              }
+              return null;
+            })()}
+
             <div className="grid lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 grid md:grid-cols-2 gap-4">
                 <button onClick={() => setPage('create-quiz')} className="p-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl text-white text-left"><span className="text-3xl mb-2 block">⚡</span><span className="font-semibold block">Generate Quiz</span><span className="text-sm text-indigo-200">From any material</span></button>
@@ -3928,6 +3945,23 @@ ${quizContent.substring(0, 40000)}
                     </button>
                   )}
                 </div>
+
+                {/* Smart Review - Spaced Repetition */}
+                {(() => {
+                  const dueCount = getQuestionsForReview().length;
+                  if (dueCount > 0 && questionBank.length > 0) {
+                    return (
+                      <button onClick={startSpacedPractice} className="w-full p-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 rounded-xl text-left flex justify-between items-center text-white mb-4">
+                        <div>
+                          <p className="font-semibold">🧠 Smart Review</p>
+                          <p className="text-sm text-purple-100">{dueCount} questions due - spaced repetition helps you remember longer</p>
+                        </div>
+                        <span className="text-2xl">→</span>
+                      </button>
+                    );
+                  }
+                  return null;
+                })()}
 
                 {/* Your Quizzes */}
                 <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
