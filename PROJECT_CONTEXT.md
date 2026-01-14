@@ -161,19 +161,34 @@ Firebase config is currently hardcoded in `QuizForge.jsx` (project: quizforge-58
 ### Recently Fixed (Jan 2026):
 - ✅ URL routing bug - users can now bookmark pages, refresh without 404, use browser back/forward
 - ✅ Removed duplicate "Forgot password?" link on auth page
-- ✅ Fixed onboarding step indicator (was showing 4 dots for 3 steps, now shows dots only during steps 1-3)
-- ✅ Fixed Question Style dropdown text truncation (shortened options, added dynamic description)
-- ✅ Improved text visibility across landing page and onboarding modals (better contrast)
+- ✅ Fixed onboarding step indicator (shows 3 dots only during steps 1-3)
+- ✅ Fixed Question Style dropdown text truncation
+- ✅ Improved text visibility across landing page ("Log In", "I'm a Teacher", "Study Smarter" etc.)
 - ✅ Contact link in footer uses mailto (working as intended)
-- ✅ Invalid class code error feedback already exists
+- ✅ **Firestore-based class joining** - students can now join ANY teacher's class by code
+- ✅ **Firestore-based assignments** - students can now see quizzes assigned to their classes
+
+### Architecture Changes (Jan 2026):
+- Classes are now stored in global `classes` collection in Firestore (not just per-user)
+- Assignments are stored in global `assignments` collection with embedded quiz data
+- When student joins a class → fetches assignments from Firestore
+- When student logs in → syncs assignments for all joined classes from Firestore
+- When teacher assigns quiz → saves to Firestore with quiz questions embedded
+
+### Firestore Collections:
+- `userData` - Per-user data (account info, local quizzes, progress)
+- `classes` - Global classes collection (searchable by code)
+- `assignments` - Global assignments with embedded quiz questions
+- `shared-{id}` - Publicly shared quizzes
 
 ### Known Issues:
-- Class joining only works for classes in local state (architecture limitation - would need Firestore query to find any teacher's class by code)
+- Teacher's student roster only updates on login (no real-time sync)
+- Submissions are still stored locally (not synced to Firestore yet)
 
 ### Next Steps:
-- Consider implementing Firestore-based class lookup for cross-user class joining
+- Consider syncing submissions to Firestore so teachers see results
+- Add real-time updates for class roster
 - Add more robust error handling for network failures
-- Consider adding loading states for async operations
 
 ---
 
