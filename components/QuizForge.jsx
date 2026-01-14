@@ -1923,7 +1923,7 @@ ${quizContent.substring(0, 40000)}
   const avgScore = studentProgress.totalQuestions > 0 ? Math.round((studentProgress.totalScore / studentProgress.totalQuestions) * 100) : 0;
   const topicScores = Object.entries(studentProgress.topicHistory || {}).map(([topic, data]) => ({ topic, score: Math.round((data.correct / data.total) * 100), total: data.total })).sort((a, b) => a.score - b.score);
   const weakTopics = topicScores.filter(t => t.score < 70);
-  const pendingAssignments = assignments.filter(a => joinedClasses.some(c => c.id === a.classId) && !submissions.some(s => s.assignmentId === a.id && s.studentName === user?.name));
+  const pendingAssignments = assignments.filter(a => joinedClasses.some(c => c.id === a.classId) && !submissions.some(s => s.assignmentId === a.id && (s.studentId === auth.currentUser?.uid || s.studentEmail === user?.email)));
   const selectedClass = currentClass || classes[0];
   const classAssignments = assignments.filter(a => a.classId === selectedClass?.id);
   // Redirect to auth if trying to access protected pages while not logged in
@@ -4234,7 +4234,7 @@ ${quizContent.substring(0, 40000)}
               <div><h3 className="font-semibold text-slate-900 mb-4">Your Classes</h3>
                 {joinedClasses.map(cls => {
                   const clsAssignments = assignments.filter(a => a.classId === cls.id);
-                  const pending = clsAssignments.filter(a => !submissions.some(s => s.assignmentId === a.id && s.studentName === user?.name));
+                  const pending = clsAssignments.filter(a => !submissions.some(s => s.assignmentId === a.id && (s.studentId === auth.currentUser?.uid || s.studentEmail === user?.email)));
                   return (
                     <div key={cls.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 mb-4">
                       <div className="flex justify-between items-start">
