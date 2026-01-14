@@ -528,6 +528,46 @@ export default function QuizForge() {
     }
   }, [page]);
 
+  // Keyboard shortcuts for quiz-taking
+  useEffect(() => {
+    if (page !== 'take-quiz' || !currentQuiz.questions.length) return;
+
+    const handleKeyDown = (e) => {
+      const q = currentQuiz.questions[quizState.currentQuestion];
+      const isAnswered = quizState.answeredQuestions.has(quizState.currentQuestion);
+      const numOptions = q?.options?.length || 0;
+
+      // Number keys 1-4 (or 1-2 for true/false) to select answer
+      if (!isAnswered && e.key >= '1' && e.key <= '4') {
+        const optionIndex = parseInt(e.key) - 1;
+        if (optionIndex < numOptions) {
+          selectAnswer(optionIndex);
+        }
+      }
+
+      // A, B, C, D keys to select answer
+      if (!isAnswered) {
+        const letterIndex = { 'a': 0, 'b': 1, 'c': 2, 'd': 3 }[e.key.toLowerCase()];
+        if (letterIndex !== undefined && letterIndex < numOptions) {
+          selectAnswer(letterIndex);
+        }
+      }
+
+      // Enter or Space to check answer or go next
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        if (isAnswered) {
+          nextQuestion();
+        } else if (quizState.selectedAnswer !== null) {
+          checkAnswer();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [page, currentQuiz.questions, quizState.currentQuestion, quizState.selectedAnswer, quizState.answeredQuestions]);
+
   // Check for saved progress on mount
   const checkSavedProgress = () => {
     try {
@@ -2468,6 +2508,43 @@ ${quizContent.substring(0, 40000)}
                 <div className="bg-slate-100 dark:bg-slate-700 rounded-lg p-3 mb-4 break-all text-sm font-mono text-slate-700 dark:text-slate-300">
                   {modalInput}
                 </div>
+
+                {/* Social Share Buttons */}
+                <div className="grid grid-cols-4 gap-2 mb-4">
+                  <button
+                    onClick={() => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('Check out this quiz I made with QuizForge!')}&url=${encodeURIComponent(modalInput)}`, '_blank')}
+                    className="flex flex-col items-center gap-1 p-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
+                    title="Share on X (Twitter)"
+                  >
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                    <span className="text-xs text-slate-600 dark:text-slate-400">X</span>
+                  </button>
+                  <button
+                    onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(modalInput)}`, '_blank')}
+                    className="flex flex-col items-center gap-1 p-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
+                    title="Share on Facebook"
+                  >
+                    <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                    <span className="text-xs text-slate-600 dark:text-slate-400">Facebook</span>
+                  </button>
+                  <button
+                    onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent('Check out this quiz: ' + modalInput)}`, '_blank')}
+                    className="flex flex-col items-center gap-1 p-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
+                    title="Share on WhatsApp"
+                  >
+                    <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                    <span className="text-xs text-slate-600 dark:text-slate-400">WhatsApp</span>
+                  </button>
+                  <button
+                    onClick={() => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(modalInput)}`, '_blank')}
+                    className="flex flex-col items-center gap-1 p-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
+                    title="Share on LinkedIn"
+                  >
+                    <svg className="w-5 h-5 text-blue-700" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                    <span className="text-xs text-slate-600 dark:text-slate-400">LinkedIn</span>
+                  </button>
+                </div>
+
                 <div className="flex gap-3">
                   <button onClick={() => { setModal(null); setModalInput(''); }} className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg">Close</button>
                   <button onClick={() => {
@@ -3877,6 +3954,13 @@ ${quizContent.substring(0, 40000)}
                             📊 Analytics
                           </button>
                           <button
+                            onClick={() => setModal({ type: 'export-pdf', quiz })}
+                            className="py-2 px-3 bg-green-100 dark:bg-green-900/50 hover:bg-green-200 dark:hover:bg-green-900/70 text-green-700 dark:text-green-300 rounded-lg text-sm font-medium"
+                            title="Export to PDF"
+                          >
+                            📄
+                          </button>
+                          <button
                             onClick={() => {
                               setCurrentQuiz(quiz);
                               setPage('review-quiz');
@@ -4003,6 +4087,7 @@ ${quizContent.substring(0, 40000)}
                             </div>
                           </div>
                           <div className="flex gap-2 items-center">
+                            <button onClick={() => setModal({ type: 'export-pdf', quiz })} className="px-2 py-1.5 text-slate-400 dark:text-slate-500 hover:text-green-500 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/50 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity" title="Export PDF">📄</button>
                             <button onClick={() => duplicateQuiz(quiz)} className="px-2 py-1.5 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/50 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity" title="Duplicate">📋</button>
                             <button onClick={() => setModal({ type: 'delete-confirm', quizId: quiz.id, quizName: quiz.name })} className="px-2 py-1.5 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/50 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity" title="Delete">🗑️</button>
                             <button onClick={() => shareQuiz(quiz)} className="px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/50 hover:bg-indigo-200 dark:hover:bg-indigo-900/70 text-indigo-700 dark:text-indigo-300 rounded-lg text-sm" title="Share quiz">🔗 Share</button>
@@ -5188,7 +5273,8 @@ ${quizContent.substring(0, 40000)}
                 )}
               </div>
               {!isAnswered && (
-                <div className="flex justify-end mt-6">
+                <div className="flex items-center justify-between mt-6">
+                  <span className="text-slate-500 text-xs hidden sm:block">Press 1-{q.options.length} or A-{String.fromCharCode(64 + q.options.length)} to select, Enter to submit</span>
                   <button onClick={checkAnswer} disabled={quizState.selectedAnswer === null} className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg">Check Answer</button>
                 </div>
               )}
@@ -5216,8 +5302,42 @@ ${quizContent.substring(0, 40000)}
                   <p className="text-indigo-400 text-sm mb-8">🔥 This quiz has been taken {currentQuiz.timesTaken} time{currentQuiz.timesTaken !== 1 ? 's' : ''}!</p>
                 )}
                 {!currentQuiz.timesTaken && <div className="mb-4" />}
-                <div className="w-full bg-slate-700 rounded-full h-4 mb-8 overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-500 to-orange-500" style={{ width: `${percentage}%` }} /></div>
-                
+                <div className="w-full bg-slate-700 rounded-full h-4 mb-6 overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-500 to-orange-500" style={{ width: `${percentage}%` }} /></div>
+
+                {/* Quick Stats Grid */}
+                <div className="grid grid-cols-3 gap-3 mb-6">
+                  <div className="bg-green-500/20 border border-green-500/30 rounded-xl p-3">
+                    <div className="text-2xl font-bold text-green-400">{quizState.results.filter(r => r.correct).length}</div>
+                    <div className="text-xs text-green-300/70">Correct</div>
+                  </div>
+                  <div className="bg-red-500/20 border border-red-500/30 rounded-xl p-3">
+                    <div className="text-2xl font-bold text-red-400">{quizState.results.filter(r => !r.correct).length}</div>
+                    <div className="text-xs text-red-300/70">Incorrect</div>
+                  </div>
+                  <div className="bg-indigo-500/20 border border-indigo-500/30 rounded-xl p-3">
+                    <div className="text-2xl font-bold text-indigo-400">{totalQuestions}</div>
+                    <div className="text-xs text-indigo-300/70">Total</div>
+                  </div>
+                </div>
+
+                {/* Question by Question Visual */}
+                <div className="flex flex-wrap justify-center gap-1.5 mb-6">
+                  {quizState.results.map((result, i) => (
+                    <div
+                      key={i}
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-medium transition-transform hover:scale-110 cursor-pointer ${
+                        result.correct
+                          ? 'bg-green-500/30 text-green-300 border border-green-500/40'
+                          : 'bg-red-500/30 text-red-300 border border-red-500/40'
+                      }`}
+                      title={`Q${i + 1}: ${result.correct ? 'Correct' : 'Incorrect'}`}
+                      onClick={() => setModal({ type: 'review-answers', results: quizState.results, questions: currentQuiz.questions, scrollTo: i })}
+                    >
+                      {i + 1}
+                    </div>
+                  ))}
+                </div>
+
                 {/* Action buttons row */}
                 <div className="flex flex-wrap justify-center gap-3 mb-6">
                   {/* Review Answers Button */}
