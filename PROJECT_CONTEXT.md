@@ -167,28 +167,36 @@ Firebase config is currently hardcoded in `QuizForge.jsx` (project: quizforge-58
 - ✅ Contact link in footer uses mailto (working as intended)
 - ✅ **Firestore-based class joining** - students can now join ANY teacher's class by code
 - ✅ **Firestore-based assignments** - students can now see quizzes assigned to their classes
+- ✅ **Firestore-based submissions** - teachers can now see student quiz results across devices
+- ✅ Fixed Sign Up button visibility (gradient amber-to-orange style)
+- ✅ Fixed share URL bug - sharing results from a friend's quiz now includes correct link
+- ✅ Fixed duplicate submission check - uses studentId/email instead of name
+- ✅ **"Times Taken" gamification** - shared quizzes now track and display play count
 
 ### Architecture Changes (Jan 2026):
 - Classes are now stored in global `classes` collection in Firestore (not just per-user)
 - Assignments are stored in global `assignments` collection with embedded quiz data
+- Submissions are now stored in global `submissions` collection in Firestore
 - When student joins a class → fetches assignments from Firestore
 - When student logs in → syncs assignments for all joined classes from Firestore
 - When teacher assigns quiz → saves to Firestore with quiz questions embedded
+- When student completes quiz → submission saved to Firestore
+- When teacher logs in → fetches all submissions for their assignments from Firestore
 
 ### Firestore Collections:
 - `userData` - Per-user data (account info, local quizzes, progress)
 - `classes` - Global classes collection (searchable by code)
 - `assignments` - Global assignments with embedded quiz questions
-- `shared-{id}` - Publicly shared quizzes
+- `submissions` - Global submissions (studentId, studentEmail, assignmentId, score, answers, etc.)
+- `shared-{id}` - Publicly shared quizzes (now includes `timesTaken` counter)
 
 ### Known Issues:
 - Teacher's student roster only updates on login (no real-time sync)
-- Submissions are still stored locally (not synced to Firestore yet)
 
 ### Next Steps:
-- Consider syncing submissions to Firestore so teachers see results
 - Add real-time updates for class roster
 - Add more robust error handling for network failures
+- Consider adding leaderboards for shared quizzes
 
 ---
 
