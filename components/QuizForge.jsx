@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import * as mammoth from 'mammoth';
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, GoogleAuthProvider, OAuthProvider, signInWithPopup } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs, updateDoc, addDoc } from 'firebase/firestore';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -239,6 +239,35 @@ export default function QuizForge() {
               } else {
                 setClasses([]);
               }
+
+              // For teachers: fetch submissions from Firestore for their assignments
+              if (userData.role === 'teacher') {
+                const localAssignments = data.assignments || [];
+                if (localAssignments.length > 0) {
+                  try {
+                    const submissionsRef = collection(db, 'submissions');
+                    const allSubmissions = [];
+                    for (const assignment of localAssignments) {
+                      const subQ = query(submissionsRef, where('assignmentId', '==', assignment.id));
+                      const subSnapshot = await getDocs(subQ);
+                      subSnapshot.docs.forEach(d => {
+                        allSubmissions.push({ id: d.id, ...d.data() });
+                      });
+                    }
+                    // Merge with local submissions, avoiding duplicates
+                    const localSubs = data.submissions || [];
+                    const mergedSubs = [...localSubs];
+                    allSubmissions.forEach(firestoreSub => {
+                      if (!mergedSubs.some(s => s.id === firestoreSub.id)) {
+                        mergedSubs.push(firestoreSub);
+                      }
+                    });
+                    setSubmissions(mergedSubs);
+                  } catch (e) {
+                    console.log('Error fetching submissions from Firestore:', e);
+                  }
+                }
+              }
             }
           }
         } catch (err) {
@@ -357,7 +386,7 @@ export default function QuizForge() {
         setUserName(userData.name);
         setUserType(userData.role);
         setIsLoggedIn(true);
-        
+
         // Load user's data
         const dataResult = await storage.get(`quizforge-data-${firebaseUser.uid}`);
         if (dataResult && dataResult.value) {
@@ -366,11 +395,43 @@ export default function QuizForge() {
           setClasses(data.classes || []);
           setJoinedClasses(data.joinedClasses || []);
           setAssignments(data.assignments || []);
-          setSubmissions(data.submissions || []);
           setQuestionBank(data.questionBank || []);
           setStudentProgress(data.studentProgress || { quizzesTaken: 0, totalScore: 0, totalQuestions: 0, topicHistory: {}, recentScores: [], currentStreak: 0, longestStreak: 0, lastPracticeDate: null, achievements: [], dailyHistory: [], questionHistory: {} });
+
+          // For teachers: fetch submissions from Firestore
+          if (userData.role === 'teacher') {
+            const localAssignments = data.assignments || [];
+            if (localAssignments.length > 0) {
+              try {
+                const submissionsRef = collection(db, 'submissions');
+                const allSubmissions = [];
+                for (const assignment of localAssignments) {
+                  const subQ = query(submissionsRef, where('assignmentId', '==', assignment.id));
+                  const subSnapshot = await getDocs(subQ);
+                  subSnapshot.docs.forEach(d => {
+                    allSubmissions.push({ id: d.id, ...d.data() });
+                  });
+                }
+                const localSubs = data.submissions || [];
+                const mergedSubs = [...localSubs];
+                allSubmissions.forEach(firestoreSub => {
+                  if (!mergedSubs.some(s => s.id === firestoreSub.id)) {
+                    mergedSubs.push(firestoreSub);
+                  }
+                });
+                setSubmissions(mergedSubs);
+              } catch (e) {
+                console.log('Error fetching submissions:', e);
+                setSubmissions(data.submissions || []);
+              }
+            } else {
+              setSubmissions(data.submissions || []);
+            }
+          } else {
+            setSubmissions(data.submissions || []);
+          }
         }
-        
+
         showToast(`Welcome back, ${userData.name}!`, 'success');
         setAuthForm({ name: '', email: '', password: '', role: 'student' });
         setPage(userData.role === 'teacher' ? 'teacher-dashboard' : userData.role === 'student' ? 'student-dashboard' : 'creator-dashboard');
@@ -493,7 +554,7 @@ export default function QuizForge() {
         setUserName(userData.name);
         setUserType(userData.role);
         setIsLoggedIn(true);
-        
+
         // Load user's data
         const dataResult = await storage.get(`quizforge-data-${firebaseUser.uid}`);
         if (dataResult && dataResult.value) {
@@ -502,11 +563,43 @@ export default function QuizForge() {
           setClasses(data.classes || []);
           setJoinedClasses(data.joinedClasses || []);
           setAssignments(data.assignments || []);
-          setSubmissions(data.submissions || []);
           setQuestionBank(data.questionBank || []);
           setStudentProgress(data.studentProgress || { quizzesTaken: 0, totalScore: 0, totalQuestions: 0, topicHistory: {}, recentScores: [], currentStreak: 0, longestStreak: 0, lastPracticeDate: null, achievements: [], dailyHistory: [], questionHistory: {} });
+
+          // For teachers: fetch submissions from Firestore
+          if (userData.role === 'teacher') {
+            const localAssignments = data.assignments || [];
+            if (localAssignments.length > 0) {
+              try {
+                const submissionsRef = collection(db, 'submissions');
+                const allSubmissions = [];
+                for (const assignment of localAssignments) {
+                  const subQ = query(submissionsRef, where('assignmentId', '==', assignment.id));
+                  const subSnapshot = await getDocs(subQ);
+                  subSnapshot.docs.forEach(d => {
+                    allSubmissions.push({ id: d.id, ...d.data() });
+                  });
+                }
+                const localSubs = data.submissions || [];
+                const mergedSubs = [...localSubs];
+                allSubmissions.forEach(firestoreSub => {
+                  if (!mergedSubs.some(s => s.id === firestoreSub.id)) {
+                    mergedSubs.push(firestoreSub);
+                  }
+                });
+                setSubmissions(mergedSubs);
+              } catch (e) {
+                console.log('Error fetching submissions:', e);
+                setSubmissions(data.submissions || []);
+              }
+            } else {
+              setSubmissions(data.submissions || []);
+            }
+          } else {
+            setSubmissions(data.submissions || []);
+          }
         }
-        
+
         showToast(`Welcome back, ${userData.name}!`, 'success');
         setPage(userData.role === 'teacher' ? 'teacher-dashboard' : userData.role === 'student' ? 'student-dashboard' : 'creator-dashboard');
       } else {
@@ -552,7 +645,7 @@ export default function QuizForge() {
       provider.addScope('name');
       const result = await signInWithPopup(auth, provider);
       const firebaseUser = result.user;
-      
+
       // Check if user already exists
       const existingUser = await storage.get(`quizforge-account-${firebaseUser.uid}`);
       if (existingUser && existingUser.value) {
@@ -562,7 +655,7 @@ export default function QuizForge() {
         setUserName(userData.name);
         setUserType(userData.role);
         setIsLoggedIn(true);
-        
+
         // Load user's data
         const dataResult = await storage.get(`quizforge-data-${firebaseUser.uid}`);
         if (dataResult && dataResult.value) {
@@ -571,11 +664,43 @@ export default function QuizForge() {
           setClasses(data.classes || []);
           setJoinedClasses(data.joinedClasses || []);
           setAssignments(data.assignments || []);
-          setSubmissions(data.submissions || []);
           setQuestionBank(data.questionBank || []);
           setStudentProgress(data.studentProgress || { quizzesTaken: 0, totalScore: 0, totalQuestions: 0, topicHistory: {}, recentScores: [], currentStreak: 0, longestStreak: 0, lastPracticeDate: null, achievements: [], dailyHistory: [], questionHistory: {} });
+
+          // For teachers: fetch submissions from Firestore
+          if (userData.role === 'teacher') {
+            const localAssignments = data.assignments || [];
+            if (localAssignments.length > 0) {
+              try {
+                const submissionsRef = collection(db, 'submissions');
+                const allSubmissions = [];
+                for (const assignment of localAssignments) {
+                  const subQ = query(submissionsRef, where('assignmentId', '==', assignment.id));
+                  const subSnapshot = await getDocs(subQ);
+                  subSnapshot.docs.forEach(d => {
+                    allSubmissions.push({ id: d.id, ...d.data() });
+                  });
+                }
+                const localSubs = data.submissions || [];
+                const mergedSubs = [...localSubs];
+                allSubmissions.forEach(firestoreSub => {
+                  if (!mergedSubs.some(s => s.id === firestoreSub.id)) {
+                    mergedSubs.push(firestoreSub);
+                  }
+                });
+                setSubmissions(mergedSubs);
+              } catch (e) {
+                console.log('Error fetching submissions:', e);
+                setSubmissions(data.submissions || []);
+              }
+            } else {
+              setSubmissions(data.submissions || []);
+            }
+          } else {
+            setSubmissions(data.submissions || []);
+          }
         }
-        
+
         showToast(`Welcome back, ${userData.name}!`, 'success');
         setPage(userData.role === 'teacher' ? 'teacher-dashboard' : userData.role === 'student' ? 'student-dashboard' : 'creator-dashboard');
       } else {
@@ -1575,9 +1700,27 @@ ${quizContent.substring(0, 40000)}
     setModalInput('');
   };
 
-  const submitQuizResult = (assignmentId, score, total, answers) => {
-    const submission = { id: `sub_${Date.now()}`, assignmentId, studentName: user?.name || 'Student', score, total, percentage: Math.round((score / total) * 100), answers, submittedAt: Date.now() };
+  const submitQuizResult = async (assignmentId, score, total, answers) => {
+    const submission = {
+      id: `sub_${Date.now()}`,
+      assignmentId,
+      studentId: auth.currentUser?.uid || null,
+      studentEmail: user?.email || null,
+      studentName: user?.name || 'Student',
+      score,
+      total,
+      percentage: Math.round((score / total) * 100),
+      answers,
+      submittedAt: Date.now()
+    };
     setSubmissions(prev => [...prev, submission]);
+
+    // Save to Firestore for teachers to access
+    try {
+      await setDoc(doc(db, 'submissions', submission.id), submission);
+    } catch (e) {
+      console.error('Error saving submission to Firestore:', e);
+    }
   };
 
   const selectAnswer = (index) => {
