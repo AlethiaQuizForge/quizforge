@@ -2660,7 +2660,7 @@ ${quizContent.substring(0, 40000)}
               ) : (
                 <>
                   <button onClick={() => { setAuthMode('login'); setPage('auth'); }} className="px-4 py-2 text-white font-medium hover:bg-white/10 rounded-lg">Log In</button>
-                  <button onClick={() => { setAuthMode('signup'); setPage('auth'); }} className="px-4 py-2 bg-white text-indigo-900 rounded-lg font-medium">Sign Up</button>
+                  <button onClick={() => { setAuthMode('signup'); setPage('auth'); }} className="px-4 py-2 bg-amber-400 text-gray-900 rounded-lg font-bold hover:bg-amber-300 shadow-md">Sign Up</button>
                 </>
               )}
             </div>
