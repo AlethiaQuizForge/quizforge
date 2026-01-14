@@ -851,22 +851,28 @@ export default function QuizForge() {
   
   // Get or create shareId for a quiz (used by social share buttons)
   const getShareUrl = async (quiz) => {
+    // If quiz is already a shared quiz (id starts with 's'), use its id directly
+    if (quiz.id && quiz.id.startsWith('s')) {
+      return `${window.location.origin}?quiz=${quiz.id}`;
+    }
+
     let shareId = quiz.shareId;
-    
+
     if (!shareId) {
       shareId = `s${Date.now()}`;
-      
+
       const shareData = {
         id: shareId,
         name: quiz.name,
         questions: quiz.questions.slice(0, 50),
         subject: quiz.subject || 'General',
         createdBy: user?.name || 'Anonymous',
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        timesTaken: 0
       };
-      
+
       await storage.set(`shared-${shareId}`, JSON.stringify(shareData));
-      
+
       // Update quiz with shareId
       const updatedQuiz = { ...quiz, shareId };
       setQuizzes(prev => prev.map(q => q.id === quiz.id ? updatedQuiz : q));
@@ -874,7 +880,7 @@ export default function QuizForge() {
         setCurrentQuiz(updatedQuiz);
       }
     }
-    
+
     return `${window.location.origin}?quiz=${shareId}`;
   };
 
@@ -1771,7 +1777,7 @@ ${quizContent.substring(0, 40000)}
     });
   };
 
-  const nextQuestion = () => {
+  const nextQuestion = async () => {
     if (quizState.currentQuestion < currentQuiz.questions.length - 1) {
       setQuizState(s => ({ ...s, currentQuestion: s.currentQuestion + 1, selectedAnswer: null }));
     } else {
@@ -1816,6 +1822,24 @@ ${quizContent.substring(0, 40000)}
         submitQuizResult(currentAssignment.id, score, total, quizState.results);
         setCurrentAssignment(null);
       }
+
+      // Increment times taken for shared quizzes
+      if (currentQuiz.id && currentQuiz.id.startsWith('s')) {
+        try {
+          const result = await storage.get(`shared-${currentQuiz.id}`);
+          if (result && result.value) {
+            const sharedData = JSON.parse(result.value);
+            sharedData.timesTaken = (sharedData.timesTaken || 0) + 1;
+            await storage.set(`shared-${currentQuiz.id}`, JSON.stringify(sharedData));
+            // Update local state so UI shows updated count
+            setSharedQuizData(sharedData);
+            setCurrentQuiz(q => ({ ...q, timesTaken: sharedData.timesTaken }));
+          }
+        } catch (e) {
+          console.log('Could not update times taken:', e);
+        }
+      }
+
       setPage('quiz-results');
     }
   };
@@ -4577,6 +4601,7 @@ ${quizContent.substring(0, 40000)}
                     <span className="text-amber-400">⚡</span>
                     <span className="text-white text-sm font-medium">{currentQuiz.name}</span>
                     {sharedQuizData?.createdBy && <span className="text-slate-400 text-sm">by {sharedQuizData.createdBy}</span>}
+                    {sharedQuizData?.timesTaken > 0 && <span className="text-indigo-400 text-sm">• {sharedQuizData.timesTaken} plays</span>}
                   </div>
                   <button onClick={() => { setAuthMode('login'); setPage('auth'); }} className="px-4 py-1.5 bg-white/10 hover:bg-white/20 text-white text-sm rounded-lg">Sign In</button>
                 </div>
@@ -4663,7 +4688,11 @@ ${quizContent.substring(0, 40000)}
                 <div className="text-7xl mb-4">{emoji}</div>
                 <h2 className="text-3xl font-bold text-white mb-2">Quiz Complete!</h2>
                 <div className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500 mb-2">{quizState.score}/{currentQuiz.questions.length}</div>
-                <p className="text-slate-400 mb-8">{percentage}% correct</p>
+                <p className="text-slate-400 mb-4">{percentage}% correct</p>
+                {currentQuiz.timesTaken > 0 && (
+                  <p className="text-indigo-400 text-sm mb-8">🔥 This quiz has been taken {currentQuiz.timesTaken} time{currentQuiz.timesTaken !== 1 ? 's' : ''}!</p>
+                )}
+                {!currentQuiz.timesTaken && <div className="mb-4" />}
                 <div className="w-full bg-slate-700 rounded-full h-4 mb-8 overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-500 to-orange-500" style={{ width: `${percentage}%` }} /></div>
                 
                 {/* Action buttons row */}
