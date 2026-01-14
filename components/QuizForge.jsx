@@ -1844,7 +1844,7 @@ ${quizContent.substring(0, 40000)}
     // Random affirmation ~30% of the time on correct answers
     if (isCorrect && Math.random() < 0.3) {
       const affirmation = affirmations[Math.floor(Math.random() * affirmations.length)];
-      showToast(affirmation, 'success');
+      showToast(affirmation, 'affirmation');
     }
     
     setStudentProgress(p => {
@@ -2091,7 +2091,12 @@ ${quizContent.substring(0, 40000)}
       
       {/* Toast */}
       {toast && (
-        <div className={`fixed bottom-6 right-6 ${toast.type === 'success' ? 'bg-green-600' : toast.type === 'error' ? 'bg-red-600' : 'bg-indigo-600'} text-white px-6 py-3 rounded-xl shadow-lg z-50`}>
+        <div className={`fixed bottom-6 right-6 ${
+          toast.type === 'success' ? 'bg-green-600' :
+          toast.type === 'error' ? 'bg-red-600' :
+          toast.type === 'affirmation' ? 'bg-gradient-to-r from-pink-500 to-purple-500' :
+          'bg-indigo-600'
+        } text-white px-6 py-3 rounded-xl shadow-lg z-50 ${toast.type === 'affirmation' ? 'text-lg font-medium' : ''}`}>
           {toast.message}
         </div>
       )}
@@ -4750,19 +4755,28 @@ ${quizContent.substring(0, 40000)}
                   })}
                 </div>
                 {isAnswered && (
-                  <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
-                    <h4 className="text-blue-400 font-medium mb-2">💡 Explanation</h4>
-                    <p className="text-slate-300 text-sm">{q.explanation}</p>
-                  </div>
+                  <button
+                    onClick={nextQuestion}
+                    className="mt-6 w-full p-4 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 rounded-xl text-left hover:from-green-500/30 hover:to-emerald-500/30 transition-all group cursor-pointer"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <h4 className="text-green-400 font-medium mb-2">💡 Explanation</h4>
+                        <p className="text-slate-300 text-sm">{q.explanation}</p>
+                      </div>
+                      <div className="flex items-center gap-2 text-green-400 font-medium shrink-0 pt-1 group-hover:translate-x-1 transition-transform">
+                        <span className="text-sm">{quizState.currentQuestion === currentQuiz.questions.length - 1 ? 'See Results' : 'Next'}</span>
+                        <span>→</span>
+                      </div>
+                    </div>
+                  </button>
                 )}
               </div>
-              <div className="flex justify-end">
-                {!isAnswered ? (
+              {!isAnswered && (
+                <div className="flex justify-end mt-6">
                   <button onClick={checkAnswer} disabled={quizState.selectedAnswer === null} className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg">Check Answer</button>
-                ) : (
-                  <button onClick={nextQuestion} className="px-6 py-2.5 bg-green-600 hover:bg-green-500 text-white font-medium rounded-lg">{quizState.currentQuestion === currentQuiz.questions.length - 1 ? 'See Results' : 'Next →'}</button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         );
