@@ -2340,12 +2340,12 @@ ${quizContent.substring(0, 40000)}
       
       {/* Toast */}
       {toast && (
-        <div className={`fixed bottom-6 right-6 ${
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 ${
           toast.type === 'success' ? 'bg-green-600' :
           toast.type === 'error' ? 'bg-red-600' :
           toast.type === 'affirmation' ? 'bg-gradient-to-r from-pink-500 to-purple-500' :
           'bg-indigo-600'
-        } text-white px-6 py-3 rounded-xl shadow-lg z-50 ${toast.type === 'affirmation' ? 'text-lg font-medium' : ''}`}>
+        } text-white px-6 py-3 rounded-xl shadow-lg z-50 ${toast.type === 'affirmation' ? 'text-lg font-medium' : ''} animate-in fade-in slide-in-from-top-4 duration-300`}>
           {toast.message}
         </div>
       )}
