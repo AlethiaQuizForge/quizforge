@@ -1881,19 +1881,17 @@ ${quizContent.substring(0, 40000)}
       setStudentProgress(p => {
         // Update streak
         let updatedProgress = updateStreak(p);
-        
-        // Update stats
+
+        // Update stats (totalScore and totalQuestions already updated per-question in checkAnswer)
         updatedProgress = {
           ...updatedProgress,
           quizzesTaken: updatedProgress.quizzesTaken + 1,
-          totalScore: updatedProgress.totalScore + score,
-          totalQuestions: updatedProgress.totalQuestions + total,
           recentScores: [...updatedProgress.recentScores.slice(-7), Math.round((score / total) * 100)]
         };
-        
+
         // Check achievements
         updatedProgress.achievements = checkAchievements(updatedProgress, score, total);
-        
+
         return updatedProgress;
       });
       
@@ -3431,106 +3429,106 @@ ${quizContent.substring(0, 40000)}
 
       {/* TEACHER DASHBOARD */}
       {page === 'teacher-dashboard' && (
-        <div className="min-h-screen bg-slate-100">
-          <nav className="bg-white border-b border-slate-200 px-6 py-3 sticky top-0 z-40">
+        <div className="min-h-screen bg-slate-100 dark:bg-slate-900">
+          <nav className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3 sticky top-0 z-40">
             <div className="max-w-7xl mx-auto flex justify-between items-center">
               <div className="flex items-center gap-4 md:gap-8">
-                <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('landing')}><span className="text-xl">⚡</span><span className="font-bold text-slate-900 hidden sm:inline">QuizForge</span></div>
+                <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('landing')}><span className="text-xl">⚡</span><span className="font-bold text-slate-900 dark:text-white hidden sm:inline">QuizForge</span></div>
                 <div className="hidden sm:flex items-center gap-4">
-                  <button onClick={() => setPage('teacher-dashboard')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Dashboard</button>
-                  <button onClick={() => setPage('create-quiz')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Create</button>
-                  <button onClick={() => setPage('class-manager')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Classes</button>
+                  <button onClick={() => setPage('teacher-dashboard')} className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-sm font-medium">Dashboard</button>
+                  <button onClick={() => setPage('create-quiz')} className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-sm font-medium">Create</button>
+                  <button onClick={() => setPage('class-manager')} className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-sm font-medium">Classes</button>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => setPage('profile')} className="flex items-center gap-2 px-3 py-1 bg-purple-100 hover:bg-purple-200 text-purple-700 text-sm font-medium rounded-full">
+                <button onClick={() => setPage('profile')} className="flex items-center gap-2 px-3 py-1 bg-purple-100 dark:bg-purple-900/50 hover:bg-purple-200 dark:hover:bg-purple-900/70 text-purple-700 dark:text-purple-300 text-sm font-medium rounded-full">
                   <span className="w-6 h-6 bg-purple-500 text-white rounded-full flex items-center justify-center text-xs">{user?.name?.charAt(0).toUpperCase() || '?'}</span>
                   <span className="hidden sm:inline">{user?.name || 'Teacher'}</span>
                 </button>
-                <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="sm:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
+                <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="sm:hidden p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
                   {mobileMenuOpen ? '✕' : '☰'}
                 </button>
               </div>
             </div>
             {/* Mobile menu */}
             {mobileMenuOpen && (
-              <div className="sm:hidden border-t border-slate-200 mt-3 pt-3 pb-2 space-y-2">
-                <button onClick={() => { setPage('teacher-dashboard'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg">📊 Dashboard</button>
-                <button onClick={() => { setPage('create-quiz'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg">⚡ Create Quiz</button>
-                <button onClick={() => { setPage('class-manager'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg">👥 Classes</button>
+              <div className="sm:hidden border-t border-slate-200 dark:border-slate-700 mt-3 pt-3 pb-2 space-y-2">
+                <button onClick={() => { setPage('teacher-dashboard'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">📊 Dashboard</button>
+                <button onClick={() => { setPage('create-quiz'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">⚡ Create Quiz</button>
+                <button onClick={() => { setPage('class-manager'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">👥 Classes</button>
               </div>
             )}
           </nav>
           <div className="max-w-7xl mx-auto px-6 py-8">
             <div className="flex justify-between items-start mb-8">
-              <div><h1 className="text-2xl font-bold text-slate-900">Welcome back{user?.name ? `, ${user.name.split(' ')[0]}` : ''} 👋</h1><p className="text-slate-600">Create assessments and track progress</p></div>
+              <div><h1 className="text-2xl font-bold text-slate-900 dark:text-white">Welcome back{user?.name ? `, ${user.name.split(' ')[0]}` : ''} 👋</h1><p className="text-slate-600 dark:text-slate-400">Create assessments and track progress</p></div>
               <button onClick={() => setPage('create-quiz')} className="px-5 py-2.5 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-500 shadow-lg">⚡ Create Quiz</button>
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5"><p className="text-3xl font-bold text-slate-900">{classes.length}</p><p className="text-sm text-slate-500">Classes</p></div>
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5"><p className="text-3xl font-bold text-slate-900">{quizzes.length}</p><p className="text-sm text-slate-500">Quizzes</p></div>
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5"><p className="text-3xl font-bold text-slate-900">{classes.reduce((s, c) => s + c.students.length, 0)}</p><p className="text-sm text-slate-500">Students</p></div>
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5"><p className="text-3xl font-bold text-green-600">{submissions.length > 0 ? Math.round(submissions.reduce((s, sub) => s + sub.percentage, 0) / submissions.length) : '--'}%</p><p className="text-sm text-slate-500">Avg Score</p></div>
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5"><p className="text-3xl font-bold text-slate-900 dark:text-white">{classes.length}</p><p className="text-sm text-slate-500 dark:text-slate-400">Classes</p></div>
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5"><p className="text-3xl font-bold text-slate-900 dark:text-white">{quizzes.length}</p><p className="text-sm text-slate-500 dark:text-slate-400">Quizzes</p></div>
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5"><p className="text-3xl font-bold text-slate-900 dark:text-white">{classes.reduce((s, c) => s + c.students.length, 0)}</p><p className="text-sm text-slate-500 dark:text-slate-400">Students</p></div>
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5"><p className="text-3xl font-bold text-green-600 dark:text-green-400">{submissions.length > 0 ? Math.round(submissions.reduce((s, sub) => s + sub.percentage, 0) / submissions.length) : '--'}%</p><p className="text-sm text-slate-500 dark:text-slate-400">Avg Score</p></div>
             </div>
             <div className="grid lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 grid md:grid-cols-2 gap-4">
                 <button onClick={() => setPage('create-quiz')} className="p-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl text-white text-left"><span className="text-3xl mb-2 block">⚡</span><span className="font-semibold block">Generate Quiz</span><span className="text-sm text-indigo-200">From any material</span></button>
-                <button onClick={() => setModal({ type: 'input', title: 'Create New Class', placeholder: 'Class name', confirmText: 'Create', onConfirm: createClass })} className="p-6 bg-white border-2 border-slate-200 rounded-xl text-left hover:border-indigo-300"><span className="text-3xl mb-2 block">👥</span><span className="font-semibold text-slate-900 block">Create Class</span><span className="text-sm text-slate-500">Get join code</span></button>
-                <button onClick={() => setPage('class-manager')} className="p-6 bg-white border-2 border-slate-200 rounded-xl text-left hover:border-indigo-300"><span className="text-3xl mb-2 block">📊</span><span className="font-semibold text-slate-900 block">View Results</span><span className="text-sm text-slate-500">Track performance</span></button>
-                <button onClick={() => setPage('class-manager')} className="p-6 bg-white border-2 border-slate-200 rounded-xl text-left hover:border-indigo-300"><span className="text-3xl mb-2 block">📨</span><span className="font-semibold text-slate-900 block">Assign Quiz</span><span className="text-sm text-slate-500">Send to classes</span></button>
+                <button onClick={() => setModal({ type: 'input', title: 'Create New Class', placeholder: 'Class name', confirmText: 'Create', onConfirm: createClass })} className="p-6 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-left hover:border-indigo-300 dark:hover:border-indigo-600"><span className="text-3xl mb-2 block">👥</span><span className="font-semibold text-slate-900 dark:text-white block">Create Class</span><span className="text-sm text-slate-500 dark:text-slate-400">Get join code</span></button>
+                <button onClick={() => setPage('class-manager')} className="p-6 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-left hover:border-indigo-300 dark:hover:border-indigo-600"><span className="text-3xl mb-2 block">📊</span><span className="font-semibold text-slate-900 dark:text-white block">View Results</span><span className="text-sm text-slate-500 dark:text-slate-400">Track performance</span></button>
+                <button onClick={() => setPage('class-manager')} className="p-6 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-left hover:border-indigo-300 dark:hover:border-indigo-600"><span className="text-3xl mb-2 block">📨</span><span className="font-semibold text-slate-900 dark:text-white block">Assign Quiz</span><span className="text-sm text-slate-500 dark:text-slate-400">Send to classes</span></button>
               </div>
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                <h3 className="font-semibold text-slate-900 mb-4">Recent Submissions</h3>
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Recent Submissions</h3>
                 {submissions.length > 0 ? submissions.slice(-5).reverse().map((sub, i) => (
                   <div key={i} className="flex items-center gap-3 p-2">
-                    <div className="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-xs font-bold">{sub.studentName.substring(0, 2).toUpperCase()}</div>
-                    <div className="flex-1"><p className="text-sm font-medium text-slate-900">{sub.studentName}</p><p className="text-xs text-slate-500">{sub.score}/{sub.total}</p></div>
-                    <span className={`font-semibold ${sub.percentage >= 80 ? 'text-green-600' : sub.percentage >= 60 ? 'text-amber-600' : 'text-red-600'}`}>{sub.percentage}%</span>
+                    <div className="w-8 h-8 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center text-xs font-bold">{sub.studentName.substring(0, 2).toUpperCase()}</div>
+                    <div className="flex-1"><p className="text-sm font-medium text-slate-900 dark:text-white">{sub.studentName}</p><p className="text-xs text-slate-500 dark:text-slate-400">{sub.score}/{sub.total}</p></div>
+                    <span className={`font-semibold ${sub.percentage >= 80 ? 'text-green-600 dark:text-green-400' : sub.percentage >= 60 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400'}`}>{sub.percentage}%</span>
                   </div>
-                )) : <p className="text-slate-500 text-sm text-center py-8">No submissions yet</p>}
+                )) : <p className="text-slate-500 dark:text-slate-400 text-sm text-center py-8">No submissions yet</p>}
               </div>
             </div>
             {classes.length > 0 && (
-              <div className="mt-8"><h3 className="font-semibold text-slate-900 mb-4">Your Classes</h3>
+              <div className="mt-8"><h3 className="font-semibold text-slate-900 dark:text-white mb-4">Your Classes</h3>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {classes.map(cls => (
-                    <div key={cls.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-                      <div className="flex justify-between items-start mb-3"><h4 className="font-semibold text-slate-900">{cls.name}</h4><span className="px-2 py-1 bg-indigo-100 text-indigo-700 text-xs font-mono rounded">{cls.code}</span></div>
-                      <p className="text-sm text-slate-500 mb-4">{cls.students.length} students</p>
-                      <button onClick={() => { setCurrentClass(cls); setPage('class-manager'); }} className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium">Manage →</button>
+                    <div key={cls.id} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
+                      <div className="flex justify-between items-start mb-3"><h4 className="font-semibold text-slate-900 dark:text-white">{cls.name}</h4><span className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs font-mono rounded">{cls.code}</span></div>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{cls.students.length} students</p>
+                      <button onClick={() => { setCurrentClass(cls); setPage('class-manager'); }} className="w-full py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium">Manage →</button>
                     </div>
                   ))}
                 </div>
               </div>
             )}
             {quizzes.length > 0 && (
-              <div className="mt-8"><h3 className="font-semibold text-slate-900 mb-4">Your Quizzes</h3>
+              <div className="mt-8"><h3 className="font-semibold text-slate-900 dark:text-white mb-4">Your Quizzes</h3>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {quizzes.map(quiz => {
                     const assignedTo = assignments.filter(a => a.quizId === quiz.id).length;
                     const totalSubmissions = submissions.filter(s => assignments.some(a => a.id === s.assignmentId && a.quizId === quiz.id)).length;
                     return (
-                      <div key={quiz.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-                        <h4 className="font-semibold text-slate-900 mb-1">{quiz.name}</h4>
-                        <p className="text-sm text-slate-500 mb-3">{pluralize(quiz.questions.length, 'question')}</p>
-                        <div className="flex gap-2 text-xs text-slate-500 mb-4">
-                          <span className="px-2 py-1 bg-slate-100 rounded">{assignedTo} class{assignedTo !== 1 ? 'es' : ''}</span>
-                          <span className="px-2 py-1 bg-slate-100 rounded">{totalSubmissions} submissions</span>
+                      <div key={quiz.id} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
+                        <h4 className="font-semibold text-slate-900 dark:text-white mb-1">{quiz.name}</h4>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">{pluralize(quiz.questions.length, 'question')}</p>
+                        <div className="flex gap-2 text-xs text-slate-500 dark:text-slate-400 mb-4">
+                          <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded">{assignedTo} class{assignedTo !== 1 ? 'es' : ''}</span>
+                          <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded">{totalSubmissions} submissions</span>
                         </div>
                         <div className="flex gap-2">
-                          <button 
+                          <button
                             onClick={() => setShowAnalytics(quiz.id)}
-                            className="flex-1 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg text-sm font-medium"
+                            className="flex-1 py-2 bg-indigo-100 dark:bg-indigo-900/50 hover:bg-indigo-200 dark:hover:bg-indigo-900/70 text-indigo-700 dark:text-indigo-300 rounded-lg text-sm font-medium"
                             title="View quiz analytics"
                           >
                             📊 Analytics
                           </button>
-                          <button 
+                          <button
                             onClick={() => {
                               setCurrentQuiz(quiz);
                               setPage('review-quiz');
-                            }} 
-                            className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium"
+                            }}
+                            className="flex-1 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium"
                           >
                             View →
                           </button>
@@ -3547,42 +3545,42 @@ ${quizContent.substring(0, 40000)}
 
       {/* CREATOR DASHBOARD */}
       {page === 'creator-dashboard' && (
-        <div className="min-h-screen bg-slate-100">
-          <nav className="bg-white border-b border-slate-200 px-6 py-3 sticky top-0 z-40">
+        <div className="min-h-screen bg-slate-100 dark:bg-slate-900">
+          <nav className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3 sticky top-0 z-40">
             <div className="max-w-7xl mx-auto flex justify-between items-center">
               <div className="flex items-center gap-4 md:gap-8">
-                <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('landing')}><span className="text-xl">⚡</span><span className="font-bold text-slate-900 hidden sm:inline">QuizForge</span></div>
+                <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('landing')}><span className="text-xl">⚡</span><span className="font-bold text-slate-900 dark:text-white hidden sm:inline">QuizForge</span></div>
                 <div className="hidden sm:flex items-center gap-4">
-                  <button onClick={() => setPage('creator-dashboard')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Dashboard</button>
-                  <button onClick={() => setPage('create-quiz')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Create</button>
+                  <button onClick={() => setPage('creator-dashboard')} className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-sm font-medium">Dashboard</button>
+                  <button onClick={() => setPage('create-quiz')} className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-sm font-medium">Create</button>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => setPage('profile')} className="flex items-center gap-2 px-3 py-1 bg-amber-100 hover:bg-amber-200 text-amber-700 text-sm font-medium rounded-full">
+                <button onClick={() => setPage('profile')} className="flex items-center gap-2 px-3 py-1 bg-amber-100 dark:bg-amber-900/50 hover:bg-amber-200 dark:hover:bg-amber-900/70 text-amber-700 dark:text-amber-300 text-sm font-medium rounded-full">
                   <span className="w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center text-xs">{user?.name?.charAt(0).toUpperCase() || '?'}</span>
                   <span className="hidden sm:inline">{user?.name || 'Creator'}</span>
                 </button>
-                <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="sm:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
+                <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="sm:hidden p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
                   {mobileMenuOpen ? '✕' : '☰'}
                 </button>
               </div>
             </div>
             {mobileMenuOpen && (
-              <div className="sm:hidden border-t border-slate-200 mt-3 pt-3 pb-2 space-y-2">
-                <button onClick={() => { setPage('creator-dashboard'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg">📊 Dashboard</button>
-                <button onClick={() => { setPage('create-quiz'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg">✨ Create Quiz</button>
+              <div className="sm:hidden border-t border-slate-200 dark:border-slate-700 mt-3 pt-3 pb-2 space-y-2">
+                <button onClick={() => { setPage('creator-dashboard'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">📊 Dashboard</button>
+                <button onClick={() => { setPage('create-quiz'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">✨ Create Quiz</button>
               </div>
             )}
           </nav>
           <div className="max-w-7xl mx-auto px-6 py-8">
             <div className="flex justify-between items-start mb-8">
               <div>
-                <h1 className="text-2xl font-bold text-slate-900">Hey{user?.name ? `, ${user.name.split(' ')[0]}` : ''}! ✨</h1>
-                <p className="text-slate-600">Ready to create something amazing?</p>
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Hey{user?.name ? `, ${user.name.split(' ')[0]}` : ''}! ✨</h1>
+                <p className="text-slate-600 dark:text-slate-400">Ready to create something amazing?</p>
               </div>
               <button onClick={() => setPage('create-quiz')} className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg font-medium hover:from-amber-400 hover:to-orange-400 shadow-lg">✨ Create Quiz</button>
             </div>
-            
+
             {/* Streak display for creators */}
             {studentProgress.currentStreak > 0 && (
               <div className="mb-6 bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-3 rounded-xl inline-flex items-center gap-2">
@@ -3590,14 +3588,14 @@ ${quizContent.substring(0, 40000)}
                 <span className="font-bold">{studentProgress.currentStreak} Day Streak!</span>
               </div>
             )}
-            
+
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5"><p className="text-3xl font-bold text-amber-600">{quizzes.length}</p><p className="text-sm text-slate-500">Quizzes Created</p></div>
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5"><p className="text-3xl font-bold text-orange-600">{questionBank.length}</p><p className="text-sm text-slate-500">Questions Generated</p></div>
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5"><p className="text-3xl font-bold text-indigo-600">{studentProgress.quizzesTaken}</p><p className="text-sm text-slate-500">Practice Sessions</p></div>
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5"><p className="text-3xl font-bold text-green-600">{avgScore > 0 ? avgScore : '--'}%</p><p className="text-sm text-slate-500">Avg Practice Score</p></div>
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5"><p className="text-3xl font-bold text-amber-600 dark:text-amber-400">{quizzes.length}</p><p className="text-sm text-slate-500 dark:text-slate-400">Quizzes Created</p></div>
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5"><p className="text-3xl font-bold text-orange-600 dark:text-orange-400">{questionBank.length}</p><p className="text-sm text-slate-500 dark:text-slate-400">Questions Generated</p></div>
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5"><p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">{studentProgress.quizzesTaken}</p><p className="text-sm text-slate-500 dark:text-slate-400">Practice Sessions</p></div>
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5"><p className="text-3xl font-bold text-green-600 dark:text-green-400">{avgScore > 0 ? avgScore : '--'}%</p><p className="text-sm text-slate-500 dark:text-slate-400">Avg Practice Score</p></div>
             </div>
-            
+
             <div className="grid lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-6">
                 {/* Quick Actions */}
@@ -3608,35 +3606,35 @@ ${quizContent.substring(0, 40000)}
                     <span className="text-sm text-amber-100">Upload any content</span>
                   </button>
                   {questionBank.length > 0 && (
-                    <button onClick={() => startPractice('all')} className="p-6 bg-white border-2 border-slate-200 rounded-xl text-left hover:border-amber-300">
+                    <button onClick={() => startPractice('all')} className="p-6 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-left hover:border-amber-300 dark:hover:border-amber-600">
                       <span className="text-3xl mb-2 block">🎯</span>
-                      <span className="font-semibold text-slate-900 block">Practice Mode</span>
-                      <span className="text-sm text-slate-500">Test your own quizzes</span>
+                      <span className="font-semibold text-slate-900 dark:text-white block">Practice Mode</span>
+                      <span className="text-sm text-slate-500 dark:text-slate-400">Test your own quizzes</span>
                     </button>
                   )}
                 </div>
-                
+
                 {/* Your Quizzes */}
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                  <h3 className="font-semibold text-slate-900 mb-4">Your Quizzes</h3>
+                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                  <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Your Quizzes</h3>
                   {quizzes.length > 0 ? (
                     <div className="space-y-3">
                       {quizzes.map(quiz => (
-                        <div key={quiz.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl group">
+                        <div key={quiz.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700 rounded-xl group">
                           <div>
-                            <p className="font-medium text-slate-900">{quiz.name}</p>
+                            <p className="font-medium text-slate-900 dark:text-white">{quiz.name}</p>
                             <div className="flex gap-2 items-center">
-                              <p className="text-sm text-slate-500">{pluralize(quiz.questions.length, 'question')}</p>
+                              <p className="text-sm text-slate-500 dark:text-slate-400">{pluralize(quiz.questions.length, 'question')}</p>
                               {quiz.tags?.length > 0 && quiz.tags.map((tag, i) => (
-                                <span key={i} className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded">#{tag}</span>
+                                <span key={i} className="text-xs px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 rounded">#{tag}</span>
                               ))}
                             </div>
                           </div>
                           <div className="flex gap-2 items-center">
-                            <button onClick={() => duplicateQuiz(quiz)} className="px-2 py-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity" title="Duplicate">📋</button>
-                            <button onClick={() => setModal({ type: 'delete-confirm', quizId: quiz.id, quizName: quiz.name })} className="px-2 py-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity" title="Delete">🗑️</button>
-                            <button onClick={() => shareQuiz(quiz)} className="px-3 py-1.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg text-sm" title="Share quiz">🔗 Share</button>
-                            <button onClick={() => { setCurrentQuiz(quiz); setPage('review-quiz'); }} className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm">View</button>
+                            <button onClick={() => duplicateQuiz(quiz)} className="px-2 py-1.5 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/50 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity" title="Duplicate">📋</button>
+                            <button onClick={() => setModal({ type: 'delete-confirm', quizId: quiz.id, quizName: quiz.name })} className="px-2 py-1.5 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/50 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity" title="Delete">🗑️</button>
+                            <button onClick={() => shareQuiz(quiz)} className="px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/50 hover:bg-indigo-200 dark:hover:bg-indigo-900/70 text-indigo-700 dark:text-indigo-300 rounded-lg text-sm" title="Share quiz">🔗 Share</button>
+                            <button onClick={() => { setCurrentQuiz(quiz); setPage('review-quiz'); }} className="px-3 py-1.5 bg-slate-200 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-500 text-slate-700 dark:text-white rounded-lg text-sm">View</button>
                             <button onClick={() => {
                               const selected = shuffleArray([...quiz.questions]).slice(0, 10).map(q => ({ ...q, options: shuffleArray([...q.options]) }));
                               setCurrentQuiz({ ...quiz, questions: selected });
@@ -3650,37 +3648,37 @@ ${quizContent.substring(0, 40000)}
                   ) : (
                     <div className="text-center py-8">
                       <div className="text-5xl mb-4">📝</div>
-                      <h4 className="text-lg font-semibold text-slate-900 mb-2">No Quizzes Yet</h4>
-                      <p className="text-slate-600 mb-4">Upload your first content to generate a quiz!</p>
+                      <h4 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No Quizzes Yet</h4>
+                      <p className="text-slate-600 dark:text-slate-400 mb-4">Upload your first content to generate a quiz!</p>
                       <button onClick={() => setPage('create-quiz')} className="px-4 py-2 bg-amber-500 text-white rounded-lg">Create Your First Quiz</button>
                     </div>
                   )}
                 </div>
               </div>
-              
+
               {/* Sidebar */}
               <div className="space-y-6">
                 {/* Tips */}
-                <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200 p-6">
-                  <h3 className="font-semibold text-slate-900 mb-3">💡 Creator Tips</h3>
-                  <ul className="space-y-2 text-sm text-slate-700">
+                <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/30 rounded-xl border border-amber-200 dark:border-amber-700 p-6">
+                  <h3 className="font-semibold text-slate-900 dark:text-amber-100 mb-3">💡 Creator Tips</h3>
+                  <ul className="space-y-2 text-sm text-slate-700 dark:text-amber-200/80">
                     <li className="flex items-start gap-2"><span className="text-amber-500">✓</span> Upload PDFs, Word docs, or paste text</li>
                     <li className="flex items-start gap-2"><span className="text-amber-500">✓</span> More content = better questions</li>
                     <li className="flex items-start gap-2"><span className="text-amber-500">✓</span> Practice your own quizzes to test quality</li>
                     <li className="flex items-start gap-2"><span className="text-amber-500">✓</span> Mix difficulty levels for variety</li>
                   </ul>
                 </div>
-                
+
                 {/* Recent Practice */}
                 {studentProgress.recentScores.length > 0 && (
-                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                    <h3 className="font-semibold text-slate-900 mb-4">Practice History</h3>
+                  <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                    <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Practice History</h3>
                     <div className="flex items-end gap-1 h-24">
                       {studentProgress.recentScores.map((score, i) => (
                         <div key={i} className="flex-1 bg-amber-500 rounded-t transition-all" style={{ height: `${score}%`, opacity: 0.4 + (score/100) * 0.6 }} />
                       ))}
                     </div>
-                    <p className="text-xs text-slate-500 mt-2 text-center">Last {studentProgress.recentScores.length} practice sessions</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 text-center">Last {studentProgress.recentScores.length} practice sessions</p>
                   </div>
                 )}
               </div>
@@ -4080,40 +4078,40 @@ ${quizContent.substring(0, 40000)}
 
       {/* STUDENT DASHBOARD */}
       {page === 'student-dashboard' && (
-        <div className="min-h-screen bg-slate-100">
-          <nav className="bg-white border-b border-slate-200 px-6 py-3 sticky top-0 z-40">
+        <div className="min-h-screen bg-slate-100 dark:bg-slate-900">
+          <nav className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3 sticky top-0 z-40">
             <div className="max-w-7xl mx-auto flex justify-between items-center">
               <div className="flex items-center gap-4 md:gap-8">
-                <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('landing')}><span className="text-xl">⚡</span><span className="font-bold text-slate-900 hidden sm:inline">QuizForge</span></div>
+                <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('landing')}><span className="text-xl">⚡</span><span className="font-bold text-slate-900 dark:text-white hidden sm:inline">QuizForge</span></div>
                 <div className="hidden sm:flex items-center gap-4">
-                  <button onClick={() => setPage('student-dashboard')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Dashboard</button>
-                  <button onClick={() => setPage('create-quiz')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Create</button>
-                  <button onClick={() => setPage('student-classes')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Classes</button>
+                  <button onClick={() => setPage('student-dashboard')} className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-sm font-medium">Dashboard</button>
+                  <button onClick={() => setPage('create-quiz')} className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-sm font-medium">Create</button>
+                  <button onClick={() => setPage('student-classes')} className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-sm font-medium">Classes</button>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => setPage('profile')} className="flex items-center gap-2 px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-sm font-medium rounded-full">
+                <button onClick={() => setPage('profile')} className="flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900/50 hover:bg-blue-200 dark:hover:bg-blue-900/70 text-blue-700 dark:text-blue-300 text-sm font-medium rounded-full">
                   <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs">{user?.name?.charAt(0).toUpperCase() || '?'}</span>
                   <span className="hidden sm:inline">{user?.name || 'Student'}</span>
                 </button>
-                <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="sm:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
+                <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="sm:hidden p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
                   {mobileMenuOpen ? '✕' : '☰'}
                 </button>
               </div>
             </div>
             {mobileMenuOpen && (
-              <div className="sm:hidden border-t border-slate-200 mt-3 pt-3 pb-2 space-y-2">
-                <button onClick={() => { setPage('student-dashboard'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg">📊 Dashboard</button>
-                <button onClick={() => { setPage('create-quiz'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg">⚡ Create Quiz</button>
-                <button onClick={() => { setPage('student-classes'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg">👥 Classes</button>
+              <div className="sm:hidden border-t border-slate-200 dark:border-slate-700 mt-3 pt-3 pb-2 space-y-2">
+                <button onClick={() => { setPage('student-dashboard'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">📊 Dashboard</button>
+                <button onClick={() => { setPage('create-quiz'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">⚡ Create Quiz</button>
+                <button onClick={() => { setPage('student-classes'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">👥 Classes</button>
               </div>
             )}
           </nav>
           <div className="max-w-7xl mx-auto px-6 py-8">
             <div className="flex justify-between items-start mb-6">
               <div>
-                <h1 className="text-2xl font-bold text-slate-900 mb-1">Hey{user?.name ? `, ${user.name.split(' ')[0]}` : ' there'}! 👋</h1>
-                <p className="text-slate-600">Ready to practice?</p>
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">Hey{user?.name ? `, ${user.name.split(' ')[0]}` : ' there'}! 👋</h1>
+                <p className="text-slate-600 dark:text-slate-400">Ready to practice?</p>
               </div>
               {studentProgress.currentStreak > 0 && (
                 <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-xl flex items-center gap-2">
@@ -4125,26 +4123,26 @@ ${quizContent.substring(0, 40000)}
                 </div>
               )}
             </div>
-            
+
             {/* Achievement badges */}
             {studentProgress.achievements?.length > 0 && (
               <div className="mb-6 flex flex-wrap gap-2">
                 {studentProgress.achievements.map(aId => {
                   const achievement = ACHIEVEMENTS.find(a => a.id === aId);
                   return achievement ? (
-                    <span key={aId} className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm" title={achievement.description}>
+                    <span key={aId} className="px-3 py-1 bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 rounded-full text-sm" title={achievement.description}>
                       {achievement.name}
                     </span>
                   ) : null;
                 })}
               </div>
             )}
-            
+
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5"><p className="text-3xl font-bold text-indigo-600">{studentProgress.quizzesTaken}</p><p className="text-sm text-slate-500">Quizzes Taken</p></div>
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5"><p className="text-3xl font-bold text-green-600">{avgScore}%</p><p className="text-sm text-slate-500">Average Score</p></div>
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5"><p className="text-3xl font-bold text-amber-600">{joinedClasses.length}</p><p className="text-sm text-slate-500">Classes</p></div>
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5"><p className="text-3xl font-bold text-purple-600">{questionBank.length}</p><p className="text-sm text-slate-500">Questions</p></div>
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5"><p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">{studentProgress.quizzesTaken}</p><p className="text-sm text-slate-500 dark:text-slate-400">Quizzes Taken</p></div>
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5"><p className="text-3xl font-bold text-green-600 dark:text-green-400">{avgScore}%</p><p className="text-sm text-slate-500 dark:text-slate-400">Average Score</p></div>
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5"><p className="text-3xl font-bold text-amber-600 dark:text-amber-400">{joinedClasses.length}</p><p className="text-sm text-slate-500 dark:text-slate-400">Classes</p></div>
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5"><p className="text-3xl font-bold text-purple-600 dark:text-purple-400">{questionBank.length}</p><p className="text-sm text-slate-500 dark:text-slate-400">Questions</p></div>
             </div>
             <div className="grid lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-6">
@@ -4261,25 +4259,25 @@ ${quizContent.substring(0, 40000)}
                 
                 {/* Student's Created Quizzes */}
                 {quizzes.length > 0 && (
-                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                    <h3 className="font-semibold text-slate-900 mb-4">Your Created Quizzes</h3>
+                  <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                    <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Your Created Quizzes</h3>
                     <div className="space-y-3">
                       {quizzes.map(quiz => (
-                        <div key={quiz.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl group">
+                        <div key={quiz.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl group">
                           <div>
-                            <p className="font-medium text-slate-900">{quiz.name}</p>
-                            <p className="text-sm text-slate-500">{pluralize(quiz.questions.length, 'question')}</p>
+                            <p className="font-medium text-slate-900 dark:text-white">{quiz.name}</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">{pluralize(quiz.questions.length, 'question')}</p>
                           </div>
                           <div className="flex gap-2 items-center">
-                            <button onClick={() => setModal({ type: 'delete-confirm', quizId: quiz.id, quizName: quiz.name })} className="px-2 py-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity" title="Delete">🗑️</button>
-                            <button onClick={() => shareQuiz(quiz)} className="px-3 py-1.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg text-sm" title="Share with friends">🔗 Share</button>
-                            <button onClick={() => { setCurrentQuiz(quiz); setPage('review-quiz'); }} className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm">View</button>
+                            <button onClick={() => setModal({ type: 'delete-confirm', quizId: quiz.id, quizName: quiz.name })} className="px-2 py-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity" title="Delete">🗑️</button>
+                            <button onClick={() => shareQuiz(quiz)} className="px-3 py-1.5 bg-indigo-100 dark:bg-indigo-500/20 hover:bg-indigo-200 dark:hover:bg-indigo-500/30 text-indigo-700 dark:text-indigo-300 rounded-lg text-sm font-medium" title="Share with friends">🔗 Share</button>
+                            <button onClick={() => { setCurrentQuiz(quiz); setPage('review-quiz'); }} className="px-3 py-1.5 bg-slate-200 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-500 text-slate-700 dark:text-white rounded-lg text-sm font-medium">View</button>
                             <button onClick={() => {
                               const selected = shuffleArray([...quiz.questions]).slice(0, 10).map(q => ({ ...q, options: shuffleArray([...q.options]) }));
                               setCurrentQuiz({ ...quiz, questions: selected });
                               setQuizState({ currentQuestion: 0, selectedAnswer: null, answeredQuestions: new Set(), score: 0, results: [] });
                               setPage('take-quiz');
-                            }} className="px-3 py-1.5 bg-indigo-500 hover:bg-indigo-400 text-white rounded-lg text-sm">Practice</button>
+                            }} className="px-3 py-1.5 bg-indigo-500 hover:bg-indigo-400 text-white rounded-lg text-sm font-medium">Practice</button>
                           </div>
                         </div>
                       ))}
@@ -4289,22 +4287,30 @@ ${quizContent.substring(0, 40000)}
               </div>
               <div className="space-y-6">
                 {weakTopics.length > 0 && (
-                  <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200 p-6">
-                    <h3 className="font-semibold text-slate-900 mb-2">🎯 AI Recommendation</h3><p className="text-slate-700 text-sm mb-4">Focus on these topics:</p>
-                    {weakTopics.slice(0, 2).map(t => <div key={t.topic} className="p-3 bg-white rounded-lg border border-amber-200 mb-2"><div className="flex justify-between"><p className="font-medium text-amber-800">{t.topic}</p><span className="text-amber-600">{t.score}%</span></div></div>)}
-                    <button onClick={() => startPractice(weakTopics[0].topic)} className="w-full mt-2 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium">Practice Weak Topics</button>
+                  <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/30 rounded-xl border border-amber-200 dark:border-amber-700 p-6">
+                    <h3 className="font-semibold text-slate-900 dark:text-amber-100 mb-2">🎯 AI Recommendation</h3>
+                    <p className="text-slate-700 dark:text-amber-200/80 text-sm mb-4">Focus on these topics:</p>
+                    {weakTopics.slice(0, 2).map(t => (
+                      <div key={t.topic} className="p-3 bg-white dark:bg-slate-800/80 rounded-lg border border-amber-200 dark:border-amber-700/50 mb-2">
+                        <div className="flex justify-between">
+                          <p className="font-medium text-amber-800 dark:text-amber-200">{t.topic}</p>
+                          <span className="text-amber-600 dark:text-amber-400 font-medium">{t.score}%</span>
+                        </div>
+                      </div>
+                    ))}
+                    <button onClick={() => startPractice(weakTopics[0].topic)} className="w-full mt-2 py-2 bg-amber-500 hover:bg-amber-400 text-white rounded-lg text-sm font-medium">Practice Weak Topics</button>
                   </div>
                 )}
                 {studentProgress.recentScores.length > 0 && (
-                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                    <h3 className="font-semibold text-slate-900 mb-4">Recent Progress</h3>
+                  <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                    <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Recent Progress</h3>
                     <div className="flex items-end gap-1 h-24">{studentProgress.recentScores.map((score, i) => <div key={i} className="flex-1 bg-indigo-500 rounded-t" style={{ height: `${score}%`, opacity: 0.4 + (score/100) * 0.6 }} />)}</div>
                   </div>
                 )}
                 {joinedClasses.length === 0 && (
-                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                    <h3 className="font-semibold text-slate-900 mb-2">🔑 Join a Class</h3><p className="text-slate-600 text-sm mb-4">Enter your teacher's class code</p>
-                    <button onClick={() => setPage('student-classes')} className="w-full py-2 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium">Enter Code</button>
+                  <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                    <h3 className="font-semibold text-slate-900 dark:text-white mb-2">🔑 Join a Class</h3><p className="text-slate-600 dark:text-slate-300 text-sm mb-4">Enter your teacher's class code</p>
+                    <button onClick={() => setPage('student-classes')} className="w-full py-2 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-lg text-sm font-medium">Enter Code</button>
                   </div>
                 )}
               </div>
@@ -4315,66 +4321,66 @@ ${quizContent.substring(0, 40000)}
 
       {/* STUDENT CLASSES */}
       {page === 'student-classes' && (
-        <div className="min-h-screen bg-slate-100">
-          <nav className="bg-white border-b border-slate-200 px-6 py-3 sticky top-0 z-40">
+        <div className="min-h-screen bg-slate-100 dark:bg-slate-900">
+          <nav className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3 sticky top-0 z-40">
             <div className="max-w-7xl mx-auto flex justify-between items-center">
               <div className="flex items-center gap-8">
-                <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('landing')}><span className="text-xl">⚡</span><span className="font-bold text-slate-900">QuizForge</span></div>
-                <button onClick={() => setPage('student-dashboard')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">Dashboard</button>
-                <button onClick={() => setPage('student-classes')} className="text-slate-600 hover:text-slate-900 text-sm font-medium">My Classes</button>
+                <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('landing')}><span className="text-xl">⚡</span><span className="font-bold text-slate-900 dark:text-white">QuizForge</span></div>
+                <button onClick={() => setPage('student-dashboard')} className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-sm font-medium">Dashboard</button>
+                <button onClick={() => setPage('student-classes')} className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-sm font-medium">My Classes</button>
               </div>
-              <button onClick={() => setPage('profile')} className="flex items-center gap-2 px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-sm font-medium rounded-full">
+              <button onClick={() => setPage('profile')} className="flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900/50 hover:bg-blue-200 dark:hover:bg-blue-900/70 text-blue-700 dark:text-blue-300 text-sm font-medium rounded-full">
                 <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs">{user?.name?.charAt(0).toUpperCase() || '?'}</span>
                 {user?.name || 'Student'}
               </button>
             </div>
           </nav>
           <div className="max-w-3xl mx-auto px-6 py-8">
-            <button onClick={() => setPage('student-dashboard')} className="text-slate-600 hover:text-slate-900 mb-4 text-sm">← Back</button>
-            <h1 className="text-2xl font-bold text-slate-900 mb-6">My Classes</h1>
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-              <h3 className="font-semibold text-slate-900 mb-4">Join a Class</h3>
+            <button onClick={() => setPage('student-dashboard')} className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white mb-4 text-sm">← Back</button>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">My Classes</h1>
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6">
+              <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Join a Class</h3>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Class Code</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Class Code</label>
                 <div className="flex gap-3">
-                  <input 
-                    type="text" 
-                    value={joinCodeInput} 
-                    onChange={e => setJoinCodeInput(e.target.value.toUpperCase())} 
+                  <input
+                    type="text"
+                    value={joinCodeInput}
+                    onChange={e => setJoinCodeInput(e.target.value.toUpperCase())}
                     onKeyDown={e => e.key === 'Enter' && joinClass()}
-                    placeholder="e.g., ABC123" 
-                    className="flex-1 px-4 py-2 border border-slate-300 rounded-lg uppercase tracking-wider font-mono focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" 
-                    maxLength={6} 
+                    placeholder="e.g., ABC123"
+                    className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg uppercase tracking-wider font-mono focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                    maxLength={6}
                   />
                   <button onClick={joinClass} className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-500">Join</button>
                 </div>
               </div>
             </div>
             {joinedClasses.length > 0 && (
-              <div><h3 className="font-semibold text-slate-900 mb-4">Your Classes</h3>
+              <div><h3 className="font-semibold text-slate-900 dark:text-white mb-4">Your Classes</h3>
                 {joinedClasses.map(cls => {
                   const clsAssignments = assignments.filter(a => a.classId === cls.id);
                   const pending = clsAssignments.filter(a => !submissions.some(s => s.assignmentId === a.id && (s.studentId === auth.currentUser?.uid || s.studentEmail === user?.email)));
                   return (
-                    <div key={cls.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 mb-4">
+                    <div key={cls.id} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 mb-4">
                       <div className="flex justify-between items-start">
                         <div>
-                          <h4 className="font-semibold text-slate-900">{cls.name}</h4>
-                          <p className="text-sm text-slate-500 mb-3">{clsAssignments.length} quizzes • {pending.length} pending</p>
+                          <h4 className="font-semibold text-slate-900 dark:text-white">{cls.name}</h4>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">{clsAssignments.length} quizzes • {pending.length} pending</p>
                         </div>
-                        <button 
-                          onClick={() => setModal({ 
-                            type: 'confirm', 
-                            title: 'Leave Class?', 
-                            message: `Are you sure you want to leave "${cls.name}"? You won't receive any more assignments from this class.`, 
-                            onConfirm: () => leaveClass(cls.id) 
+                        <button
+                          onClick={() => setModal({
+                            type: 'confirm',
+                            title: 'Leave Class?',
+                            message: `Are you sure you want to leave "${cls.name}"? You won't receive any more assignments from this class.`,
+                            onConfirm: () => leaveClass(cls.id)
                           })}
-                          className="px-3 py-1 text-xs bg-slate-100 hover:bg-red-100 text-slate-500 hover:text-red-600 rounded"
+                          className="px-3 py-1 text-xs bg-slate-100 dark:bg-slate-700 hover:bg-red-100 dark:hover:bg-red-900/50 text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 rounded"
                         >
                           Leave
                         </button>
                       </div>
-                      {pending.length > 0 && <div className="p-3 bg-amber-50 rounded-lg"><p className="text-sm text-amber-800">📋 {pending.length} quiz{pending.length > 1 ? 'zes' : ''} to complete</p></div>}
+                      {pending.length > 0 && <div className="p-3 bg-amber-50 dark:bg-amber-900/30 rounded-lg"><p className="text-sm text-amber-800 dark:text-amber-200">📋 {pending.length} quiz{pending.length > 1 ? 'zes' : ''} to complete</p></div>}
                     </div>
                   );
                 })}
@@ -4386,153 +4392,153 @@ ${quizContent.substring(0, 40000)}
 
       {/* CREATE QUIZ */}
       {page === 'create-quiz' && (
-        <div className="min-h-screen bg-slate-100">
-          <nav className="bg-white border-b border-slate-200 px-6 py-3 sticky top-0 z-40">
+        <div className="min-h-screen bg-slate-100 dark:bg-slate-900">
+          <nav className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3 sticky top-0 z-40">
             <div className="max-w-7xl mx-auto flex justify-between items-center">
               <div className="flex items-center gap-8">
-                <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('landing')}><span className="text-xl">⚡</span><span className="font-bold text-slate-900">QuizForge</span></div>
+                <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('landing')}><span className="text-xl">⚡</span><span className="font-bold text-slate-900 dark:text-white">QuizForge</span></div>
               </div>
-              <span className={`px-3 py-1 ${userType === 'teacher' ? 'bg-purple-100 text-purple-700' : userType === 'student' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'} text-xs font-medium rounded-full`}>
+              <span className={`px-3 py-1 ${userType === 'teacher' ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300' : userType === 'student' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300' : 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300'} text-xs font-medium rounded-full`}>
                 {userType === 'teacher' ? '👩‍🏫 Teacher' : userType === 'student' ? '👨‍🎓 Student' : '✨ Creator'}
               </span>
             </div>
           </nav>
           <div className="max-w-3xl mx-auto px-6 py-8">
-            <button onClick={() => setPage(getDashboard())} className="text-slate-600 hover:text-slate-900 mb-6 text-sm">← Back</button>
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
-              <div className="flex items-center gap-3 mb-6"><span className="text-3xl">⚡</span><h1 className="text-2xl font-bold text-slate-900">Create New Quiz</h1></div>
-              {generation.error && <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700"><strong>Error:</strong> {generation.error}</div>}
+            <button onClick={() => setPage(getDashboard())} className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white mb-6 text-sm">← Back</button>
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-8">
+              <div className="flex items-center gap-3 mb-6"><span className="text-3xl">⚡</span><h1 className="text-2xl font-bold text-slate-900 dark:text-white">Create New Quiz</h1></div>
+              {generation.error && <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-300"><strong>Error:</strong> {generation.error}</div>}
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Quiz Name</label>
-                  <input type="text" value={quizNameInput} onChange={e => setQuizNameInput(e.target.value)} placeholder="e.g., Midterm Practice" className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" />
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Quiz Name</label>
+                  <input type="text" value={quizNameInput} onChange={e => setQuizNameInput(e.target.value)} placeholder="e.g., Midterm Practice" className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Subject</label>
-                  <input type="text" value={quizSubject} onChange={e => setQuizSubject(e.target.value)} placeholder="e.g., Microeconomics" className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" />
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Subject</label>
+                  <input type="text" value={quizSubject} onChange={e => setQuizSubject(e.target.value)} placeholder="e.g., Microeconomics" className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Course Material</label>
-                  
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Course Material</label>
+
                   {/* Drag & Drop Zone */}
-                  <div 
+                  <div
                     onDragOver={handleDragOver}
-                    onDragEnter={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-indigo-500', 'bg-indigo-50'); }}
-                    onDragLeave={(e) => { e.preventDefault(); e.currentTarget.classList.remove('border-indigo-500', 'bg-indigo-50'); }}
-                    onDrop={(e) => { e.currentTarget.classList.remove('border-indigo-500', 'bg-indigo-50'); handleDrop(e); }}
+                    onDragEnter={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-indigo-500', 'bg-indigo-50', 'dark:bg-indigo-900/30'); }}
+                    onDragLeave={(e) => { e.preventDefault(); e.currentTarget.classList.remove('border-indigo-500', 'bg-indigo-50', 'dark:bg-indigo-900/30'); }}
+                    onDrop={(e) => { e.currentTarget.classList.remove('border-indigo-500', 'bg-indigo-50', 'dark:bg-indigo-900/30'); handleDrop(e); }}
                     onClick={() => !uploadProgress.active && fileInputRef.current?.click()}
-                    className={`mb-3 p-6 border-2 border-dashed border-slate-300 rounded-xl text-center cursor-pointer transition-colors hover:border-indigo-400 hover:bg-indigo-50/50 ${uploadProgress.active ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={`mb-3 p-6 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-center cursor-pointer transition-colors hover:border-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20 ${uploadProgress.active ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
-                    <input 
-                      ref={fileInputRef} 
-                      type="file" 
+                    <input
+                      ref={fileInputRef}
+                      type="file"
                       multiple
-                      accept=".docx,.pdf,.txt,.pptx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.presentationml.presentation" 
-                      onChange={handleFileUpload} 
-                      className="hidden" 
-                      disabled={uploadProgress.active} 
+                      accept=".docx,.pdf,.txt,.pptx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      disabled={uploadProgress.active}
                     />
                     <div className="text-4xl mb-2">📄</div>
-                    <p className="font-medium text-slate-700">
+                    <p className="font-medium text-slate-700 dark:text-slate-300">
                       {uploadProgress.active ? '⏳ Processing...' : 'Drop files here or click to upload'}
                     </p>
-                    <p className="text-sm text-slate-500 mt-1">
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                       PDF, Word (.docx), PowerPoint (.pptx), or Text files
                     </p>
-                    <p className="text-xs text-slate-400 mt-1">
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                       Multiple files supported • Up to 20 pages per PDF
                     </p>
                   </div>
-                  
+
                   {/* Upload Progress Bar */}
                   {uploadProgress.active && (
-                    <div className="mb-4 p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
+                    <div className="mb-4 p-4 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-xl">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-3">
                           <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-                          <span className="text-sm font-medium text-indigo-700">{uploadProgress.step}</span>
+                          <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">{uploadProgress.step}</span>
                         </div>
-                        <button 
+                        <button
                           onClick={cancelUpload}
-                          className="text-xs px-2 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200"
+                          className="text-xs px-2 py-1 bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-900/70"
                         >
                           Cancel
                         </button>
                       </div>
-                      <div className="w-full bg-indigo-200 rounded-full h-2 overflow-hidden">
-                        <div 
+                      <div className="w-full bg-indigo-200 dark:bg-indigo-900/50 rounded-full h-2 overflow-hidden">
+                        <div
                           className="h-full bg-indigo-600 rounded-full transition-all duration-300"
                           style={{ width: `${uploadProgress.progress}%` }}
                         />
                       </div>
-                      <p className="text-xs text-indigo-600 mt-1 text-right">{uploadProgress.progress}%</p>
+                      <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1 text-right">{uploadProgress.progress}%</p>
                     </div>
                   )}
-                  
+
                   {/* Content textarea */}
                   <div className="relative">
-                    <textarea value={quizContent} onChange={e => setQuizContent(e.target.value)} placeholder="Or paste your content here..." className="w-full h-48 px-4 py-3 border border-slate-300 rounded-xl resize-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" disabled={uploadProgress.active} />
+                    <textarea value={quizContent} onChange={e => setQuizContent(e.target.value)} placeholder="Or paste your content here..." className="w-full h-48 px-4 py-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl resize-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" disabled={uploadProgress.active} />
                     {quizContent && (
-                      <button 
+                      <button
                         onClick={() => setQuizContent('')}
-                        className="absolute top-2 right-2 text-xs px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-600 rounded"
+                        className="absolute top-2 right-2 text-xs px-2 py-1 bg-slate-200 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-500 text-slate-600 dark:text-slate-300 rounded"
                       >
                         Clear
                       </button>
                     )}
                   </div>
-                  <div className="flex justify-between mt-2 text-sm text-slate-500">
+                  <div className="flex justify-between mt-2 text-sm text-slate-500 dark:text-slate-400">
                     <span>{quizContent.length.toLocaleString()} characters</span>
                     <span>{quizContent.length < 500 ? '⚠️ Min 500 recommended' : '✓ Good'}</span>
                   </div>
                 </div>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Questions</label>
-                    <select value={numQuestions} onChange={e => setNumQuestions(parseInt(e.target.value))} className="w-full px-4 py-3 border border-slate-300 rounded-xl">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Questions</label>
+                    <select value={numQuestions} onChange={e => setNumQuestions(parseInt(e.target.value))} className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl">
                       <option value={5}>5</option><option value={10}>10</option><option value={15}>15</option><option value={20}>20</option><option value={25}>25</option><option value={30}>30</option><option value={40}>40</option><option value={50}>50</option>
                     </select>
-                    <p className="text-xs text-slate-400 mt-1">All questions can be shared with friends</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">All questions can be shared with friends</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Difficulty</label>
-                    <select value={difficulty} onChange={e => setDifficulty(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-xl">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Difficulty</label>
+                    <select value={difficulty} onChange={e => setDifficulty(e.target.value)} className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl">
                       <option value="basic">Basic</option><option value="mixed">Mixed</option><option value="advanced">Advanced</option>
                     </select>
                   </div>
                 </div>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Question Style</label>
-                    <select value={questionStyle} onChange={e => setQuestionStyle(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Question Style</label>
+                    <select value={questionStyle} onChange={e => setQuestionStyle(e.target.value)} className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl text-sm">
                       <option value="concept">📚 Concept-focused</option>
                       <option value="mixed">🔀 Mixed</option>
                       <option value="case">📋 Case-based</option>
                     </select>
-                    <p className="text-xs text-slate-400 mt-1">{questionStyle === 'concept' ? 'Tests theories & frameworks, avoids case-specific details' : questionStyle === 'case' ? 'Tests specific examples from the material' : 'Mix of concepts and case examples'}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{questionStyle === 'concept' ? 'Tests theories & frameworks, avoids case-specific details' : questionStyle === 'case' ? 'Tests specific examples from the material' : 'Mix of concepts and case examples'}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Topic Focus <span className="text-slate-400 font-normal">(optional)</span></label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Topic Focus <span className="text-slate-400 dark:text-slate-500 font-normal">(optional)</span></label>
                     <input
                       type="text"
                       value={topicFocus}
                       onChange={e => setTopicFocus(e.target.value)}
                       placeholder="e.g., Portfolio Theory, CAPM..."
-                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     />
-                    <p className="text-xs text-slate-400 mt-1">Leave empty for all topics</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Leave empty for all topics</p>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Tags <span className="text-slate-400 font-normal">(optional, comma-separated)</span></label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Tags <span className="text-slate-400 dark:text-slate-500 font-normal">(optional, comma-separated)</span></label>
                   <input
                     type="text"
                     value={quizTagInput}
                     onChange={e => setQuizTagInput(e.target.value)}
                     placeholder="e.g., midterm, chapter5, economics"
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   />
-                  <p className="text-xs text-slate-400 mt-1">Organize quizzes with tags</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Organize quizzes with tags</p>
                 </div>
                 <button type="button" onClick={generateQuestions} disabled={quizContent.length < 100 || uploadProgress.active} className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:from-slate-400 disabled:to-slate-400 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-lg">⚡ Generate Quiz with AI</button>
               </div>
@@ -4543,24 +4549,24 @@ ${quizContent.substring(0, 40000)}
 
       {/* GENERATING */}
       {page === 'generating' && (
-        <div className="min-h-screen bg-slate-100 flex items-center justify-center">
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-12 max-w-lg w-full text-center">
+        <div className="min-h-screen bg-slate-100 dark:bg-slate-900 flex items-center justify-center">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-12 max-w-lg w-full text-center">
             <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-5xl mx-auto mb-6 animate-pulse">⚡</div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">Generating Your Quiz</h2>
-            <p className="text-slate-600 mb-2">{generation.step}</p>
-            <p className="text-sm text-slate-400 mb-6">Creating {numQuestions} high-quality questions</p>
-            <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden mb-2">
-              <div 
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Generating Your Quiz</h2>
+            <p className="text-slate-600 dark:text-slate-300 mb-2">{generation.step}</p>
+            <p className="text-sm text-slate-400 dark:text-slate-500 mb-6">Creating {numQuestions} high-quality questions</p>
+            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3 overflow-hidden mb-2">
+              <div
                 className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500"
                 style={{ width: `${generation.progress}%` }}
               />
             </div>
-            <div className="flex justify-between text-sm text-slate-500">
+            <div className="flex justify-between text-sm text-slate-500 dark:text-slate-400">
               <span>{generation.progress}%</span>
               <span>{generation.progress < 85 ? '⏱️ Usually 30-90 seconds' : 'Almost done...'}</span>
             </div>
-            <div className="mt-6 p-3 bg-slate-50 rounded-lg">
-              <p className="text-xs text-slate-500">💡 Tip: More content = better questions. The AI analyzes your material to create questions that test real understanding.</p>
+            <div className="mt-6 p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
+              <p className="text-xs text-slate-500 dark:text-slate-400">💡 Tip: More content = better questions. The AI analyzes your material to create questions that test real understanding.</p>
             </div>
           </div>
         </div>
@@ -4568,52 +4574,52 @@ ${quizContent.substring(0, 40000)}
 
       {/* REVIEW QUIZ */}
       {page === 'review-quiz' && (
-        <div className="min-h-screen bg-slate-100">
-          <nav className="bg-white border-b border-slate-200 px-6 py-3 sticky top-0 z-40">
+        <div className="min-h-screen bg-slate-100 dark:bg-slate-900">
+          <nav className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3 sticky top-0 z-40">
             <div className="max-w-7xl mx-auto flex justify-between items-center">
-              <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('landing')}><span className="text-xl">⚡</span><span className="font-bold text-slate-900">QuizForge</span></div>
-              <span className={`px-3 py-1 ${userType === 'teacher' ? 'bg-purple-100 text-purple-700' : userType === 'student' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'} text-xs font-medium rounded-full`}>
+              <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('landing')}><span className="text-xl">⚡</span><span className="font-bold text-slate-900 dark:text-white">QuizForge</span></div>
+              <span className={`px-3 py-1 ${userType === 'teacher' ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300' : userType === 'student' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300' : 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300'} text-xs font-medium rounded-full`}>
                 {userType === 'teacher' ? '👩‍🏫 Teacher' : userType === 'student' ? '👨‍🎓 Student' : '✨ Creator'}
               </span>
             </div>
           </nav>
           <div className="max-w-5xl mx-auto px-6 py-8">
-            <button onClick={() => setPage(getDashboard())} className="text-slate-600 hover:text-slate-900 mb-4 text-sm">← Back to Dashboard</button>
+            <button onClick={() => setPage(getDashboard())} className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white mb-4 text-sm">← Back to Dashboard</button>
             <div className="flex justify-between items-start mb-6">
               <div>
-                <h1 className="text-2xl font-bold text-slate-900">{currentQuiz.published ? '' : 'Review: '}{currentQuiz.name}</h1>
-                <p className="text-slate-600">{pluralize(currentQuiz.questions.length, 'question')} {currentQuiz.published && <span className="text-green-600">• Published ✓</span>}</p>
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{currentQuiz.published ? '' : 'Review: '}{currentQuiz.name}</h1>
+                <p className="text-slate-600 dark:text-slate-400">{pluralize(currentQuiz.questions.length, 'question')} {currentQuiz.published && <span className="text-green-600 dark:text-green-400">• Published ✓</span>}</p>
               </div>
               <div className="flex gap-3">
                 {currentQuiz.published ? (
                   <>
-                    <button 
+                    <button
                       onClick={() => shareQuiz(currentQuiz)}
-                      className="px-4 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg font-medium"
+                      className="px-4 py-2 bg-indigo-100 dark:bg-indigo-900/50 hover:bg-indigo-200 dark:hover:bg-indigo-900/70 text-indigo-700 dark:text-indigo-300 rounded-lg font-medium"
                     >
                       🔗 Share
                     </button>
-                    <button 
+                    <button
                       onClick={() => duplicateQuiz(currentQuiz)}
-                      className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium"
+                      className="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg font-medium"
                     >
                       📋 Duplicate
                     </button>
                     {userType === 'teacher' && (
-                      <button 
-                        onClick={() => classes.length > 0 ? setModal({ type: 'select', title: 'Assign Quiz' }) : showToast('Create a class first', 'error')} 
+                      <button
+                        onClick={() => classes.length > 0 ? setModal({ type: 'select', title: 'Assign Quiz' }) : showToast('Create a class first', 'error')}
                         className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium"
                       >
                         📨 Assign to Class
                       </button>
                     )}
-                    <button 
+                    <button
                       onClick={() => {
                         const selected = shuffleArray([...currentQuiz.questions]).slice(0, 10).map(q => ({ ...q, options: shuffleArray([...q.options]) }));
                         setCurrentQuiz({ ...currentQuiz, questions: selected });
                         setQuizState({ currentQuestion: 0, selectedAnswer: null, answeredQuestions: new Set(), score: 0, results: [] });
                         setPage('take-quiz');
-                      }} 
+                      }}
                       className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-white rounded-lg font-medium"
                     >
                       🎯 Practice
@@ -4621,60 +4627,60 @@ ${quizContent.substring(0, 40000)}
                   </>
                 ) : (
                   <>
-                    <button onClick={() => shareQuiz(currentQuiz)} className="px-4 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg">🔗 Share</button>
-                    <button onClick={() => { setQuestionBank(prev => limitQuestionBank([...prev, ...currentQuiz.questions])); showToast('✅ Added to bank!', 'success'); }} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg">🗃️ Save Only</button>
+                    <button onClick={() => shareQuiz(currentQuiz)} className="px-4 py-2 bg-indigo-100 dark:bg-indigo-900/50 hover:bg-indigo-200 dark:hover:bg-indigo-900/70 text-indigo-700 dark:text-indigo-300 rounded-lg">🔗 Share</button>
+                    <button onClick={() => { setQuestionBank(prev => limitQuestionBank([...prev, ...currentQuiz.questions])); showToast('✅ Added to bank!', 'success'); }} className="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg">🗃️ Save Only</button>
                     <button onClick={publishQuiz} className="px-5 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg font-medium">✓ Publish</button>
                   </>
                 )}
               </div>
             </div>
-            
+
             {/* Quiz Tags */}
             {currentQuiz.tags?.length > 0 && (
               <div className="flex gap-2 mb-4 flex-wrap">
                 {currentQuiz.tags.map((tag, i) => (
-                  <span key={i} className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm">#{tag}</span>
+                  <span key={i} className="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-full text-sm">#{tag}</span>
                 ))}
               </div>
             )}
-            
+
             <div className="space-y-4">
               {currentQuiz.questions.map((q, i) => (
-                <div key={i} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <div key={i} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <span className="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-bold">{i + 1}</span>
-                      <span className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-full">{q.topic}</span>
-                      <span className={`px-2 py-1 text-xs rounded-full ${q.difficulty === 'Basic' ? 'bg-green-100 text-green-700' : q.difficulty === 'Intermediate' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>{q.difficulty}</span>
+                      <span className="w-8 h-8 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center font-bold">{i + 1}</span>
+                      <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs rounded-full">{q.topic}</span>
+                      <span className={`px-2 py-1 text-xs rounded-full ${q.difficulty === 'Basic' ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300' : q.difficulty === 'Intermediate' ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300' : 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300'}`}>{q.difficulty}</span>
                     </div>
                     <div className="flex gap-2">
-                      <button 
+                      <button
                         onClick={() => setEditingQuestion({ quizId: currentQuiz.id, index: i, question: { ...q } })}
-                        className="px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 rounded"
+                        className="px-2 py-1 text-xs bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 rounded"
                       >
                         ✏️ Edit
                       </button>
                       {currentQuiz.questions.length > 1 && (
-                        <button 
+                        <button
                           onClick={() => setModal({ type: 'confirm', title: 'Delete Question?', message: 'This cannot be undone.', onConfirm: () => deleteQuestion(currentQuiz.id, i) })}
-                          className="px-2 py-1 text-xs bg-red-50 hover:bg-red-100 text-red-600 rounded"
+                          className="px-2 py-1 text-xs bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 rounded"
                         >
                           🗑️
                         </button>
                       )}
                     </div>
                   </div>
-                  <p className="text-slate-900 font-medium mb-3">{q.question}</p>
+                  <p className="text-slate-900 dark:text-white font-medium mb-3">{q.question}</p>
                   <div className="grid md:grid-cols-2 gap-2 mb-3">
                     {q.options.map((opt, j) => (
-                      <div key={j} className={`px-3 py-2 rounded-lg text-sm ${opt.isCorrect ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-slate-50 text-slate-600'}`}>
+                      <div key={j} className={`px-3 py-2 rounded-lg text-sm ${opt.isCorrect ? 'bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-300' : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
                         {String.fromCharCode(65 + j)}) {opt.text} {opt.isCorrect && '✓'}
                       </div>
                     ))}
                   </div>
-                  <details className="bg-blue-50 border border-blue-200 rounded-lg">
-                    <summary className="px-4 py-2 cursor-pointer text-blue-800 text-sm">📖 Explanation</summary>
-                    <div className="px-4 py-3 text-sm text-blue-900 border-t border-blue-200">{q.explanation}</div>
+                  <details className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <summary className="px-4 py-2 cursor-pointer text-blue-800 dark:text-blue-300 text-sm">📖 Explanation</summary>
+                    <div className="px-4 py-3 text-sm text-blue-900 dark:text-blue-200 border-t border-blue-200 dark:border-blue-800">{q.explanation}</div>
                   </details>
                 </div>
               ))}
