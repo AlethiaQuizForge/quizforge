@@ -2927,7 +2927,7 @@ ${quizContent.substring(0, 40000)}
                     <span className="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center text-sm">{user?.name?.charAt(0).toUpperCase()}</span>
                     {user?.name}
                   </button>
-                  <button onClick={() => setPage(getDashboard())} className="px-4 py-2 bg-white text-indigo-900 rounded-lg font-medium">Dashboard</button>
+                  <button onClick={() => setPage(getDashboard())} className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg font-semibold hover:from-amber-400 hover:to-orange-400 shadow-md">Dashboard</button>
                 </>
               ) : (
                 <>
@@ -2958,7 +2958,7 @@ ${quizContent.substring(0, 40000)}
               <p className="text-base md:text-xl text-indigo-200 mb-6">Upload slides, readings, or case studies. Our AI generates quizzes for students or full exams for your class.</p>
               <div className="flex flex-col sm:flex-row flex-wrap gap-3">
                 {isLoggedIn ? (
-                  <button onClick={() => setPage(getDashboard())} className="px-6 py-3 bg-white text-indigo-900 rounded-xl font-semibold hover:bg-indigo-100 shadow-lg text-center">
+                  <button onClick={() => setPage(getDashboard())} className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-semibold hover:from-amber-400 hover:to-orange-400 shadow-lg text-center">
                     Go to Dashboard →
                   </button>
                 ) : (
