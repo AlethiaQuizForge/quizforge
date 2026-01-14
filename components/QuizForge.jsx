@@ -65,6 +65,44 @@ const DEFAULT_STUDENT_PROGRESS = {
   achievements: [], dailyHistory: [], questionHistory: {}
 };
 
+// Skeleton loader components
+const SkeletonCard = () => (
+  <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 animate-pulse">
+    <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-16 mb-2" />
+    <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-24" />
+  </div>
+);
+
+const SkeletonQuizItem = () => (
+  <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700 rounded-xl animate-pulse">
+    <div className="flex-1">
+      <div className="h-5 bg-slate-200 dark:bg-slate-600 rounded w-48 mb-2" />
+      <div className="h-4 bg-slate-200 dark:bg-slate-600 rounded w-32" />
+    </div>
+    <div className="flex gap-2">
+      <div className="h-8 bg-slate-200 dark:bg-slate-600 rounded w-16" />
+      <div className="h-8 bg-slate-200 dark:bg-slate-600 rounded w-16" />
+    </div>
+  </div>
+);
+
+const SkeletonStats = () => (
+  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <SkeletonCard />
+    <SkeletonCard />
+    <SkeletonCard />
+    <SkeletonCard />
+  </div>
+);
+
+const SkeletonQuizList = () => (
+  <div className="space-y-3">
+    <SkeletonQuizItem />
+    <SkeletonQuizItem />
+    <SkeletonQuizItem />
+  </div>
+);
+
 export default function QuizForge() {
   // Helper for grammar
   const pluralize = (count, word) => count === 1 ? `${count} ${word}` : `${count} ${word}s`;
@@ -87,7 +125,8 @@ export default function QuizForge() {
   const [socialAuthPending, setSocialAuthPending] = useState(null);
   const [authError, setAuthError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  
+  const [isDataLoading, setIsDataLoading] = useState(true); // For skeleton loaders on dashboard
+
   const [page, setPage] = useState('landing');
   const [userType, setUserType] = useState(null);
   const [userName, setUserName] = useState('');
@@ -305,11 +344,13 @@ export default function QuizForge() {
         setIsLoggedIn(false);
         setUserType(null);
         setUserName('');
+        setIsDataLoading(false);
       }
-      
+
       // Check for shared quiz BEFORE finishing loading
       await checkForSharedQuiz();
       setIsLoading(false);
+      setIsDataLoading(false);
     });
     
     return () => unsubscribe();
@@ -3861,12 +3902,14 @@ ${quizContent.substring(0, 40000)}
               </div>
             )}
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5"><p className="text-3xl font-bold text-amber-600 dark:text-amber-400">{quizzes.length}</p><p className="text-sm text-slate-500 dark:text-slate-300">Quizzes Created</p></div>
-              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5"><p className="text-3xl font-bold text-orange-600 dark:text-orange-400">{questionBank.length}</p><p className="text-sm text-slate-500 dark:text-slate-300">Questions Generated</p></div>
-              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5"><p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">{studentProgress.quizzesTaken}</p><p className="text-sm text-slate-500 dark:text-slate-300">Practice Sessions</p></div>
-              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5"><p className="text-3xl font-bold text-green-600 dark:text-green-400">{avgScore > 0 ? avgScore : '--'}%</p><p className="text-sm text-slate-500 dark:text-slate-300">Avg Practice Score</p></div>
-            </div>
+            {isDataLoading ? <SkeletonStats /> : (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5"><p className="text-3xl font-bold text-amber-600 dark:text-amber-400">{quizzes.length}</p><p className="text-sm text-slate-500 dark:text-slate-300">Quizzes Created</p></div>
+                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5"><p className="text-3xl font-bold text-orange-600 dark:text-orange-400">{questionBank.length}</p><p className="text-sm text-slate-500 dark:text-slate-300">Questions Generated</p></div>
+                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5"><p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">{studentProgress.quizzesTaken}</p><p className="text-sm text-slate-500 dark:text-slate-300">Practice Sessions</p></div>
+                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5"><p className="text-3xl font-bold text-green-600 dark:text-green-400">{avgScore > 0 ? avgScore : '--'}%</p><p className="text-sm text-slate-500 dark:text-slate-300">Avg Practice Score</p></div>
+              </div>
+            )}
 
             <div className="grid lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-6">
@@ -3889,7 +3932,7 @@ ${quizContent.substring(0, 40000)}
                 {/* Your Quizzes */}
                 <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
                   <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Your Quizzes</h3>
-                  {quizzes.length > 0 ? (
+                  {isDataLoading ? <SkeletonQuizList /> : quizzes.length > 0 ? (
                     <div className="space-y-3">
                       {quizzes.map(quiz => (
                         <div key={quiz.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700 rounded-xl group">
