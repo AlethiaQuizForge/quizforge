@@ -1598,15 +1598,15 @@ ${quizContent.substring(0, 40000)}
     // Save to global classes collection for cross-user lookup
     try {
       await setDoc(doc(db, 'classes', newClass.id), newClass);
+      setClasses(prev => [...prev, newClass]);
+      setCurrentClass(newClass);
+      showToast(`✅ Class "${newClass.name}" created! Code: ${newClass.code}`, 'success');
+      setModal(null);
+      setModalInput('');
     } catch (e) {
       console.error('Error saving class to Firestore:', e);
+      showToast('❌ Failed to create class. Please try again.', 'error');
     }
-
-    setClasses(prev => [...prev, newClass]);
-    setCurrentClass(newClass);
-    showToast(`✅ Class "${newClass.name}" created! Code: ${newClass.code}`, 'success');
-    setModal(null);
-    setModalInput('');
   };
 
   const joinClass = async () => {
