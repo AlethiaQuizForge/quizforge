@@ -185,10 +185,32 @@ export default function QuizForge() {
               const data = JSON.parse(dataResult.value);
               setQuizzes(data.quizzes || []);
               setJoinedClasses(data.joinedClasses || []);
-              setAssignments(data.assignments || []);
               setSubmissions(data.submissions || []);
               setQuestionBank(data.questionBank || []);
               setStudentProgress(data.studentProgress || { quizzesTaken: 0, totalScore: 0, totalQuestions: 0, topicHistory: {}, recentScores: [], currentStreak: 0, longestStreak: 0, lastPracticeDate: null, achievements: [], dailyHistory: [], questionHistory: {} });
+
+              // Fetch assignments from Firestore for student's joined classes
+              const joinedClassIds = (data.joinedClasses || []).map(c => c.id);
+              if (joinedClassIds.length > 0 && userData.role === 'student') {
+                try {
+                  const assignmentsRef = collection(db, 'assignments');
+                  const allAssignments = [];
+                  // Fetch assignments for each joined class
+                  for (const classId of joinedClassIds) {
+                    const assignQ = query(assignmentsRef, where('classId', '==', classId));
+                    const assignSnapshot = await getDocs(assignQ);
+                    assignSnapshot.docs.forEach(d => {
+                      allAssignments.push({ id: d.id, ...d.data() });
+                    });
+                  }
+                  setAssignments(allAssignments);
+                } catch (e) {
+                  console.log('Error fetching assignments:', e);
+                  setAssignments(data.assignments || []);
+                }
+              } else {
+                setAssignments(data.assignments || []);
+              }
 
               // Sync classes from Firestore to get latest student data
               const localClasses = data.classes || [];
@@ -1195,9 +1217,18 @@ ${quizContent.substring(0, 40000)}
         // Update in Firestore
         await updateDoc(doc(db, 'classes', foundClass.id), { students: updatedStudents });
 
+        // Fetch assignments for this class
+        const assignmentsRef = collection(db, 'assignments');
+        const assignQ = query(assignmentsRef, where('classId', '==', foundClass.id));
+        const assignSnapshot = await getDocs(assignQ);
+        const classAssignments = assignSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
         // Update local state
         const updatedClass = { ...foundClass, students: updatedStudents };
         setJoinedClasses(prev => [...prev, updatedClass]);
+        if (classAssignments.length > 0) {
+          setAssignments(prev => [...prev, ...classAssignments]);
+        }
         showToast(`✅ Joined "${foundClass.name}" by ${foundClass.teacherName || 'teacher'}!`, 'success');
         setJoinCodeInput('');
       } else {
@@ -1505,7 +1536,7 @@ ${quizContent.substring(0, 40000)}
 
   // ============ END A+ FEATURES ============
 
-  const assignQuiz = (quizId, weight = 10, dueDate = null) => {
+  const assignQuiz = async (quizId, weight = 10, dueDate = null) => {
     if (!currentClass && classes.length > 0) {
       setCurrentClass(classes[0]);
     }
@@ -1515,17 +1546,30 @@ ${quizContent.substring(0, 40000)}
       return;
     }
     const targetClass = currentClass || classes[0];
-    const newAssignment = { 
-      id: `assign_${Date.now()}`, 
-      quizId, 
-      classId: targetClass.id, 
+    const quiz = quizzes.find(q => q.id === quizId);
+
+    const newAssignment = {
+      id: `assign_${Date.now()}`,
+      quizId,
+      classId: targetClass.id,
+      className: targetClass.name,
+      quizName: quiz?.name || 'Quiz',
+      quizQuestions: quiz?.questions || [],
       weight: parseFloat(weight) || 10,
       dueDate: dueDate || null,
-      createdAt: Date.now(), 
-      submissions: [] 
+      createdAt: Date.now(),
+      teacherId: user?.email,
+      teacherName: user?.name
     };
+
+    // Save assignment to Firestore for students to access
+    try {
+      await setDoc(doc(db, 'assignments', newAssignment.id), newAssignment);
+    } catch (e) {
+      console.error('Error saving assignment to Firestore:', e);
+    }
+
     setAssignments(prev => [...prev, newAssignment]);
-    const quiz = quizzes.find(q => q.id === quizId);
     showToast(`✅ "${quiz?.name}" assigned to ${targetClass.name}!`, 'success');
     setModal(null);
     setModalInput('');
@@ -1694,9 +1738,21 @@ ${quizContent.substring(0, 40000)}
   };
 
   const startAssignment = (assignment) => {
-    const quiz = quizzes.find(q => q.id === assignment.quizId);
-    if (!quiz) { showToast('Quiz not found', 'error'); return; }
-    setCurrentQuiz({ ...quiz, questions: quiz.questions.map(q => ({ ...q, options: shuffleArray([...q.options]) })) });
+    // Try local quiz first, then use assignment's embedded quiz data
+    const localQuiz = quizzes.find(q => q.id === assignment.quizId);
+    const quizQuestions = assignment.quizQuestions || localQuiz?.questions || [];
+    const quizName = assignment.quizName || localQuiz?.name || 'Quiz';
+
+    if (!quizQuestions.length) {
+      showToast('Quiz not found', 'error');
+      return;
+    }
+
+    setCurrentQuiz({
+      id: assignment.quizId,
+      name: quizName,
+      questions: quizQuestions.map(q => ({ ...q, options: shuffleArray([...q.options]) }))
+    });
     setCurrentAssignment(assignment);
     setQuizState({ currentQuestion: 0, selectedAnswer: null, answeredQuestions: new Set(), score: 0, results: [] });
     setPage('take-quiz');
@@ -2603,7 +2659,7 @@ ${quizContent.substring(0, 40000)}
                 </>
               ) : (
                 <>
-                  <button onClick={() => { setAuthMode('login'); setPage('auth'); }} className="px-4 py-2 text-white/80 hover:text-white">Log In</button>
+                  <button onClick={() => { setAuthMode('login'); setPage('auth'); }} className="px-4 py-2 text-white font-medium hover:bg-white/10 rounded-lg">Log In</button>
                   <button onClick={() => { setAuthMode('signup'); setPage('auth'); }} className="px-4 py-2 bg-white text-indigo-900 rounded-lg font-medium">Sign Up</button>
                 </>
               )}
@@ -2635,7 +2691,7 @@ ${quizContent.substring(0, 40000)}
                   </button>
                 ) : (
                   <>
-                    <button onClick={() => { setAuthMode('signup'); setAuthForm(f => ({ ...f, role: 'teacher' })); setPage('auth'); }} className="px-5 py-3 bg-white text-indigo-900 rounded-xl font-semibold hover:bg-indigo-100 shadow-lg text-sm">👩‍🏫 I'm a Teacher</button>
+                    <button onClick={() => { setAuthMode('signup'); setAuthForm(f => ({ ...f, role: 'teacher' })); setPage('auth'); }} className="px-5 py-3 bg-indigo-100 text-indigo-900 rounded-xl font-bold hover:bg-indigo-200 shadow-lg text-sm border border-indigo-200">👩‍🏫 I'm a Teacher</button>
                     <button onClick={() => { setAuthMode('signup'); setAuthForm(f => ({ ...f, role: 'student' })); setPage('auth'); }} className="px-5 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-500 border border-indigo-500 text-sm">👨‍🎓 I'm a Student</button>
                     <button onClick={() => { setAuthMode('signup'); setAuthForm(f => ({ ...f, role: 'creator' })); setPage('auth'); }} className="px-5 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-semibold hover:from-amber-400 hover:to-orange-400 text-sm">✨ I'm Just Making Quizzes</button>
                   </>
@@ -2736,14 +2792,14 @@ ${quizContent.substring(0, 40000)}
               </div>
               
               {/* Student Study Section */}
-              <div className="mt-8 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-300">
+              <div className="mt-8 bg-amber-100 rounded-2xl p-6 border-2 border-amber-400">
                 <div className="flex flex-col md:flex-row items-center gap-4">
                   <div className="text-4xl">📚</div>
                   <div className="text-center md:text-left">
-                    <h3 className="font-bold text-slate-800 text-lg mb-1">Study Smarter, Not Harder</h3>
-                    <p className="text-slate-700 text-sm">Upload your course materials, past exams, or lecture notes — our AI generates practice exams tailored to your class. Perfect for exam prep!</p>
+                    <h3 className="font-bold text-gray-900 text-lg mb-1">Study Smarter, Not Harder</h3>
+                    <p className="text-gray-700 text-sm">Upload your course materials, past exams, or lecture notes — our AI generates practice exams tailored to your class. Perfect for exam prep!</p>
                   </div>
-                  <button onClick={() => { setAuthMode('signup'); setAuthForm(f => ({ ...f, role: 'student' })); setPage('auth'); }} className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-white rounded-lg font-medium text-sm whitespace-nowrap">
+                  <button onClick={() => { setAuthMode('signup'); setAuthForm(f => ({ ...f, role: 'student' })); setPage('auth'); }} className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-white rounded-lg font-semibold text-sm whitespace-nowrap shadow-md">
                     Start Practicing →
                   </button>
                 </div>
@@ -3833,16 +3889,19 @@ ${quizContent.substring(0, 40000)}
                   <div className="bg-white rounded-xl shadow-sm border-2 border-amber-300 p-6">
                     <h3 className="font-semibold text-slate-900 mb-4">📋 Assigned Quizzes</h3>
                     {pendingAssignments.map(a => {
-                      const quiz = quizzes.find(q => q.id === a.quizId);
-                      const assignedClass = classes.find(c => c.id === a.classId);
+                      // Try local quiz first, then use assignment's embedded quiz data
+                      const localQuiz = quizzes.find(q => q.id === a.quizId);
+                      const quizName = a.quizName || localQuiz?.name || 'Quiz';
+                      const quizQuestions = a.quizQuestions || localQuiz?.questions || [];
+                      const assignedClass = joinedClasses.find(c => c.id === a.classId) || classes.find(c => c.id === a.classId);
                       const isOverdue = a.dueDate && new Date(a.dueDate) < new Date();
                       const isDueSoon = a.dueDate && !isOverdue && (new Date(a.dueDate) - new Date()) < 24 * 60 * 60 * 1000;
-                      const estimatedTime = quiz ? Math.ceil(quiz.questions.length * 1.5) : null;
+                      const estimatedTime = quizQuestions.length ? Math.ceil(quizQuestions.length * 1.5) : null;
                       return (
                         <div key={a.id} className={`flex items-center justify-between p-4 rounded-lg mb-2 ${isOverdue ? 'bg-red-50 border border-red-200' : 'bg-amber-50'}`}>
                           <div>
-                            <p className="font-medium text-slate-900">{quiz?.name}</p>
-                            <p className="text-sm text-slate-500">{quiz ? pluralize(quiz.questions.length, 'question') : '?'} • {estimatedTime ? `~${estimatedTime} min` : ''} • From: {assignedClass?.name || 'Unknown class'}</p>
+                            <p className="font-medium text-slate-900">{quizName}</p>
+                            <p className="text-sm text-slate-500">{quizQuestions.length ? pluralize(quizQuestions.length, 'question') : '?'} • {estimatedTime ? `~${estimatedTime} min` : ''} • From: {a.className || assignedClass?.name || 'Class'}</p>
                             {a.dueDate && (
                               <p className={`text-xs mt-1 ${isOverdue ? 'text-red-600 font-medium' : isDueSoon ? 'text-amber-600 font-medium' : 'text-slate-500'}`}>
                                 {isOverdue ? '⚠️ Overdue!' : isDueSoon ? '⏰ Due soon:' : '📅 Due:'} {new Date(a.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
