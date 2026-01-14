@@ -2607,54 +2607,54 @@ ${quizContent.substring(0, 40000)}
               <div className="grid md:grid-cols-2 gap-6">
                 {/* Teachers Column */}
                 <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-5">
-                  <h3 className="text-sm font-semibold text-indigo-600 mb-4 text-center">👩‍🏫 For Teachers</h3>
+                  <h3 className="text-sm font-bold text-indigo-700 mb-4 text-center">👩‍🏫 For Teachers</h3>
                   <div className="space-y-2">
-                    <div className="bg-white/80 rounded-xl p-3 flex items-center gap-3">
+                    <div className="bg-white rounded-xl p-3 flex items-center gap-3 shadow-sm">
                       <div className="text-xl">📤</div>
                       <div>
-                        <h4 className="font-semibold text-slate-900 text-xs">Upload</h4>
+                        <h4 className="font-bold text-slate-800 text-sm">Upload</h4>
                         <p className="text-slate-600 text-xs">Lecture slides, PDFs, or notes</p>
                       </div>
                     </div>
-                    <div className="bg-white/80 rounded-xl p-3 flex items-center gap-3">
+                    <div className="bg-white rounded-xl p-3 flex items-center gap-3 shadow-sm">
                       <div className="text-xl">🧠</div>
                       <div>
-                        <h4 className="font-semibold text-slate-900 text-xs">Generate Quizzes & Exams</h4>
+                        <h4 className="font-bold text-slate-800 text-sm">Generate Quizzes & Exams</h4>
                         <p className="text-slate-600 text-xs">AI creates assessments instantly</p>
                       </div>
                     </div>
-                    <div className="bg-white/80 rounded-xl p-3 flex items-center gap-3">
+                    <div className="bg-white rounded-xl p-3 flex items-center gap-3 shadow-sm">
                       <div className="text-xl">📊</div>
                       <div>
-                        <h4 className="font-semibold text-slate-900 text-xs">Assign & Track</h4>
+                        <h4 className="font-bold text-slate-800 text-sm">Assign & Track</h4>
                         <p className="text-slate-600 text-xs">Share with class, view results</p>
                       </div>
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Students Column */}
                 <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-5">
-                  <h3 className="text-sm font-semibold text-blue-600 mb-4 text-center">👨‍🎓 For Students</h3>
+                  <h3 className="text-sm font-bold text-blue-700 mb-4 text-center">👨‍🎓 For Students</h3>
                   <div className="space-y-2">
-                    <div className="bg-white/80 rounded-xl p-3 flex items-center gap-3">
+                    <div className="bg-white rounded-xl p-3 flex items-center gap-3 shadow-sm">
                       <div className="text-xl">📋</div>
                       <div>
-                        <h4 className="font-semibold text-slate-900 text-xs">Join & Take</h4>
+                        <h4 className="font-bold text-slate-800 text-sm">Join & Take</h4>
                         <p className="text-slate-600 text-xs">Complete assigned quizzes</p>
                       </div>
                     </div>
-                    <div className="bg-white/80 rounded-xl p-3 flex items-center gap-3">
+                    <div className="bg-white rounded-xl p-3 flex items-center gap-3 shadow-sm">
                       <div className="text-xl">📚</div>
                       <div>
-                        <h4 className="font-semibold text-slate-900 text-xs">Create & Study</h4>
+                        <h4 className="font-bold text-slate-800 text-sm">Create & Study</h4>
                         <p className="text-slate-600 text-xs">Upload notes, practice exams</p>
                       </div>
                     </div>
-                    <div className="bg-white/80 rounded-xl p-3 flex items-center gap-3">
+                    <div className="bg-white rounded-xl p-3 flex items-center gap-3 shadow-sm">
                       <div className="text-xl">🔗</div>
                       <div>
-                        <h4 className="font-semibold text-slate-900 text-xs">Share & Compete</h4>
+                        <h4 className="font-bold text-slate-800 text-sm">Share & Compete</h4>
                         <p className="text-slate-600 text-xs">Quiz friends, study together</p>
                       </div>
                     </div>
@@ -2663,12 +2663,12 @@ ${quizContent.substring(0, 40000)}
               </div>
               
               {/* Student Study Section */}
-              <div className="mt-8 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-200">
+              <div className="mt-8 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-300">
                 <div className="flex flex-col md:flex-row items-center gap-4">
                   <div className="text-4xl">📚</div>
                   <div className="text-center md:text-left">
-                    <h3 className="font-semibold text-slate-900 mb-1">Study Smarter, Not Harder</h3>
-                    <p className="text-slate-600 text-sm">Upload your course materials, past exams, or lecture notes — our AI generates practice exams tailored to your class. Perfect for exam prep!</p>
+                    <h3 className="font-bold text-slate-800 text-lg mb-1">Study Smarter, Not Harder</h3>
+                    <p className="text-slate-700 text-sm">Upload your course materials, past exams, or lecture notes — our AI generates practice exams tailored to your class. Perfect for exam prep!</p>
                   </div>
                   <button onClick={() => { setAuthMode('signup'); setAuthForm(f => ({ ...f, role: 'student' })); setPage('auth'); }} className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-white rounded-lg font-medium text-sm whitespace-nowrap">
                     Start Practicing →
