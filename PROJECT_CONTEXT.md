@@ -374,12 +374,15 @@ Firebase config is currently hardcoded in `QuizForge.jsx` (project: quizforge-58
   - Pro Plan profile section shows full feature list
   - Profile name editing with inline form
   - Share to Organization button for teachers in orgs (🏫 icon)
+  - Separate `classManagerTab` state for class manager tabs (prevents modal input pollution)
 
 - **Bug Fixes**:
   - Fixed Stripe webhook not updating user plan (Firebase fallback config)
   - Fixed 30 UX issues from comprehensive audit
   - Safe JSON parsing throughout app
   - Rate condition fixes in quiz navigation
+  - **Fixed class creation modal bug** - modal now passes `modalInput` as parameter to `onConfirm` callback to avoid stale closure issue
+  - **Unified contact email** - all contact emails now use `support@quizforgeapp.com`
 
 ---
 
