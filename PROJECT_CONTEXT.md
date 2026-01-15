@@ -22,6 +22,9 @@ Use this document when starting a new Claude conversation to quickly provide con
 | Auth | Firebase Authentication (Email/Password, Google, Apple) |
 | File Processing | mammoth.js (Word docs), JSZip |
 | Mobile | Capacitor (iOS app wrapper) |
+| Payments | Stripe (prepared, not yet active) |
+| Analytics | Vercel Analytics |
+| Error Monitoring | Sentry |
 | Hosting | Vercel |
 
 ---
@@ -32,21 +35,35 @@ Use this document when starting a new Claude conversation to quickly provide con
 quizforge-deploy 2/
 ├── app/
 │   ├── page.tsx              # Entry point (renders QuizForge)
-│   ├── layout.tsx            # Root layout with metadata
+│   ├── layout.tsx            # Root layout with metadata, Analytics, Sentry
 │   ├── globals.css           # Global styles
+│   ├── sentry-provider.tsx   # Client-side Sentry initialization
+│   ├── opengraph-image.tsx   # Dynamic OG image for social sharing
+│   ├── twitter-image.tsx     # Twitter card image
 │   ├── api/
-│   │   ├── generate/route.ts # Quiz generation endpoint (Claude API)
-│   │   └── vision/route.ts   # PDF image extraction (Claude Vision)
+│   │   ├── generate/route.ts # Quiz generation endpoint (rate-limited)
+│   │   ├── vision/route.ts   # PDF image extraction (rate-limited)
+│   │   └── stripe/           # Stripe checkout, webhook, portal routes
 │   ├── privacy/page.tsx      # Privacy policy
 │   └── terms/page.tsx        # Terms of service
 ├── components/
-│   └── QuizForge.jsx         # Main app component (~6000 lines)
-├── lib/                      # Utility functions
+│   ├── QuizForge.jsx         # Main app component (~6000 lines)
+│   └── PricingCard.tsx       # Subscription pricing UI component
+├── lib/
+│   ├── stripe.ts             # Stripe plans and limit checking
+│   └── rate-limit.ts         # In-memory rate limiter
+├── docs/
+│   ├── STRIPE_SETUP.md       # Stripe activation guide
+│   └── ...
+├── scripts/
+│   └── backup-firebase.md    # Firebase backup documentation
 ├── public/
 │   ├── manifest.json         # PWA manifest
 │   ├── icon.svg              # App icon
+│   ├── BingSiteAuth.xml      # Bing Webmaster verification
 │   └── icons/                # App icons (various sizes)
 ├── ios/                      # Capacitor iOS project
+├── instrumentation.ts        # Server-side Sentry setup
 ├── package.json
 ├── tailwind.config.js
 ├── next.config.js
@@ -84,6 +101,11 @@ quizforge-deploy 2/
 - PWA support
 - Onboarding flow
 - Toast notifications
+- Social sharing (X, Facebook, WhatsApp, LinkedIn)
+- Keyboard shortcuts (1-4/A-D for answers, Enter/Space for submit)
+- PDF export for quizzes
+- Smart Review (spaced repetition)
+- Enhanced quiz results with stats grid and visual breakdown
 
 ---
 
@@ -150,6 +172,16 @@ Extracts text from PDF page images using Claude Vision.
 Required in `.env.local`:
 ```
 ANTHROPIC_API_KEY=sk-ant-...
+NEXT_PUBLIC_SENTRY_DSN=https://...@sentry.io/...
+```
+
+Optional (for Stripe subscriptions - see docs/STRIPE_SETUP.md):
+```
+STRIPE_SECRET_KEY=sk_live_...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PRO_PRICE_ID=price_...
+STRIPE_INSTITUTION_PRICE_ID=price_...
 ```
 
 Firebase config is currently hardcoded in `QuizForge.jsx` (project: quizforge-58f79)
@@ -190,12 +222,24 @@ Firebase config is currently hardcoded in `QuizForge.jsx` (project: quizforge-58
 - `submissions` - Global submissions (studentId, studentEmail, assignmentId, score, answers, etc.)
 - `shared-{id}` - Publicly shared quizzes (now includes `timesTaken` counter)
 
+### Recently Added (Jan 2026):
+- ✅ **SEO & Social**: OG images, Twitter cards, sitemap, Google/Bing verification
+- ✅ **Analytics**: Vercel Analytics integration
+- ✅ **Error Monitoring**: Sentry with client and server-side tracking
+- ✅ **Social Sharing**: X, Facebook, WhatsApp, LinkedIn share buttons
+- ✅ **UX Improvements**: Keyboard shortcuts (1-4/A-D), enhanced results view
+- ✅ **PDF Export**: Export quizzes from dashboard
+- ✅ **Rate Limiting**: API protection (10 quizzes/hr, 20 vision requests/hr)
+- ✅ **Stripe Infrastructure**: Subscription system built (inactive until configured)
+  - Plans: Free (5 quizzes/mo), Pro ($9 - unlimited), Institution ($199)
+  - Philosophy: Same product quality for all, differentiate by volume only
+
 ### Known Issues:
 - Teacher's student roster only updates on login (no real-time sync)
 
 ### Next Steps:
+- Activate Stripe subscriptions (see docs/STRIPE_SETUP.md)
 - Add real-time updates for class roster
-- Add more robust error handling for network failures
 - Consider adding leaderboards for shared quizzes
 
 ---
@@ -239,4 +283,4 @@ npx cap open ios     # Open in Xcode
 
 ---
 
-*Last updated: January 2026*
+*Last updated: January 15, 2026*
