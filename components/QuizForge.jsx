@@ -231,6 +231,26 @@ export default function QuizForge() {
       }
     }
   };
+
+  // Check for pending class join from link (e.g., /class/ABC123)
+  const checkForPendingClassJoin = () => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const pendingCode = sessionStorage.getItem('pendingClassCode');
+    const isJoinFlow = params.get('join') === 'class';
+
+    if (pendingCode && isJoinFlow) {
+      // Set the code in the input and clear from storage
+      setJoinCodeInput(pendingCode);
+      sessionStorage.removeItem('pendingClassCode');
+      // Clear URL param
+      window.history.replaceState({}, '', window.location.pathname);
+      // Show toast to prompt user
+      setTimeout(() => {
+        showToast('Click "Join" to join the class', 'info');
+      }, 500);
+    }
+  };
   
   // Listen for Firebase auth state changes
   useEffect(() => {
@@ -350,6 +370,8 @@ export default function QuizForge() {
 
       // Check for shared quiz BEFORE finishing loading
       await checkForSharedQuiz();
+      // Check for pending class join from link
+      checkForPendingClassJoin();
       setIsLoading(false);
       setIsDataLoading(false);
     });
@@ -3924,7 +3946,17 @@ ${quizContent.substring(0, 40000)}
                   {classes.map(cls => (
                     <div key={cls.id} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
                       <div className="flex justify-between items-start mb-3"><h4 className="font-semibold text-slate-900 dark:text-white">{cls.name}</h4><span className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs font-mono rounded">{cls.code}</span></div>
-                      <p className="text-sm text-slate-500 dark:text-slate-300 mb-4">{cls.students.length} students</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-300 mb-2">{cls.students.length} students</p>
+                      <button
+                        onClick={() => {
+                          const link = `${window.location.origin}/class/${cls.code}`;
+                          navigator.clipboard.writeText(link);
+                          showToast('Invite link copied!', 'success');
+                        }}
+                        className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline mb-3 flex items-center gap-1"
+                      >
+                        <span>📋</span> Copy invite link
+                      </button>
                       <button onClick={() => { setCurrentClass(cls); setPage('class-manager'); }} className="w-full py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium">Manage →</button>
                     </div>
                   ))}
@@ -4216,7 +4248,9 @@ ${quizContent.substring(0, 40000)}
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-slate-500 dark:text-slate-300 text-sm">Join Code:</span>
                           <span className="font-mono bg-indigo-100 dark:bg-indigo-900/50 px-2 py-0.5 rounded text-indigo-700 dark:text-indigo-300 font-bold text-sm">{selectedClass?.code}</span>
-                          <button onClick={() => { navigator.clipboard.writeText(selectedClass?.code || ''); showToast('📋 Code copied!', 'success'); }} className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300">Copy</button>
+                          <button onClick={() => { navigator.clipboard.writeText(selectedClass?.code || ''); showToast('📋 Code copied!', 'success'); }} className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300">Copy Code</button>
+                          <span className="text-slate-300 dark:text-slate-600">|</span>
+                          <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/class/${selectedClass?.code}`); showToast('📋 Invite link copied!', 'success'); }} className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300">Copy Link</button>
                         </div>
                       </div>
                       <div className="flex gap-2">

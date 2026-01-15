@@ -11,13 +11,15 @@ export const stripe = process.env.STRIPE_SECRET_KEY
   : null;
 
 // Plan definitions
+// Note: quizzesPerMonth does NOT stack - resets each month
 export const PLANS = {
   free: {
     id: 'free',
     name: 'Free',
     price: 0,
-    priceId: null, // No Stripe price for free
+    priceId: null,
     limits: {
+      users: 1,
       quizzesPerMonth: 5,
       classesMax: 1,
       studentsPerClass: 30,
@@ -36,38 +38,22 @@ export const PLANS = {
     price: 9,
     priceId: process.env.STRIPE_PRO_PRICE_ID || null,
     limits: {
-      quizzesPerMonth: -1, // unlimited
-      classesMax: 5,
-      studentsPerClass: 100,
+      users: 1,
+      quizzesPerMonth: 25,
+      classesMax: 3,
+      studentsPerClass: 50,
     },
     features: [
-      'Unlimited quizzes',
-      '5 classes with 100 students each',
+      '25 quizzes per month',
+      '3 classes with 50 students each',
       'All question types',
       'PDF export',
       'Full analytics',
-      'Priority support',
     ],
   },
-  institution: {
-    id: 'institution',
-    name: 'Institution',
-    price: 199, // Starting price, can be custom
-    priceId: process.env.STRIPE_INSTITUTION_PRICE_ID || null,
-    limits: {
-      quizzesPerMonth: -1,
-      classesMax: -1, // unlimited
-      studentsPerClass: -1, // unlimited
-    },
-    features: [
-      'Unlimited everything',
-      'Admin dashboard',
-      'Email domain access',
-      'Usage analytics',
-      'Priority support',
-      'Invoice billing',
-    ],
-  },
+  // Organization plans - coming soon (requires admin dashboard)
+  // school: { ... 25 teachers, $199/mo }
+  // university: { ... 50 professors, $499/mo }
 } as const;
 
 export type PlanId = keyof typeof PLANS;
@@ -89,34 +75,28 @@ export function checkPlanLimits(
   const plan = getPlan(planId);
   const limits = plan.limits;
 
-  // Check quizzes per month (-1 means unlimited)
-  if (limits.quizzesPerMonth !== -1 && usage.quizzesThisMonth !== undefined) {
-    if (usage.quizzesThisMonth >= limits.quizzesPerMonth) {
-      return {
-        allowed: false,
-        reason: `You've reached your ${limits.quizzesPerMonth} quiz limit for this month. Upgrade to Pro for unlimited quizzes.`,
-      };
-    }
+  // Check quizzes per month
+  if (usage.quizzesThisMonth !== undefined && usage.quizzesThisMonth >= limits.quizzesPerMonth) {
+    return {
+      allowed: false,
+      reason: `You've reached your ${limits.quizzesPerMonth} quiz limit for this month. Upgrade for more quizzes.`,
+    };
   }
 
   // Check class count
-  if (limits.classesMax !== -1 && usage.classCount !== undefined) {
-    if (usage.classCount >= limits.classesMax) {
-      return {
-        allowed: false,
-        reason: `You've reached your ${limits.classesMax} class limit. Upgrade to add more classes.`,
-      };
-    }
+  if (usage.classCount !== undefined && usage.classCount >= limits.classesMax) {
+    return {
+      allowed: false,
+      reason: `You've reached your ${limits.classesMax} class limit. Upgrade to add more classes.`,
+    };
   }
 
   // Check students per class
-  if (limits.studentsPerClass !== -1 && usage.studentsInClass !== undefined) {
-    if (usage.studentsInClass >= limits.studentsPerClass) {
-      return {
-        allowed: false,
-        reason: `This class has reached the ${limits.studentsPerClass} student limit. Upgrade for more students per class.`,
-      };
-    }
+  if (usage.studentsInClass !== undefined && usage.studentsInClass >= limits.studentsPerClass) {
+    return {
+      allowed: false,
+      reason: `This class has reached the ${limits.studentsPerClass} student limit. Upgrade for more students per class.`,
+    };
   }
 
   return { allowed: true };
