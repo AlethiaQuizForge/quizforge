@@ -39,11 +39,45 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { content, subject, numQuestions, difficulty, topicFocus, questionStyle, questionType = 'multiple-choice' } = await request.json();
+    const body = await request.json();
+    const { content, subject, topicFocus, questionStyle } = body;
 
-    if (!content || content.length < 100) {
+    // Validate and sanitize inputs
+    const validDifficulties = ['basic', 'mixed', 'advanced'];
+    const validQuestionTypes = ['multiple-choice', 'true-false', 'mixed'];
+    const validQuestionStyles = ['concept', 'case', 'mixed'];
+
+    // Content validation
+    if (!content || typeof content !== 'string') {
+      return NextResponse.json(
+        { error: 'Content is required' },
+        { status: 400 }
+      );
+    }
+
+    if (content.length < 100) {
       return NextResponse.json(
         { error: 'Content must be at least 100 characters' },
+        { status: 400 }
+      );
+    }
+
+    // Sanitize numQuestions (1-100)
+    const numQuestions = Math.max(1, Math.min(100, parseInt(body.numQuestions) || 10));
+
+    // Validate difficulty
+    const difficulty = validDifficulties.includes(body.difficulty) ? body.difficulty : 'mixed';
+
+    // Validate questionType
+    const questionType = validQuestionTypes.includes(body.questionType) ? body.questionType : 'multiple-choice';
+
+    // Validate questionStyle (if provided)
+    const validatedQuestionStyle = validQuestionStyles.includes(questionStyle) ? questionStyle : 'concept';
+
+    // Validate topicFocus length
+    if (topicFocus && typeof topicFocus === 'string' && topicFocus.length > 500) {
+      return NextResponse.json(
+        { error: 'Topic focus is too long (max 500 characters)' },
         { status: 400 }
       );
     }
@@ -92,7 +126,7 @@ export async function POST(request: NextRequest) {
       ? `\nTOPIC FOCUS: Generate questions ONLY about: ${topicFocus}. Ignore any content not related to this topic.`
       : '';
 
-    const questionStyleInstruction = questionStyleGuide[questionStyle as keyof typeof questionStyleGuide] || questionStyleGuide.concept;
+    const questionStyleInstruction = questionStyleGuide[validatedQuestionStyle as keyof typeof questionStyleGuide] || questionStyleGuide.concept;
     const questionTypeInstruction = questionTypeGuide[questionType as keyof typeof questionTypeGuide] || questionTypeGuide['multiple-choice'];
 
     const questionFormatLabel = questionType === 'true-false' ? 'true/false' : questionType === 'mixed' ? 'mixed format' : 'multiple-choice';

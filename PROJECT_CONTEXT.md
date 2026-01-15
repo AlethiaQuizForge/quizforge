@@ -6,7 +6,7 @@ Use this document when starting a new Claude conversation to quickly provide con
 
 ## Quick Summary
 
-**QuizForge** is an AI-powered quiz generator web app that lets educators and students create quizzes from course materials (PDFs, Word docs, text). Built with Next.js, React, Tailwind CSS, Firebase, and the Claude API.
+**QuizForge** is an AI-powered quiz generator web app that lets educators and students create quizzes from course materials (PDFs, Word docs, PowerPoint, images, text). Built with Next.js, React, Tailwind CSS, Firebase, and the Claude API.
 
 ---
 
@@ -20,9 +20,9 @@ Use this document when starting a new Claude conversation to quickly provide con
 | AI | Claude API (claude-sonnet-4-20250514) via @anthropic-ai/sdk |
 | Database | Firebase Firestore |
 | Auth | Firebase Authentication (Email/Password, Google, Apple) |
-| File Processing | mammoth.js (Word docs), JSZip |
+| File Processing | mammoth.js (Word docs), JSZip (PPTX) |
 | Mobile | Capacitor (iOS app wrapper) |
-| Payments | Stripe (prepared, not yet active) |
+| Payments | Stripe (4 subscription tiers) |
 | Analytics | Vercel Analytics |
 | Error Monitoring | Sentry |
 | Hosting | Vercel |
@@ -44,6 +44,8 @@ quizforge-deploy 2/
 │   │   ├── generate/route.ts # Quiz generation endpoint (rate-limited)
 │   │   ├── vision/route.ts   # PDF image extraction (rate-limited)
 │   │   └── stripe/           # Stripe checkout, webhook, portal routes
+│   ├── join/[code]/page.tsx  # Organization invite join page
+│   ├── class/[code]/page.tsx # Class join redirect page
 │   ├── privacy/page.tsx      # Privacy policy
 │   └── terms/page.tsx        # Terms of service
 ├── components/
@@ -74,38 +76,150 @@ quizforge-deploy 2/
 
 ---
 
-## Key Features (Implemented)
+## Complete Feature List
 
-### For Educators/Teachers
-- Upload course materials (PDF, Word, PowerPoint, images, text)
-- AI generates multiple-choice questions from content
-- Configure: number of questions, difficulty, topic focus, question style
-- Question bank management (edit, tag, organize)
-- Create and publish quizzes from question bank
-- Class management with join codes
-- Assign quizzes to classes with due dates
-- View student submissions and analytics
+### Quiz Generation & Management
 
-### For Students
-- Join classes via codes
-- Take assigned quizzes
-- Practice mode with instant feedback
-- Progress tracking (scores, streaks, achievements)
-- Spaced repetition for review
-- Share quizzes via link
+- **AI-powered quiz generation** using Claude API (claude-sonnet-4-20250514)
+- **File upload support**: PDF, DOCX, PPTX, images, plain text (max 20MB, drag-and-drop)
+- **Claude Vision API** for image-based PDF text extraction
+- **Question types**: Multiple-choice (4 options), True/False, Mixed format
+- **Configuration options**:
+  - Number of questions (customizable)
+  - Difficulty: Basic, Mixed, Advanced
+  - Question style: Concept-focused, Case-based, Mixed
+  - Topic focus filtering
+- **Quiz management**: Edit, delete, duplicate, tag quizzes
+- **Question editing**: Edit individual questions, delete questions
+- **Publish & share**: Publish quizzes, generate shareable URLs
+- **Answer shuffling**: Options randomized on each attempt
 
-### Additional Features
-- Dark mode toggle
-- Timed quiz mode
-- Mobile-responsive design
-- PWA support
-- Onboarding flow
-- Toast notifications
-- Social sharing (X, Facebook, WhatsApp, LinkedIn)
-- Keyboard shortcuts (1-4/A-D for answers, Enter/Space for submit)
-- PDF export for quizzes
-- Smart Review (spaced repetition)
-- Enhanced quiz results with stats grid and visual breakdown
+### Authentication & User Management
+
+- **Firebase Auth**: Email/password, Google OAuth, Apple OAuth
+- **Password reset** via email
+- **Three user roles**: Teacher, Student, Creator
+- **Role-specific dashboards** and features
+- **Profile management** page
+- **Social sign-in role selection**
+
+### Teacher Features
+
+- **Class management**: Create classes with unique join codes
+- **Student roster**: View and manage enrolled students
+- **Quiz assignment**: Assign quizzes to classes with due dates and weights
+- **Submissions view**: See all student submissions and grades
+- **Analytics**:
+  - Per-question correct rate
+  - Identify hardest questions
+  - Average scores per class
+  - Student engagement metrics
+- **Teacher dashboard**: Overview of quizzes, classes, students, pending assignments
+
+### Student Features
+
+- **Class enrollment**: Join classes via codes, leave classes
+- **Quiz taking**: Take assigned quizzes with progress saving
+- **Keyboard shortcuts**: 1-4 keys, A-D letters for quick answers
+- **Results & review**: View scores, explanations, retry wrong answers only
+- **Progress tracking**:
+  - Quiz completion count
+  - Average score calculation
+  - Total questions answered
+  - Score history (last 8 scores)
+  - Topic performance breakdown
+  - Weak topics identification
+  - Daily history (last 30 days)
+- **Student dashboard**: Personal quizzes, assignments, completion status
+
+### Gamification & Engagement
+
+- **7 Achievements**:
+  - First Quiz (complete first quiz)
+  - On Fire (3-day streak)
+  - Week Warrior (7-day streak)
+  - Dedicated Learner (10 quizzes)
+  - Quiz Master (50 quizzes)
+  - Perfect Score (100% on quiz)
+  - Star Student (80%+ average)
+- **Streak tracking**: Current streak, longest streak, daily practice tracking
+- **Timed quiz mode**: Configurable time limits, countdown timer, auto-submit
+- **Leaderboard**: Top 10 scores on shared quizzes
+- **"Times Taken" counter** on shared quizzes
+- **Affirmations**: Random positive messages on correct answers (~30%)
+
+### Spaced Repetition System
+
+- **Question-level performance tracking**: Correct/wrong count per question
+- **Dynamic review scheduling** based on performance
+- **Next review date calculation**
+- **Spaced repetition practice mode**: Auto-selects 10 questions due for review
+- **Practice by topic** selection
+
+### Export & Sharing
+
+- **PDF export**: With or without answer keys, professional formatting
+- **Shareable quiz URLs**: Unique IDs, no login required to take
+- **Social sharing buttons**: X, Facebook, WhatsApp, LinkedIn
+- **Clipboard copy** with fallback modal
+
+### Subscription Plans (Stripe)
+
+| Plan | Price | Limits |
+|------|-------|--------|
+| Free | $0 | 5 quizzes/month, 1 class, 30 students |
+| Pro | $9/month | 25 quizzes/month, 3 classes, 50 students/class |
+| School | $199/month | 25 teachers, 25 quizzes/teacher/month |
+| University | $499/month | 50 professors, 35 quizzes/professor/month |
+
+- **Stripe integration**: Checkout sessions, billing portal, webhooks
+- **Plan enforcement**: Limits checked on quiz generation
+- **One-click upgrade** buttons
+
+### Organization/Enterprise Features
+
+- **Organization creation** with admin user
+- **Invite system**: 6-character alphanumeric invite codes
+- **Email domain auto-join** configuration
+- **Member management**: Add, remove, view all members
+- **Admin dashboard**:
+  - Overview tab (limits, member count, plan details)
+  - Members tab (manage membership)
+  - Settings tab (org name, email domain, invite code)
+- **Invite link**: Copy and regenerate functionality
+- **Routes**: `/join/[code]` for org invites, `/class/[code]` for class joins
+
+### UI/UX Features
+
+- **Dark mode**: Toggle with localStorage persistence
+- **Responsive design**: Mobile, tablet, desktop optimized
+- **Loading states**: Skeleton loaders, progress indicators, spinners
+- **Toast notifications**: Success, error, info, affirmation styles (auto-dismiss 3s)
+- **Modals**: Resume quiz, delete confirmation, export options, share link, timed setup
+- **Keyboard navigation**: 1-4, A-D, Enter key support
+- **Onboarding flow** for new users
+
+### Data & Sync
+
+- **Firebase Firestore**: Cloud storage with real-time sync
+- **Offline support**: Data queuing with sync indicators, pending count
+- **Local storage**: UI preferences, quiz progress auto-save, resume functionality
+
+### Infrastructure
+
+- **Rate limiting**: 10 quizzes/hour, 20 vision requests/hour per IP
+- **Sentry**: Client and server-side error tracking
+- **Vercel Analytics**: Usage tracking
+- **PWA support**: Web manifest, Capacitor for iOS native app
+- **SEO**: OpenGraph, Twitter cards, JSON-LD structured data
+
+### Static Pages
+
+- `/` - Landing page with feature showcase and auth
+- `/privacy` - Privacy Policy
+- `/terms` - Terms of Service
+- `/join/[code]` - Organization invite page
+- `/class/[code]` - Class join redirect
 
 ---
 
@@ -122,7 +236,8 @@ Generates quiz questions from content using Claude.
   "numQuestions": 10,
   "difficulty": "basic|mixed|advanced",
   "topicFocus": "Optional specific topic",
-  "questionStyle": "concept|case|mixed"
+  "questionStyle": "concept|case|mixed",
+  "questionType": "multiple-choice|true-false|mixed"
 }
 ```
 
@@ -134,8 +249,7 @@ Generates quiz questions from content using Claude.
       "question": "Question text?",
       "options": [
         {"text": "Option A", "isCorrect": false},
-        {"text": "Option B", "isCorrect": true},
-        ...
+        {"text": "Option B", "isCorrect": true}
       ],
       "explanation": "Why B is correct",
       "topic": "Topic name",
@@ -155,15 +269,32 @@ Extracts text from PDF page images using Claude Vision.
 }
 ```
 
+### Stripe Endpoints
+- `POST /api/stripe/create-checkout` - Create checkout session
+- `POST /api/stripe/portal` - Create billing portal session
+- `POST /api/stripe/webhook` - Handle Stripe events
+
 ---
 
 ## Firebase Structure
 
-- **Auth**: Email/password, Google, Apple sign-in
-- **Firestore Collection**: `userData`
-  - `quizforge-account-{uid}`: User profile (name, role, etc.)
-  - `quizforge-data-{uid}`: User data (quizzes, classes, progress)
-  - `shared-{quizId}`: Publicly shared quizzes
+### Authentication
+- Email/password, Google, Apple sign-in
+
+### Firestore Collections
+
+| Collection | Purpose |
+|------------|---------|
+| `userData` | Per-user data (account info, local quizzes, progress) |
+| `classes` | Global classes (searchable by code) |
+| `assignments` | Global assignments with embedded quiz questions |
+| `submissions` | Student submissions (studentId, email, assignmentId, score, answers) |
+| `organizations` | Organization data (members, settings, invite codes) |
+| `shared-{id}` | Publicly shared quizzes (includes `timesTaken` counter, leaderboard) |
+
+### Document Patterns
+- `quizforge-account-{uid}` - User profile (name, role, plan, org membership)
+- `quizforge-data-{uid}` - User data (quizzes, classes, progress, achievements)
 
 ---
 
@@ -175,72 +306,53 @@ ANTHROPIC_API_KEY=sk-ant-...
 NEXT_PUBLIC_SENTRY_DSN=https://...@sentry.io/...
 ```
 
-Optional (for Stripe subscriptions - see docs/STRIPE_SETUP.md):
+For Stripe subscriptions (see docs/STRIPE_SETUP.md):
 ```
 STRIPE_SECRET_KEY=sk_live_...
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_PRO_PRICE_ID=price_...
-STRIPE_INSTITUTION_PRICE_ID=price_...
+STRIPE_SCHOOL_PRICE_ID=price_...
+STRIPE_UNIVERSITY_PRICE_ID=price_...
 ```
 
 Firebase config is currently hardcoded in `QuizForge.jsx` (project: quizforge-58f79)
 
 ---
 
-## Current State / Known Issues
+## Architecture Notes
 
-### Recently Fixed (Jan 2026):
-- ✅ URL routing bug - users can now bookmark pages, refresh without 404, use browser back/forward
-- ✅ Removed duplicate "Forgot password?" link on auth page
-- ✅ Fixed onboarding step indicator (shows 3 dots only during steps 1-3)
-- ✅ Fixed Question Style dropdown text truncation
-- ✅ Improved text visibility across landing page ("Log In", "I'm a Teacher", "Study Smarter" etc.)
-- ✅ Contact link in footer uses mailto (working as intended)
-- ✅ **Firestore-based class joining** - students can now join ANY teacher's class by code
-- ✅ **Firestore-based assignments** - students can now see quizzes assigned to their classes
-- ✅ **Firestore-based submissions** - teachers can now see student quiz results across devices
-- ✅ Fixed Sign Up button visibility (gradient amber-to-orange style)
-- ✅ Fixed share URL bug - sharing results from a friend's quiz now includes correct link
-- ✅ Fixed duplicate submission check - uses studentId/email instead of name
-- ✅ **"Times Taken" gamification** - shared quizzes now track and display play count
-
-### Architecture Changes (Jan 2026):
-- Classes are now stored in global `classes` collection in Firestore (not just per-user)
-- Assignments are stored in global `assignments` collection with embedded quiz data
-- Submissions are now stored in global `submissions` collection in Firestore
-- When student joins a class → fetches assignments from Firestore
-- When student logs in → syncs assignments for all joined classes from Firestore
-- When teacher assigns quiz → saves to Firestore with quiz questions embedded
+### Class/Assignment System (Jan 2026)
+- Classes stored in global `classes` collection (searchable by code)
+- Assignments stored in global `assignments` collection with embedded quiz data
+- Submissions stored in global `submissions` collection
+- When student joins class → fetches assignments from Firestore
+- When student logs in → syncs assignments for all joined classes
+- When teacher assigns quiz → saves to Firestore with questions embedded
 - When student completes quiz → submission saved to Firestore
-- When teacher logs in → fetches all submissions for their assignments from Firestore
+- When teacher logs in → fetches all submissions for their assignments
 
-### Firestore Collections:
-- `userData` - Per-user data (account info, local quizzes, progress)
-- `classes` - Global classes collection (searchable by code)
-- `assignments` - Global assignments with embedded quiz questions
-- `submissions` - Global submissions (studentId, studentEmail, assignmentId, score, answers, etc.)
-- `shared-{id}` - Publicly shared quizzes (now includes `timesTaken` counter)
+### Organization System
+- Organizations have admin users who can invite others
+- Members join via invite codes or email domain auto-join
+- Organization admins manage members and settings
+- Plans (School/University) are organization-level with per-teacher limits
 
-### Recently Added (Jan 2026):
-- ✅ **SEO & Social**: OG images, Twitter cards, sitemap, Google/Bing verification
-- ✅ **Analytics**: Vercel Analytics integration
-- ✅ **Error Monitoring**: Sentry with client and server-side tracking
-- ✅ **Social Sharing**: X, Facebook, WhatsApp, LinkedIn share buttons
-- ✅ **UX Improvements**: Keyboard shortcuts (1-4/A-D), enhanced results view
-- ✅ **PDF Export**: Export quizzes from dashboard
-- ✅ **Rate Limiting**: API protection (10 quizzes/hr, 20 vision requests/hr)
-- ✅ **Stripe Infrastructure**: Subscription system built (inactive until configured)
-  - Plans: Free (5 quizzes/mo), Pro ($9 - unlimited), Institution ($199)
-  - Philosophy: Same product quality for all, differentiate by volume only
+---
 
-### Known Issues:
+## Known Issues
+
 - Teacher's student roster only updates on login (no real-time sync)
 
-### Next Steps:
-- Activate Stripe subscriptions (see docs/STRIPE_SETUP.md)
-- Add real-time updates for class roster
-- Consider adding leaderboards for shared quizzes
+---
+
+## Potential Future Enhancements
+
+- Real-time updates for class roster
+- More detailed analytics dashboards
+- Question import/export (CSV, JSON)
+- Integration with LMS platforms (Canvas, Blackboard)
+- AI-powered question difficulty calibration
 
 ---
 
@@ -251,7 +363,7 @@ Copy and paste this to start your new conversation:
 ```
 I'm continuing work on QuizForge, an AI-powered quiz generator app.
 
-Tech stack: Next.js 16, React 19, Tailwind CSS, Firebase (Auth + Firestore), Claude API
+Tech stack: Next.js 16, React 19, Tailwind CSS, Firebase (Auth + Firestore), Claude API, Stripe
 
 The main component is components/QuizForge.jsx (~6000 lines). API routes are in app/api/.
 

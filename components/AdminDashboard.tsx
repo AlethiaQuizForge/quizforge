@@ -206,7 +206,7 @@ export function AdminDashboard({ orgId, userId, onBack, showToast }: AdminDashbo
               <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
                 <p className="text-3xl font-bold text-slate-900 dark:text-white">{activeMembers.length}</p>
                 <p className="text-sm text-slate-500 dark:text-slate-300">
-                  Teachers ({limits?.teachers} max)
+                  Active Teachers ({limits?.teachers} max)
                 </p>
               </div>
               <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">

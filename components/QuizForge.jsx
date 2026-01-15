@@ -227,7 +227,20 @@ export default function QuizForge() {
       try {
         const result = await storage.get(`shared-${sharedId}`);
         if (result && result.value) {
-          const quizData = JSON.parse(result.value);
+          let quizData;
+          try {
+            quizData = JSON.parse(result.value);
+          } catch (parseErr) {
+            console.log('Invalid shared quiz data format');
+            showToast('This quiz link is invalid or corrupted', 'error');
+            return;
+          }
+          // Validate quiz data structure
+          if (!quizData || !Array.isArray(quizData.questions) || quizData.questions.length === 0) {
+            console.log('Shared quiz has invalid structure');
+            showToast('This quiz appears to be empty or corrupted', 'error');
+            return;
+          }
           setSharedQuizData(quizData);
           setSharedQuizMode(true);
           setCurrentQuiz(quizData);
@@ -235,9 +248,11 @@ export default function QuizForge() {
           setPage('take-quiz');
         } else {
           console.log('Shared quiz not found');
+          showToast('Quiz not found. The link may be invalid or expired.', 'error');
         }
       } catch (err) {
         console.log('Could not load shared quiz:', err);
+        showToast('Could not load quiz. Please try again.', 'error');
       }
     }
   };
@@ -271,7 +286,14 @@ export default function QuizForge() {
 
     if (pendingOrgStr && isOrgJoinFlow && auth.currentUser && userType === 'teacher') {
       try {
-        const pendingOrg = JSON.parse(pendingOrgStr);
+        let pendingOrg;
+        try {
+          pendingOrg = JSON.parse(pendingOrgStr);
+        } catch {
+          sessionStorage.removeItem('pendingOrgJoin');
+          showToast('Invalid organization invite. Please try the link again.', 'error');
+          return;
+        }
         sessionStorage.removeItem('pendingOrgJoin');
         window.history.replaceState({}, '', window.location.pathname);
 
@@ -309,6 +331,9 @@ export default function QuizForge() {
     }
   };
 
+  // Subscription poll interval ref (for cleanup)
+  const subscriptionPollRef = useRef(null);
+
   // Check for subscription success/cancel in URL params
   const checkForSubscriptionStatus = async () => {
     if (typeof window === 'undefined') return;
@@ -326,20 +351,45 @@ export default function QuizForge() {
       if (auth.currentUser) {
         let attempts = 0;
         const maxAttempts = 10;
-        const pollInterval = setInterval(async () => {
+
+        // Clear any existing poll
+        if (subscriptionPollRef.current) {
+          clearInterval(subscriptionPollRef.current);
+        }
+
+        subscriptionPollRef.current = setInterval(async () => {
           attempts++;
-          const result = await storage.get(`quizforge-account-${auth.currentUser.uid}`);
-          if (result && result.value) {
-            const userData = JSON.parse(result.value);
-            if (userData.plan === 'pro') {
-              clearInterval(pollInterval);
-              setUser(userData);
-              setUserPlan('pro');
-            } else if (attempts >= maxAttempts) {
-              clearInterval(pollInterval);
-              // Still show as pro optimistically - webhook may be delayed
-              setUserPlan('pro');
+
+          // Safety check - stop if user logged out
+          if (!auth.currentUser) {
+            clearInterval(subscriptionPollRef.current);
+            subscriptionPollRef.current = null;
+            return;
+          }
+
+          try {
+            const result = await storage.get(`quizforge-account-${auth.currentUser.uid}`);
+            if (result && result.value) {
+              let userData;
+              try {
+                userData = JSON.parse(result.value);
+              } catch {
+                return; // Invalid JSON, skip this poll cycle
+              }
+              if (userData.plan === 'pro') {
+                clearInterval(subscriptionPollRef.current);
+                subscriptionPollRef.current = null;
+                setUser(userData);
+                setUserPlan('pro');
+              } else if (attempts >= maxAttempts) {
+                clearInterval(subscriptionPollRef.current);
+                subscriptionPollRef.current = null;
+                // Still show as pro optimistically - webhook may be delayed
+                setUserPlan('pro');
+              }
             }
+          } catch (err) {
+            console.log('Error polling subscription status:', err);
           }
         }, 2000); // Check every 2 seconds
       }
@@ -348,6 +398,15 @@ export default function QuizForge() {
       showToast('Subscription cancelled. You can upgrade anytime.', 'info');
     }
   };
+
+  // Cleanup subscription poll on unmount
+  useEffect(() => {
+    return () => {
+      if (subscriptionPollRef.current) {
+        clearInterval(subscriptionPollRef.current);
+      }
+    };
+  }, []);
 
   // Listen for Firebase auth state changes
   useEffect(() => {
@@ -401,22 +460,32 @@ export default function QuizForge() {
               const localClasses = data.classes || [];
               if (localClasses.length > 0) {
                 try {
-                  const syncedClasses = await Promise.all(
+                  // Use Promise.allSettled to handle individual class sync failures gracefully
+                  const results = await Promise.allSettled(
                     localClasses.map(async (cls) => {
-                      const classDoc = await getDoc(doc(db, 'classes', cls.id));
-                      if (classDoc.exists()) {
-                        return { ...cls, ...classDoc.data() };
+                      try {
+                        const classDoc = await getDoc(doc(db, 'classes', cls.id));
+                        if (classDoc.exists()) {
+                          return { ...cls, ...classDoc.data() };
+                        }
+                        // If not in Firestore yet, save it
+                        await setDoc(doc(db, 'classes', cls.id), {
+                          ...cls,
+                          teacherId: userData.email,
+                          teacherName: userData.name
+                        });
+                        return cls;
+                      } catch (err) {
+                        console.log(`Error syncing class ${cls.id}:`, err);
+                        return cls; // Fall back to local data on error
                       }
-                      // If not in Firestore yet, save it
-                      await setDoc(doc(db, 'classes', cls.id), {
-                        ...cls,
-                        teacherId: userData.email,
-                        teacherName: userData.name
-                      });
-                      return cls;
                     })
                   );
-                  setClasses(syncedClasses);
+                  // Extract values from settled promises
+                  const syncedClasses = results
+                    .map(r => r.status === 'fulfilled' ? r.value : null)
+                    .filter(Boolean);
+                  setClasses(syncedClasses.length > 0 ? syncedClasses : localClasses);
                 } catch (e) {
                   console.log('Error syncing classes from Firestore:', e);
                   setClasses(localClasses);
@@ -1515,13 +1584,24 @@ export default function QuizForge() {
         });
         
         setUploadController(null);
-        
+
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || `Vision API error for ${file.name}`);
+          let errorMsg = `Vision API error for ${file.name}`;
+          try {
+            const errorData = await response.json();
+            errorMsg = errorData.error || errorMsg;
+          } catch {
+            // Response wasn't valid JSON, use default error message
+          }
+          throw new Error(errorMsg);
         }
-        
-        const data = await response.json();
+
+        let data;
+        try {
+          data = await response.json();
+        } catch {
+          throw new Error(`Invalid response from Vision API for ${file.name}`);
+        }
         const visionText = data.text || '';
         
         if (visionText.length > 200) {
@@ -1595,12 +1675,26 @@ export default function QuizForge() {
     }
 
     setUploadProgress({ active: true, step: `Processing ${fileArray.length} file(s)...`, progress: 5 });
-    
+
+    // Helper to add timeout to file processing
+    const processFileWithTimeout = async (file, idx, total, timeoutMs = 120000) => {
+      return Promise.race([
+        processFile(file, idx, total),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error(`File processing timed out: ${file.name}`)), timeoutMs)
+        )
+      ]);
+    };
+
     try {
       const results = [];
       for (let i = 0; i < fileArray.length; i++) {
-        const result = await processFile(fileArray[i], i, fileArray.length);
-        results.push(result);
+        try {
+          const result = await processFileWithTimeout(fileArray[i], i, fileArray.length);
+          results.push(result);
+        } catch (timeoutErr) {
+          results.push({ success: false, error: timeoutErr.message, name: fileArray[i].name });
+        }
       }
       
       const successful = results.filter(r => r.success);
@@ -2279,9 +2373,17 @@ ${quizContent.substring(0, 40000)}
 
   const checkAnswer = () => {
     if (quizState.selectedAnswer === null) return;
-    const q = currentQuiz?.questions?.[quizState.currentQuestion];
-    if (!q || !q.options) return; // Defensive check for null reference
-    const isCorrect = q.options[quizState.selectedAnswer]?.isCorrect;
+
+    // Bounds checking
+    const questions = currentQuiz?.questions;
+    if (!questions || !Array.isArray(questions)) return;
+    if (quizState.currentQuestion < 0 || quizState.currentQuestion >= questions.length) return;
+
+    const q = questions[quizState.currentQuestion];
+    if (!q || !q.options || !Array.isArray(q.options)) return;
+    if (quizState.selectedAnswer < 0 || quizState.selectedAnswer >= q.options.length) return;
+
+    const isCorrect = q.options[quizState.selectedAnswer]?.isCorrect ?? false;
     
     const newAnswered = new Set(quizState.answeredQuestions);
     newAnswered.add(quizState.currentQuestion);
@@ -2313,10 +2415,17 @@ ${quizContent.substring(0, 40000)}
       // Quiz completed - update progress with streak and achievements
       const score = quizState.score;
       const total = currentQuiz.questions.length;
-      
+
       // Stop timer if timed mode
       stopTimer();
-      
+
+      // Navigate to results immediately for better UX
+      setPage('quiz-results');
+
+      // Run all updates in parallel but don't block the UI
+      // Use Promise.allSettled to ensure all updates are attempted even if some fail
+      const updatePromises = [];
+
       // Update spaced repetition data for each question
       quizState.results.forEach((result, i) => {
         const question = currentQuiz.questions[i];
@@ -2324,10 +2433,10 @@ ${quizContent.substring(0, 40000)}
           updateQuestionHistory(question.id, result.correct);
         }
       });
-      
+
       // Update daily history for progress charts
       updateDailyHistory(score, total);
-      
+
       setStudentProgress(p => {
         // Update streak
         let updatedProgress = updateStreak(p);
@@ -2344,42 +2453,57 @@ ${quizContent.substring(0, 40000)}
 
         return updatedProgress;
       });
-      
+
+      // Submit assignment result
       if (currentAssignment) {
-        submitQuizResult(currentAssignment.id, score, total, quizState.results);
+        updatePromises.push(
+          submitQuizResult(currentAssignment.id, score, total, quizState.results)
+            .catch(err => console.log('Failed to submit quiz result:', err))
+        );
         setCurrentAssignment(null);
       }
 
       // Increment times taken and update leaderboard for shared quizzes
       if (typeof currentQuiz?.id === 'string' && currentQuiz.id.startsWith('s')) {
-        try {
-          const result = await storage.get(`shared-${currentQuiz.id}`);
-          if (result && result.value) {
-            const sharedData = JSON.parse(result.value);
-            sharedData.timesTaken = (sharedData.timesTaken || 0) + 1;
+        updatePromises.push((async () => {
+          try {
+            const result = await storage.get(`shared-${currentQuiz.id}`);
+            if (result && result.value) {
+              let sharedData;
+              try {
+                sharedData = JSON.parse(result.value);
+              } catch {
+                console.log('Invalid shared quiz data');
+                return;
+              }
+              sharedData.timesTaken = (sharedData.timesTaken || 0) + 1;
 
-            // Update leaderboard (top 10 scores)
-            const playerName = user?.name || 'Anonymous';
-            const playerScore = Math.round((score / total) * 100);
-            const leaderboard = sharedData.leaderboard || [];
-            const newEntry = { name: playerName, score: playerScore, date: Date.now() };
+              // Update leaderboard (top 10 scores)
+              const playerName = user?.name || 'Anonymous';
+              const playerScore = Math.round((score / total) * 100);
+              const leaderboard = sharedData.leaderboard || [];
+              const newEntry = { name: playerName, score: playerScore, date: Date.now() };
 
-            // Add new entry and keep top 10
-            leaderboard.push(newEntry);
-            leaderboard.sort((a, b) => b.score - a.score || a.date - b.date);
-            sharedData.leaderboard = leaderboard.slice(0, 10);
+              // Add new entry and keep top 10
+              leaderboard.push(newEntry);
+              leaderboard.sort((a, b) => b.score - a.score || a.date - b.date);
+              sharedData.leaderboard = leaderboard.slice(0, 10);
 
-            await storage.set(`shared-${currentQuiz.id}`, JSON.stringify(sharedData));
-            // Update local state so UI shows updated count and leaderboard
-            setSharedQuizData(sharedData);
-            setCurrentQuiz(q => ({ ...q, timesTaken: sharedData.timesTaken, leaderboard: sharedData.leaderboard }));
+              await storage.set(`shared-${currentQuiz.id}`, JSON.stringify(sharedData));
+              // Update local state so UI shows updated count and leaderboard
+              setSharedQuizData(sharedData);
+              setCurrentQuiz(q => ({ ...q, timesTaken: sharedData.timesTaken, leaderboard: sharedData.leaderboard }));
+            }
+          } catch (e) {
+            console.log('Could not update times taken:', e);
           }
-        } catch (e) {
-          console.log('Could not update times taken:', e);
-        }
+        })());
       }
 
-      setPage('quiz-results');
+      // Wait for all updates to complete (but don't block - already navigated to results)
+      if (updatePromises.length > 0) {
+        Promise.allSettled(updatePromises).catch(() => {});
+      }
     }
   };
 
@@ -2514,25 +2638,14 @@ ${quizContent.substring(0, 40000)}
     );
   }
 
-  // Show loading state
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4 animate-pulse">⚡</div>
-          <p className="text-white/60">Loading QuizForge...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className={`min-h-screen ${darkMode ? 'dark bg-slate-900' : ''}`}>
       {/* Dark Mode Toggle - Fixed position */}
       <button
         onClick={() => setDarkMode(!darkMode)}
         className="fixed bottom-6 left-6 z-50 p-3 bg-slate-800 dark:bg-white text-white dark:text-slate-900 rounded-full shadow-lg hover:scale-110 transition-transform"
-        title={darkMode ? 'Light Mode' : 'Dark Mode'}
+        title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+        aria-label={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
       >
         {darkMode ? '☀️' : '🌙'}
       </button>
@@ -2559,7 +2672,7 @@ ${quizContent.substring(0, 40000)}
 
       {/* Modal */}
       {modal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setModal(null); setModalInput(''); }}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { if (!isActionLoading) { setModal(null); setModalInput(''); } }}>
           <div className={`bg-white dark:bg-slate-800 rounded-2xl p-6 w-full mx-4 shadow-2xl ${modal?.type === 'review-answers' ? 'max-w-3xl max-h-[80vh] overflow-y-auto' : 'max-w-md'}`} onClick={e => e.stopPropagation()}>
             {modal?.title && <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">{modal.title}</h3>}
 
@@ -4085,8 +4198,14 @@ ${quizContent.substring(0, 40000)}
                 <h2 className="font-semibold text-slate-900 dark:text-white mb-4">Account Actions</h2>
                 <div className="space-y-3">
                   <button
-                    onClick={resetData}
+                    onClick={() => setModal({
+                      type: 'confirm',
+                      title: 'Reset All Data?',
+                      message: 'This will permanently delete all your quizzes, classes, progress, and achievements. This action cannot be undone.',
+                      onConfirm: resetData
+                    })}
                     className="w-full p-3 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl text-left flex items-center gap-3"
+                    aria-label="Reset all data"
                   >
                     <span className="text-xl">🔄</span>
                     <div>
