@@ -67,6 +67,17 @@ export async function POST(request: NextRequest) {
       tax_id_collection: {
         enabled: true,
       },
+      // Enable invoice generation and emails
+      invoice_creation: {
+        enabled: true,
+      },
+      // Subscription settings
+      subscription_data: {
+        metadata: {
+          userId,
+          planId,
+        },
+      },
     });
 
     return NextResponse.json({ url: session.url });
