@@ -10,6 +10,7 @@
 import {
   doc,
   getDoc,
+  getDocs,
   setDoc,
   updateDoc,
   collection,
@@ -344,8 +345,7 @@ export async function verifyMigration(userId: string): Promise<{
   const legacyQuizCount = legacyData?.quizzes?.length || 0;
 
   // Get new data
-  const { getDocs, collection: coll, query: q } = await import('firebase/firestore');
-  const quizzesRef = coll(db, 'users', userId, 'quizzes');
+  const quizzesRef = collection(db, 'users', userId, 'quizzes');
   const quizzesSnap = await getDocs(quizzesRef);
   const newQuizCount = quizzesSnap.size;
 

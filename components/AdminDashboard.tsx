@@ -7,13 +7,13 @@ import {
   SharedQuiz,
   getOrganization,
   getOrgMembers,
-  getActiveMemberCount,
   removeMemberFromOrg,
   regenerateInviteCode,
   updateOrganization,
   getOrgLimits,
   getOrgSharedQuizzes,
   deleteSharedQuiz,
+  getSharedQuizById,
 } from '@/lib/organizations';
 import {
   OrgOverview,
@@ -25,14 +25,23 @@ import {
   refreshOrgAnalytics,
 } from '@/lib/orgAnalytics';
 
+interface CopiedQuiz {
+  id: string;
+  title: string;
+  subject: string;
+  questions: SharedQuiz['questions'];
+  tags?: string[];
+}
+
 interface AdminDashboardProps {
   orgId: string;
   userId: string;
   onBack: () => void;
   showToast: (message: string, type: 'success' | 'error' | 'info') => void;
+  onCopyQuiz?: (quiz: CopiedQuiz) => void; // Optional callback to copy quiz to user's quizzes
 }
 
-export function AdminDashboard({ orgId, userId, onBack, showToast }: AdminDashboardProps) {
+export function AdminDashboard({ orgId, userId, onBack, showToast, onCopyQuiz }: AdminDashboardProps) {
   const [org, setOrg] = useState<Organization | null>(null);
   const [members, setMembers] = useState<OrgMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -138,6 +147,47 @@ export function AdminDashboard({ orgId, userId, onBack, showToast }: AdminDashbo
       showToast('Failed to refresh analytics', 'error');
     } finally {
       setAnalyticsLoading(false);
+    }
+  }
+
+  async function handleCopyQuiz(quiz: SharedQuiz) {
+    if (!onCopyQuiz) {
+      showToast('Copy feature not available', 'error');
+      return;
+    }
+
+    setIsActionLoading(true);
+    try {
+      // Get full quiz data
+      const fullQuiz = await getSharedQuizById(orgId, quiz.id);
+      if (!fullQuiz) {
+        showToast('Quiz not found', 'error');
+        return;
+      }
+
+      // Create a new quiz ID for the copy
+      const newQuizId = `quiz_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // Call the callback with the quiz data
+      onCopyQuiz({
+        id: newQuizId,
+        title: `${fullQuiz.title} (Copy)`,
+        subject: fullQuiz.subject,
+        questions: fullQuiz.questions,
+        tags: fullQuiz.tags,
+      });
+
+      // Update usage count in the UI
+      setSharedQuizzes(sharedQuizzes.map(q =>
+        q.id === quiz.id ? { ...q, usageCount: q.usageCount + 1 } : q
+      ));
+
+      showToast(`Quiz copied to your library!`, 'success');
+    } catch (err) {
+      console.error('Failed to copy quiz:', err);
+      showToast('Failed to copy quiz', 'error');
+    } finally {
+      setIsActionLoading(false);
     }
   }
 
@@ -524,6 +574,16 @@ export function AdminDashboard({ orgId, userId, onBack, showToast }: AdminDashbo
                         )}
                       </div>
                       <div className="flex items-center gap-2">
+                        {onCopyQuiz && (
+                          <button
+                            onClick={() => handleCopyQuiz(quiz)}
+                            disabled={isActionLoading}
+                            className="px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-900/70 rounded-lg text-sm font-medium"
+                            title="Copy to my quizzes"
+                          >
+                            📋 Copy
+                          </button>
+                        )}
                         {(isAdmin || quiz.sharedBy === userId) && (
                           <button
                             onClick={() => handleDeleteSharedQuiz(quiz.id, quiz.title)}

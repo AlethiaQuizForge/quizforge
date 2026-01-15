@@ -3216,6 +3216,7 @@ ${quizContent.substring(0, 40000)}
                       </button>
                       <button
                         onClick={() => {
+                          setModalInput('');
                           setModal({ type: 'input', title: 'Create New Class', placeholder: 'Class name (e.g., Economics 101)', confirmText: 'Create', onConfirm: createClass });
                         }}
                         className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium"
@@ -4455,7 +4456,7 @@ ${quizContent.substring(0, 40000)}
             <div className="grid lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 grid md:grid-cols-2 gap-4">
                 <button onClick={() => setPage('create-quiz')} className="p-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl text-white text-left"><span className="text-3xl mb-2 block">⚡</span><span className="font-semibold block">Generate Quiz</span><span className="text-sm text-indigo-200">From any material</span></button>
-                <button onClick={() => setModal({ type: 'input', title: 'Create New Class', placeholder: 'Class name', confirmText: 'Create', onConfirm: createClass })} className="p-6 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-left hover:border-indigo-300 dark:hover:border-indigo-600"><span className="text-3xl mb-2 block">👥</span><span className="font-semibold text-slate-900 dark:text-white block">Create Class</span><span className="text-sm text-slate-500 dark:text-slate-300">Get join code</span></button>
+                <button onClick={() => { setModalInput(''); setModal({ type: 'input', title: 'Create New Class', placeholder: 'Class name', confirmText: 'Create', onConfirm: createClass }); }} className="p-6 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-left hover:border-indigo-300 dark:hover:border-indigo-600"><span className="text-3xl mb-2 block">👥</span><span className="font-semibold text-slate-900 dark:text-white block">Create Class</span><span className="text-sm text-slate-500 dark:text-slate-300">Get join code</span></button>
                 <button onClick={() => setPage('class-manager')} className="p-6 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-left hover:border-indigo-300 dark:hover:border-indigo-600"><span className="text-3xl mb-2 block">📊</span><span className="font-semibold text-slate-900 dark:text-white block">View Results</span><span className="text-sm text-slate-500 dark:text-slate-300">Track performance</span></button>
                 <button onClick={() => setPage('class-manager')} className="p-6 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-left hover:border-indigo-300 dark:hover:border-indigo-600"><span className="text-3xl mb-2 block">📨</span><span className="font-semibold text-slate-900 dark:text-white block">Assign Quiz</span><span className="text-sm text-slate-500 dark:text-slate-300">Send to classes</span></button>
               </div>
@@ -4731,7 +4732,7 @@ ${quizContent.substring(0, 40000)}
             {classes.length === 0 ? (
               <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-12 text-center">
                 <div className="text-5xl mb-4">👥</div><h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No Classes Yet</h3>
-                <button onClick={() => setModal({ type: 'input', title: 'Create New Class', placeholder: 'Class name (e.g., Economics 101)', confirmText: 'Create', onConfirm: createClass })} className="px-6 py-2 bg-indigo-600 text-white rounded-lg">Create Class</button>
+                <button onClick={() => { setModalInput(''); setModal({ type: 'input', title: 'Create New Class', placeholder: 'Class name (e.g., Economics 101)', confirmText: 'Create', onConfirm: createClass }); }} className="px-6 py-2 bg-indigo-600 text-white rounded-lg">Create Class</button>
               </div>
             ) : (() => {
               // Calculate class stats
@@ -4787,7 +4788,7 @@ ${quizContent.substring(0, 40000)}
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => setModal({ type: 'input', title: 'Create New Class', placeholder: 'Class name', confirmText: 'Create', onConfirm: createClass })} className="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-medium hover:bg-slate-200 dark:hover:bg-slate-600 text-sm">+ New Class</button>
+                        <button onClick={() => { setModalInput(''); setModal({ type: 'input', title: 'Create New Class', placeholder: 'Class name', confirmText: 'Create', onConfirm: createClass }); }} className="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-medium hover:bg-slate-200 dark:hover:bg-slate-600 text-sm">+ New Class</button>
                         <button onClick={() => quizzes.length > 0 ? setModal({ type: 'select', title: 'Assign Quiz to ' + selectedClass?.name }) : showToast('Create a quiz first', 'error')} className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-500 text-sm">+ Assign Quiz</button>
                       </div>
                     </div>
