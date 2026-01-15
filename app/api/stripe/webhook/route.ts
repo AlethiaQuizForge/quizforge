@@ -99,7 +99,8 @@ export async function POST(request: NextRequest) {
               const userDoc = await getDoc(userDocRef);
               if (userDoc.exists()) {
                 const existingData = userDoc.data();
-                let userData = {};
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                let userData: Record<string, any> = {};
 
                 // Parse existing value if it exists
                 if (existingData.value) {
