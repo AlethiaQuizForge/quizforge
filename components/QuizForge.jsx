@@ -578,6 +578,18 @@ export default function QuizForge() {
     }
   }, [isLoggedIn, userType]);
 
+  // Trigger gradual migration to subcollection structure on login
+  useEffect(() => {
+    if (isLoggedIn && auth.currentUser) {
+      // Run migration check in background (non-blocking)
+      import('@/lib/migration').then(({ checkAndMigrateOnLogin }) => {
+        checkAndMigrateOnLogin(auth.currentUser.uid);
+      }).catch(err => {
+        console.log('Migration check skipped:', err.message);
+      });
+    }
+  }, [isLoggedIn]);
+
   // Real-time listener for class roster updates (teachers only)
   useEffect(() => {
     if (!isLoggedIn || userType !== 'teacher' || classes.length === 0) return;
@@ -2024,6 +2036,46 @@ ${quizContent.substring(0, 40000)}
     setQuizzes(prev => [...prev, newQuiz]);
     showToast(`✅ Quiz duplicated!`, 'success');
     setModal(null);
+  };
+
+  // Share quiz to organization library
+  const shareQuizToOrg = async (quiz) => {
+    if (!auth.currentUser || userOrganizations.length === 0) {
+      showToast('You must be part of an organization to share quizzes', 'error');
+      return;
+    }
+
+    try {
+      const { shareQuizWithOrg } = await import('@/lib/organizations');
+
+      // Use first organization (most users will only have one)
+      const org = userOrganizations[0];
+
+      const result = await shareQuizWithOrg(
+        org.orgId,
+        {
+          userId: auth.currentUser.uid,
+          displayName: userName || 'Unknown Teacher',
+          email: user?.email || auth.currentUser.email || 'unknown@email.com',
+        },
+        {
+          id: quiz.id,
+          title: quiz.name,
+          subject: quiz.subject || 'General',
+          questions: quiz.questions,
+          tags: quiz.tags,
+        }
+      );
+
+      if (result.success) {
+        showToast(`✅ Shared to ${org.orgName} library!`, 'success');
+      } else {
+        showToast(result.error || 'Failed to share quiz', 'error');
+      }
+    } catch (err) {
+      console.error('Error sharing to org:', err);
+      showToast('Failed to share quiz to organization', 'error');
+    }
   };
 
   // Edit quiz question
@@ -4600,6 +4652,9 @@ ${quizContent.substring(0, 40000)}
                             <button onClick={() => setModal({ type: 'export-pdf', quiz })} className="px-2 py-1.5 text-slate-400 dark:text-slate-500 hover:text-green-500 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/50 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity" title="Export PDF">📄</button>
                             <button onClick={() => duplicateQuiz(quiz)} className="px-2 py-1.5 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/50 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity" title="Duplicate">📋</button>
                             <button onClick={() => setModal({ type: 'delete-confirm', quizId: quiz.id, quizName: quiz.name })} className="px-2 py-1.5 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/50 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity" title="Delete">🗑️</button>
+                            {userOrganizations.length > 0 && (
+                              <button onClick={() => shareQuizToOrg(quiz)} className="px-2 py-1.5 text-slate-400 dark:text-slate-500 hover:text-purple-500 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/50 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity" title="Share to organization">🏫</button>
+                            )}
                             <button onClick={() => shareQuiz(quiz)} className="px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/50 hover:bg-indigo-200 dark:hover:bg-indigo-900/70 text-indigo-700 dark:text-indigo-300 rounded-lg text-sm" title="Share quiz">🔗 Share</button>
                             <button onClick={() => { setCurrentQuiz(quiz); setPage('review-quiz'); }} className="px-3 py-1.5 bg-slate-200 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-500 text-slate-700 dark:text-white rounded-lg text-sm">View</button>
                             <button onClick={() => {

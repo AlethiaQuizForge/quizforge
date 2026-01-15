@@ -14,7 +14,8 @@ import {
   arrayUnion,
   arrayRemove,
   serverTimestamp,
-  Timestamp
+  Timestamp,
+  orderBy,
 } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -503,4 +504,197 @@ export async function canCreateClass(
   }
 
   return { allowed: true };
+}
+
+// =============================================================================
+// Organization Quiz Sharing
+// =============================================================================
+
+export interface SharedQuiz {
+  id: string;
+  title: string;
+  subject: string;
+  questions: {
+    question: string;
+    options: { text: string; isCorrect: boolean }[];
+    explanation: string;
+    topic?: string;
+    difficulty?: string;
+  }[];
+  sharedBy: string;
+  sharedByName: string;
+  sharedByEmail: string;
+  sharedAt: Timestamp;
+  usageCount: number;
+  tags?: string[];
+  questionCount: number;
+}
+
+/**
+ * Share a quiz with the organization
+ */
+export async function shareQuizWithOrg(
+  orgId: string,
+  user: { userId: string; displayName: string; email: string },
+  quiz: {
+    id: string;
+    title: string;
+    subject: string;
+    questions: SharedQuiz['questions'];
+    tags?: string[];
+  }
+): Promise<{ success: boolean; sharedQuizId?: string; error?: string }> {
+  try {
+    // Verify user is a member of the org
+    const memberDoc = await getDoc(doc(db, 'organizations', orgId, 'members', user.userId));
+    if (!memberDoc.exists() || (memberDoc.data() as OrgMember).status !== 'active') {
+      return { success: false, error: 'You are not a member of this organization' };
+    }
+
+    // Create shared quiz document
+    const sharedQuizId = `shared_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const sharedQuiz: SharedQuiz = {
+      id: sharedQuizId,
+      title: quiz.title,
+      subject: quiz.subject,
+      questions: quiz.questions,
+      sharedBy: user.userId,
+      sharedByName: user.displayName,
+      sharedByEmail: user.email,
+      sharedAt: Timestamp.now(),
+      usageCount: 0,
+      tags: quiz.tags || [],
+      questionCount: quiz.questions.length,
+    };
+
+    await setDoc(doc(db, 'organizations', orgId, 'sharedQuizzes', sharedQuizId), sharedQuiz);
+
+    return { success: true, sharedQuizId };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to share quiz',
+    };
+  }
+}
+
+/**
+ * Get all shared quizzes in an organization
+ */
+export async function getOrgSharedQuizzes(orgId: string): Promise<SharedQuiz[]> {
+  const q = query(
+    collection(db, 'organizations', orgId, 'sharedQuizzes'),
+    orderBy('sharedAt', 'desc')
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(d => d.data() as SharedQuiz);
+}
+
+/**
+ * Get shared quizzes filtered by subject
+ */
+export async function getOrgSharedQuizzesBySubject(orgId: string, subject: string): Promise<SharedQuiz[]> {
+  const q = query(
+    collection(db, 'organizations', orgId, 'sharedQuizzes'),
+    where('subject', '==', subject),
+    orderBy('sharedAt', 'desc')
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(d => d.data() as SharedQuiz);
+}
+
+/**
+ * Copy a shared quiz to a teacher's personal quizzes
+ */
+export async function copySharedQuizToUser(
+  orgId: string,
+  sharedQuizId: string,
+  userId: string
+): Promise<{ success: boolean; newQuizId?: string; error?: string }> {
+  try {
+    // Get the shared quiz
+    const sharedQuizRef = doc(db, 'organizations', orgId, 'sharedQuizzes', sharedQuizId);
+    const sharedQuizSnap = await getDoc(sharedQuizRef);
+
+    if (!sharedQuizSnap.exists()) {
+      return { success: false, error: 'Shared quiz not found' };
+    }
+
+    const sharedQuiz = sharedQuizSnap.data() as SharedQuiz;
+
+    // Increment usage count
+    await updateDoc(sharedQuizRef, {
+      usageCount: sharedQuiz.usageCount + 1,
+    });
+
+    // Create new quiz ID for the copy
+    const newQuizId = `quiz_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Return the quiz data - caller is responsible for saving to their quizzes
+    return {
+      success: true,
+      newQuizId,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to copy quiz',
+    };
+  }
+}
+
+/**
+ * Get a single shared quiz by ID
+ */
+export async function getSharedQuizById(orgId: string, sharedQuizId: string): Promise<SharedQuiz | null> {
+  const sharedQuizRef = doc(db, 'organizations', orgId, 'sharedQuizzes', sharedQuizId);
+  const sharedQuizSnap = await getDoc(sharedQuizRef);
+
+  if (!sharedQuizSnap.exists()) {
+    return null;
+  }
+
+  return sharedQuizSnap.data() as SharedQuiz;
+}
+
+/**
+ * Delete a shared quiz (only owner or admin can delete)
+ */
+export async function deleteSharedQuiz(
+  orgId: string,
+  sharedQuizId: string,
+  userId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Get the shared quiz
+    const sharedQuizRef = doc(db, 'organizations', orgId, 'sharedQuizzes', sharedQuizId);
+    const sharedQuizSnap = await getDoc(sharedQuizRef);
+
+    if (!sharedQuizSnap.exists()) {
+      return { success: false, error: 'Shared quiz not found' };
+    }
+
+    const sharedQuiz = sharedQuizSnap.data() as SharedQuiz;
+
+    // Check if user is owner or admin
+    const org = await getOrganization(orgId);
+    if (!org) {
+      return { success: false, error: 'Organization not found' };
+    }
+
+    const isOwner = sharedQuiz.sharedBy === userId;
+    const isAdmin = org.adminUserId === userId;
+
+    if (!isOwner && !isAdmin) {
+      return { success: false, error: 'Only the quiz owner or organization admin can delete shared quizzes' };
+    }
+
+    await deleteDoc(sharedQuizRef);
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to delete shared quiz',
+    };
+  }
 }

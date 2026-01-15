@@ -351,6 +351,15 @@ Firebase config is currently hardcoded in `QuizForge.jsx` (project: quizforge-58
 
 ## Recent Updates (January 2026)
 
+- **Data Architecture Improvements** (Jan 15):
+  - **New subcollection structure** for scalable user data storage (`/lib/userData.ts`)
+  - **Migration utilities** for gradual migration from monolithic docs (`/lib/migration.ts`)
+  - **Cross-teacher quiz sharing** within organizations (`/lib/organizations.ts`)
+  - **Organization analytics** with overview stats, teacher leaderboards, topic performance (`/lib/orgAnalytics.ts`)
+  - **Admin Dashboard enhancements**: Quiz Library tab and Analytics tab
+  - **Firestore indexes** for optimized queries (`firestore.indexes.json`)
+  - **Auto-migration on login** to subcollection structure (non-blocking)
+
 - **Pricing Page**: Full marketing page at `/pricing` with:
   - Plan comparison cards with gradient styling
   - Monthly/yearly billing toggle (17% savings)
@@ -364,6 +373,7 @@ Firebase config is currently hardcoded in `QuizForge.jsx` (project: quizforge-58
   - Class creation now navigates to Class Manager after success
   - Pro Plan profile section shows full feature list
   - Profile name editing with inline form
+  - Share to Organization button for teachers in orgs (🏫 icon)
 
 - **Bug Fixes**:
   - Fixed Stripe webhook not updating user plan (Firebase fallback config)
@@ -373,16 +383,27 @@ Firebase config is currently hardcoded in `QuizForge.jsx` (project: quizforge-58
 
 ---
 
+## New Files Added (Jan 15)
+
+| File | Purpose |
+|------|---------|
+| `lib/userData.ts` | Data access layer with dual-mode support (legacy + subcollections) |
+| `lib/migration.ts` | Migration utilities for moving users to new data structure |
+| `lib/orgAnalytics.ts` | Organization-wide analytics functions |
+| `firestore.indexes.json` | Composite indexes for common queries |
+
+---
+
 ## Known Issues
 
 - Teacher's student roster only updates on login (no real-time sync)
+- Migration runs automatically on login but large accounts may take a few seconds
 
 ---
 
 ## Potential Future Enhancements
 
 - Real-time updates for class roster
-- More detailed analytics dashboards
 - Question import/export (CSV, JSON)
 - Integration with LMS platforms (Canvas, Blackboard)
 - AI-powered question difficulty calibration

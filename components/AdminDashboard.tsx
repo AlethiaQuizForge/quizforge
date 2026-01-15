@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Organization,
   OrgMember,
+  SharedQuiz,
   getOrganization,
   getOrgMembers,
   getActiveMemberCount,
@@ -11,7 +12,18 @@ import {
   regenerateInviteCode,
   updateOrganization,
   getOrgLimits,
+  getOrgSharedQuizzes,
+  deleteSharedQuiz,
 } from '@/lib/organizations';
+import {
+  OrgOverview,
+  TeacherStats,
+  TopicStats,
+  getOrgOverview,
+  getTeacherStats,
+  getTopicStats,
+  refreshOrgAnalytics,
+} from '@/lib/orgAnalytics';
 
 interface AdminDashboardProps {
   orgId: string;
@@ -24,11 +36,21 @@ export function AdminDashboard({ orgId, userId, onBack, showToast }: AdminDashbo
   const [org, setOrg] = useState<Organization | null>(null);
   const [members, setMembers] = useState<OrgMember[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'quizLibrary' | 'analytics' | 'settings'>('overview');
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const [domainInput, setDomainInput] = useState('');
   const [isActionLoading, setIsActionLoading] = useState(false);
+
+  // Quiz Library state
+  const [sharedQuizzes, setSharedQuizzes] = useState<SharedQuiz[]>([]);
+  const [quizLibraryLoading, setQuizLibraryLoading] = useState(false);
+
+  // Analytics state
+  const [analyticsOverview, setAnalyticsOverview] = useState<OrgOverview | null>(null);
+  const [teacherStats, setTeacherStats] = useState<TeacherStats[]>([]);
+  const [topicStats, setTopicStats] = useState<TopicStats[]>([]);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
   // Load organization data
   useEffect(() => {
@@ -59,6 +81,84 @@ export function AdminDashboard({ orgId, userId, onBack, showToast }: AdminDashbo
   const isAdmin = org?.adminUserId === userId;
   const activeMembers = members.filter(m => m.status === 'active');
   const limits = org ? getOrgLimits(org.plan) : null;
+
+  // Load quiz library when tab is selected
+  useEffect(() => {
+    if (activeTab === 'quizLibrary' && sharedQuizzes.length === 0 && !quizLibraryLoading) {
+      loadQuizLibrary();
+    }
+  }, [activeTab]);
+
+  // Load analytics when tab is selected
+  useEffect(() => {
+    if (activeTab === 'analytics' && !analyticsOverview && !analyticsLoading) {
+      loadAnalytics();
+    }
+  }, [activeTab]);
+
+  async function loadQuizLibrary() {
+    setQuizLibraryLoading(true);
+    try {
+      const quizzes = await getOrgSharedQuizzes(orgId);
+      setSharedQuizzes(quizzes);
+    } catch (err) {
+      console.error('Failed to load quiz library:', err);
+      showToast('Failed to load quiz library', 'error');
+    } finally {
+      setQuizLibraryLoading(false);
+    }
+  }
+
+  async function loadAnalytics() {
+    setAnalyticsLoading(true);
+    try {
+      const [overview, teachers, topics] = await Promise.all([
+        getOrgOverview(orgId),
+        getTeacherStats(orgId),
+        getTopicStats(orgId),
+      ]);
+      setAnalyticsOverview(overview);
+      setTeacherStats(teachers);
+      setTopicStats(topics);
+    } catch (err) {
+      console.error('Failed to load analytics:', err);
+      showToast('Failed to load analytics', 'error');
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }
+
+  async function handleRefreshAnalytics() {
+    setAnalyticsLoading(true);
+    try {
+      const overview = await refreshOrgAnalytics(orgId);
+      setAnalyticsOverview(overview);
+      showToast('Analytics refreshed', 'success');
+    } catch (err) {
+      showToast('Failed to refresh analytics', 'error');
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }
+
+  async function handleDeleteSharedQuiz(quizId: string, quizTitle: string) {
+    if (!confirm(`Delete "${quizTitle}" from the shared library? This cannot be undone.`)) return;
+
+    setIsActionLoading(true);
+    try {
+      const result = await deleteSharedQuiz(orgId, quizId, userId);
+      if (result.success) {
+        setSharedQuizzes(sharedQuizzes.filter(q => q.id !== quizId));
+        showToast('Quiz removed from library', 'success');
+      } else {
+        showToast(result.error || 'Failed to delete quiz', 'error');
+      }
+    } catch (err) {
+      showToast('Failed to delete quiz', 'error');
+    } finally {
+      setIsActionLoading(false);
+    }
+  }
 
   const handleCopyInviteLink = () => {
     if (!org) return;
@@ -182,18 +282,24 @@ export function AdminDashboard({ orgId, userId, onBack, showToast }: AdminDashbo
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Tabs */}
-        <div className="flex gap-4 mb-8 border-b border-slate-200 dark:border-slate-700">
-          {(['overview', 'members', 'settings'] as const).map(tab => (
+        <div className="flex gap-4 mb-8 border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
+          {([
+            { key: 'overview', label: 'Overview' },
+            { key: 'members', label: 'Members' },
+            { key: 'quizLibrary', label: 'Quiz Library' },
+            { key: 'analytics', label: 'Analytics' },
+            { key: 'settings', label: 'Settings' },
+          ] as const).map(tab => (
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`pb-3 px-2 text-sm font-medium border-b-2 transition ${
-                activeTab === tab
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`pb-3 px-2 text-sm font-medium border-b-2 transition whitespace-nowrap ${
+                activeTab === tab.key
                   ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
                   : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
               }`}
             >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab.label}
             </button>
           ))}
         </div>
@@ -356,6 +462,252 @@ export function AdminDashboard({ orgId, userId, onBack, showToast }: AdminDashbo
                 >
                   Share invite link to add teachers
                 </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Quiz Library Tab */}
+        {activeTab === 'quizLibrary' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">Shared Quiz Library</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Quizzes shared by teachers in your organization
+                </p>
+              </div>
+              <button
+                onClick={loadQuizLibrary}
+                disabled={quizLibraryLoading}
+                className="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-medium hover:bg-slate-200 dark:hover:bg-slate-600 text-sm"
+              >
+                {quizLibraryLoading ? 'Loading...' : 'Refresh'}
+              </button>
+            </div>
+
+            {quizLibraryLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+              </div>
+            ) : sharedQuizzes.length > 0 ? (
+              <div className="grid gap-4">
+                {sharedQuizzes.map(quiz => (
+                  <div
+                    key={quiz.id}
+                    className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-slate-900 dark:text-white">{quiz.title}</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                          {quiz.subject} • {quiz.questionCount} questions
+                        </p>
+                        <div className="flex items-center gap-4 mt-3 text-xs text-slate-500 dark:text-slate-400">
+                          <span>Shared by {quiz.sharedByName}</span>
+                          <span>•</span>
+                          <span>{quiz.sharedAt?.toDate?.()?.toLocaleDateString() || 'Unknown date'}</span>
+                          <span>•</span>
+                          <span>{quiz.usageCount} copies made</span>
+                        </div>
+                        {quiz.tags && quiz.tags.length > 0 && (
+                          <div className="flex gap-2 mt-3">
+                            {quiz.tags.map(tag => (
+                              <span
+                                key={tag}
+                                className="px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs rounded-full"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {(isAdmin || quiz.sharedBy === userId) && (
+                          <button
+                            onClick={() => handleDeleteSharedQuiz(quiz.id, quiz.title)}
+                            disabled={isActionLoading}
+                            className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
+                            title="Remove from library"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-12 text-center">
+                <div className="text-4xl mb-4">📚</div>
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-2">No shared quizzes yet</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-sm max-w-md mx-auto">
+                  Teachers can share their quizzes with the organization from their quiz menu. Shared quizzes can be copied by any member.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Analytics Tab */}
+        {activeTab === 'analytics' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">Organization Analytics</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Overview of quiz activity across your organization
+                </p>
+              </div>
+              <button
+                onClick={handleRefreshAnalytics}
+                disabled={analyticsLoading}
+                className="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-medium hover:bg-slate-200 dark:hover:bg-slate-600 text-sm"
+              >
+                {analyticsLoading ? 'Loading...' : 'Refresh'}
+              </button>
+            </div>
+
+            {analyticsLoading && !analyticsOverview ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+              </div>
+            ) : analyticsOverview ? (
+              <>
+                {/* Overview Stats */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 border-l-4 border-l-indigo-500">
+                    <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">{analyticsOverview.totalQuizzes}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Total Quizzes</p>
+                  </div>
+                  <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 border-l-4 border-l-purple-500">
+                    <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">{analyticsOverview.totalStudents}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Total Students</p>
+                  </div>
+                  <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 border-l-4 border-l-blue-500">
+                    <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{analyticsOverview.totalSubmissions}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Quiz Submissions</p>
+                  </div>
+                  <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 border-l-4 border-l-green-500">
+                    <p className="text-3xl font-bold text-green-600 dark:text-green-400">{analyticsOverview.avgScore}%</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Average Score</p>
+                  </div>
+                </div>
+
+                <div className="grid lg:grid-cols-2 gap-6">
+                  {/* Teacher Leaderboard */}
+                  <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                    <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Teacher Activity</h3>
+                    {teacherStats.length > 0 ? (
+                      <div className="space-y-3">
+                        {teacherStats.slice(0, 10).map((teacher, index) => (
+                          <div key={teacher.id} className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                                index === 0 ? 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300' :
+                                index === 1 ? 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300' :
+                                index === 2 ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300' :
+                                'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                              }`}>
+                                {index + 1}
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-slate-900 dark:text-white">{teacher.name}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                  {teacher.classCount} classes • {teacher.studentCount} students
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-semibold text-slate-900 dark:text-white">{teacher.quizCount}</p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400">quizzes</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-slate-500 dark:text-slate-400 text-sm text-center py-4">
+                        No teacher activity yet
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Topic Performance */}
+                  <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                    <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Topic Performance</h3>
+                    {topicStats.length > 0 ? (
+                      <div className="space-y-3">
+                        {topicStats.slice(0, 10).map(topic => (
+                          <div key={topic.topic} className="space-y-1">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-slate-700 dark:text-slate-300">{topic.topic}</span>
+                              <span className={`font-medium ${
+                                topic.correctRate >= 80 ? 'text-green-600 dark:text-green-400' :
+                                topic.correctRate >= 60 ? 'text-yellow-600 dark:text-yellow-400' :
+                                'text-red-600 dark:text-red-400'
+                              }`}>
+                                {topic.correctRate}%
+                              </span>
+                            </div>
+                            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                              <div
+                                className={`h-2 rounded-full ${
+                                  topic.correctRate >= 80 ? 'bg-green-500' :
+                                  topic.correctRate >= 60 ? 'bg-yellow-500' :
+                                  'bg-red-500'
+                                }`}
+                                style={{ width: `${topic.correctRate}%` }}
+                              />
+                            </div>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                              {topic.totalAttempts} attempts • {topic.questionCount} questions
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-slate-500 dark:text-slate-400 text-sm text-center py-4">
+                        No topic data yet. Analytics will appear once students start taking quizzes.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Monthly Activity */}
+                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                  <h3 className="font-semibold text-slate-900 dark:text-white mb-4">This Month</h3>
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <p className="text-2xl font-bold text-slate-900 dark:text-white">{analyticsOverview.quizzesThisMonth}</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Quizzes Created</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-slate-900 dark:text-white">{analyticsOverview.activeTeachers}</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Active Teachers</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-slate-900 dark:text-white">{analyticsOverview.totalClasses}</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Active Classes</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Last Updated */}
+                <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
+                  Last updated: {analyticsOverview.lastUpdated?.toLocaleString?.() || 'Unknown'}
+                </p>
+              </>
+            ) : (
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-12 text-center">
+                <div className="text-4xl mb-4">📊</div>
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-2">Analytics Coming Soon</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-sm">
+                  Analytics will be available once teachers start creating quizzes.
+                </p>
               </div>
             )}
           </div>
