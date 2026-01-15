@@ -401,7 +401,7 @@ export default function PricingPage() {
                       ))}
                     </ul>
                     <button
-                      onClick={() => window.location.href = 'mailto:sales@quizforgeapp.com?subject=' + encodeURIComponent(`QuizForge ${plan.name} Plan Inquiry`)}
+                      onClick={() => window.location.href = 'mailto:support@quizforgeapp.com?subject=' + encodeURIComponent(`QuizForge ${plan.name} Plan Inquiry`)}
                       className={`block w-full py-3 rounded-xl font-semibold text-center transition-all ${
                         isUniversity
                           ? 'bg-white text-amber-700 hover:bg-amber-50 shadow-lg'
