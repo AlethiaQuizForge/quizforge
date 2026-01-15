@@ -188,6 +188,7 @@ export default function QuizForge() {
   // Subscription/plan state
   const [userPlan, setUserPlan] = useState('free'); // 'free' or 'pro'
   const [isUpgrading, setIsUpgrading] = useState(false);
+  const [showUpgradeSuccess, setShowUpgradeSuccess] = useState(false); // Show success modal
 
   const fileInputRef = useRef(null);
   const timerRef = useRef(null);
@@ -317,15 +318,30 @@ export default function QuizForge() {
     if (subscriptionStatus === 'success') {
       // Clear URL params
       window.history.replaceState({}, '', window.location.pathname);
-      showToast('🎉 Welcome to Pro! Your account has been upgraded.', 'success');
-      // Reload user data to get updated plan
+
+      // Show success modal immediately
+      setShowUpgradeSuccess(true);
+
+      // Poll for webhook to update the plan (may take a few seconds)
       if (auth.currentUser) {
-        const result = await storage.get(`quizforge-account-${auth.currentUser.uid}`);
-        if (result && result.value) {
-          const userData = JSON.parse(result.value);
-          setUser(userData);
-          setUserPlan(userData.plan || 'free');
-        }
+        let attempts = 0;
+        const maxAttempts = 10;
+        const pollInterval = setInterval(async () => {
+          attempts++;
+          const result = await storage.get(`quizforge-account-${auth.currentUser.uid}`);
+          if (result && result.value) {
+            const userData = JSON.parse(result.value);
+            if (userData.plan === 'pro') {
+              clearInterval(pollInterval);
+              setUser(userData);
+              setUserPlan('pro');
+            } else if (attempts >= maxAttempts) {
+              clearInterval(pollInterval);
+              // Still show as pro optimistically - webhook may be delayed
+              setUserPlan('pro');
+            }
+          }
+        }, 2000); // Check every 2 seconds
       }
     } else if (subscriptionStatus === 'cancelled') {
       window.history.replaceState({}, '', window.location.pathname);
@@ -3161,6 +3177,68 @@ ${quizContent.substring(0, 40000)}
         </div>
       )}
 
+      {/* UPGRADE SUCCESS MODAL */}
+      {showUpgradeSuccess && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 w-full max-w-md shadow-2xl text-center relative overflow-hidden">
+            {/* Confetti effect */}
+            <div className="absolute inset-0 pointer-events-none">
+              {[...Array(20)].map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute animate-bounce"
+                  style={{
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`,
+                    animationDelay: `${Math.random() * 2}s`,
+                    animationDuration: `${1 + Math.random() * 2}s`,
+                  }}
+                >
+                  {['🎉', '⭐', '🎊', '✨', '💫'][Math.floor(Math.random() * 5)]}
+                </div>
+              ))}
+            </div>
+
+            <div className="relative z-10">
+              <div className="text-6xl mb-4">🎉</div>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                Welcome to Pro!
+              </h2>
+              <p className="text-slate-600 dark:text-slate-300 mb-6">
+                Your account has been upgraded successfully.
+              </p>
+
+              <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-4 mb-6 text-white">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <span className="text-xl">⭐</span>
+                  <span className="font-bold text-lg">Pro Plan Active</span>
+                </div>
+                <div className="text-sm text-indigo-100 space-y-1">
+                  <p>✓ 25 quizzes per month</p>
+                  <p>✓ 3 classes with 50 students each</p>
+                  <p>✓ All question types</p>
+                  <p>✓ PDF export & full analytics</p>
+                </div>
+              </div>
+
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                A receipt has been sent to your email.
+              </p>
+
+              <button
+                onClick={() => {
+                  setShowUpgradeSuccess(false);
+                  setUserPlan('pro');
+                }}
+                className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium transition"
+              >
+                Start Using Pro Features
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ONBOARDING MODAL */}
       {showOnboarding && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -4071,7 +4149,7 @@ ${quizContent.substring(0, 40000)}
           </nav>
           <div className="max-w-7xl mx-auto px-6 py-8">
             <div className="flex justify-between items-start mb-8">
-              <div><h1 className="text-2xl font-bold text-slate-900 dark:text-white">Welcome back{user?.name ? `, ${user.name.split(' ')[0]}` : ''} 👋</h1><p className="text-slate-600 dark:text-slate-300">Create assessments and track progress</p></div>
+              <div><h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">Welcome back{user?.name ? `, ${user.name.split(' ')[0]}` : ''} 👋 {userPlan === 'pro' && <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-full">⭐ PRO</span>}</h1><p className="text-slate-600 dark:text-slate-300">Create assessments and track progress</p></div>
               <button onClick={() => setPage('create-quiz')} className="px-5 py-2.5 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-500 shadow-lg">⚡ Create Quiz</button>
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

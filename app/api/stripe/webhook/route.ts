@@ -89,18 +89,45 @@ export async function POST(request: NextRequest) {
             }
           } else {
             // Individual plan (Pro) - update user's plan in Firebase
+            // QuizForge stores user data as { value: JSON.stringify(userData) }
             try {
               const db = await getFirebaseDb();
-              const { doc, updateDoc } = await import('firebase/firestore');
+              const { doc, getDoc, updateDoc } = await import('firebase/firestore');
               const userDocRef = doc(db, 'userData', `quizforge-account-${userId}`);
-              await updateDoc(userDocRef, {
-                plan: planId,
-                stripeCustomerId: customerId,
-                stripeSubscriptionId: subscriptionId,
-                subscriptionStatus: 'active',
-                subscribedAt: new Date().toISOString(),
-              });
-              console.log(`Updated user ${userId} to plan ${planId}`);
+
+              // Get existing user data
+              const userDoc = await getDoc(userDocRef);
+              if (userDoc.exists()) {
+                const existingData = userDoc.data();
+                let userData = {};
+
+                // Parse existing value if it exists
+                if (existingData.value) {
+                  try {
+                    userData = JSON.parse(existingData.value);
+                  } catch {
+                    userData = existingData;
+                  }
+                } else {
+                  userData = existingData;
+                }
+
+                // Update with plan info
+                userData.plan = planId;
+                userData.stripeCustomerId = customerId;
+                userData.stripeSubscriptionId = subscriptionId;
+                userData.subscriptionStatus = 'active';
+                userData.subscribedAt = new Date().toISOString();
+
+                // Save back in the same format
+                await updateDoc(userDocRef, {
+                  value: JSON.stringify(userData),
+                  updatedAt: new Date(),
+                });
+                console.log(`Updated user ${userId} to plan ${planId}`);
+              } else {
+                console.error(`User document not found for ${userId}`);
+              }
             } catch (err) {
               console.error('Failed to update user plan:', err);
             }
