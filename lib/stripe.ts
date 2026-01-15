@@ -51,16 +51,79 @@ export const PLANS = {
       'Full analytics',
     ],
   },
-  // Organization plans - coming soon (requires admin dashboard)
-  // school: { ... 25 teachers, $199/mo }
-  // university: { ... 50 professors, $499/mo }
+  // Organization plans
+  school: {
+    id: 'school',
+    name: 'School',
+    price: 199,
+    priceId: process.env.STRIPE_SCHOOL_PRICE_ID || null,
+    isOrgPlan: true,
+    limits: {
+      users: 25,
+      quizzesPerMonth: 25, // Per teacher
+      classesMax: 3, // Per teacher
+      studentsPerClass: 50,
+    },
+    features: [
+      '25 teachers',
+      '25 quizzes per teacher/month',
+      '3 classes per teacher, 50 students each',
+      'Admin dashboard',
+      'Organization-wide analytics',
+    ],
+  },
+  university: {
+    id: 'university',
+    name: 'University',
+    price: 499,
+    priceId: process.env.STRIPE_UNIVERSITY_PRICE_ID || null,
+    isOrgPlan: true,
+    limits: {
+      users: 50,
+      quizzesPerMonth: 35, // Per professor
+      classesMax: 10, // Per professor
+      studentsPerClass: 100,
+    },
+    features: [
+      '50 professors',
+      '35 quizzes per professor/month',
+      '10 classes per professor, 100 students each',
+      'Admin dashboard',
+      'Organization-wide analytics',
+      'Invoice billing',
+    ],
+  },
 } as const;
 
 export type PlanId = keyof typeof PLANS;
+export type IndividualPlanId = 'free' | 'pro';
+export type OrgPlanId = 'school' | 'university';
 
 // Get plan by ID
 export function getPlan(planId: PlanId) {
   return PLANS[planId] || PLANS.free;
+}
+
+// Check if a plan is an organization plan
+export function isOrgPlan(planId: PlanId): boolean {
+  const plan = PLANS[planId];
+  return 'isOrgPlan' in plan && plan.isOrgPlan === true;
+}
+
+// Get individual plans only (for personal pricing UI)
+export function getIndividualPlans() {
+  return {
+    free: PLANS.free,
+    pro: PLANS.pro,
+  };
+}
+
+// Get organization plans only (for institution pricing UI)
+export function getOrgPlans() {
+  return {
+    school: PLANS.school,
+    university: PLANS.university,
+  };
 }
 
 // Check if user is within plan limits
