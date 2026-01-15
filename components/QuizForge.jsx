@@ -140,6 +140,7 @@ export default function QuizForge() {
   const [joinedClasses, setJoinedClasses] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [submissions, setSubmissions] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   
   const [quizContent, setQuizContent] = useState('');
   const [quizSubject, setQuizSubject] = useState('');
@@ -360,6 +361,47 @@ export default function QuizForge() {
       setUserOrganizations(orgs);
     } catch (err) {
       console.error('Failed to load organizations:', err);
+    }
+  };
+
+  // Load student notifications
+  const loadStudentNotifications = async () => {
+    if (!auth.currentUser || !user?.email) return;
+    try {
+      const notificationsRef = collection(db, 'notifications');
+      const q = query(
+        notificationsRef,
+        where('recipientEmail', '==', user.email),
+        where('read', '==', false)
+      );
+      const snapshot = await getDocs(q);
+      const notifs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      setNotifications(notifs);
+    } catch (err) {
+      console.error('Failed to load notifications:', err);
+    }
+  };
+
+  // Mark notification as read
+  const markNotificationRead = async (notificationId) => {
+    try {
+      await setDoc(doc(db, 'notifications', notificationId), { read: true }, { merge: true });
+      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+    } catch (err) {
+      console.error('Failed to mark notification as read:', err);
+    }
+  };
+
+  // Mark all notifications as read
+  const markAllNotificationsRead = async () => {
+    try {
+      const promises = notifications.map(n =>
+        setDoc(doc(db, 'notifications', n.id), { read: true }, { merge: true })
+      );
+      await Promise.all(promises);
+      setNotifications([]);
+    } catch (err) {
+      console.error('Failed to mark all notifications as read:', err);
     }
   };
 
@@ -620,6 +662,13 @@ export default function QuizForge() {
       loadUserOrganizations();
     }
   }, [isLoggedIn, userType]);
+
+  // Load notifications for students
+  useEffect(() => {
+    if (isLoggedIn && userType === 'student' && user?.email) {
+      loadStudentNotifications();
+    }
+  }, [isLoggedIn, userType, user?.email]);
 
   // Trigger gradual migration to subcollection structure on login
   useEffect(() => {
@@ -2514,7 +2563,37 @@ ${quizContent.substring(0, 40000)}
     try {
       await setDoc(doc(db, 'assignments', newAssignment.id), newAssignment);
       setAssignments(prev => [...prev, newAssignment]);
-      showToast(`✅ "${quiz?.name}" assigned to ${targetClass.name}!`, 'success');
+
+      // Create notifications for all students in the class
+      const studentCount = targetClass.students?.length || 0;
+      if (studentCount > 0) {
+        const notificationPromises = targetClass.students.map(async (student) => {
+          const notification = {
+            id: `notif_${Date.now()}_${student.odinal || Math.random().toString(36).substr(2, 9)}`,
+            type: 'new_assignment',
+            title: 'New Quiz Assigned!',
+            message: `"${quiz?.name}" has been assigned to ${targetClass.name}`,
+            assignmentId: newAssignment.id,
+            classId: targetClass.id,
+            className: targetClass.name,
+            quizName: quiz?.name || 'Quiz',
+            teacherName: user?.name || 'Your teacher',
+            dueDate: dueDate || null,
+            recipientId: student.odinal || student.email,
+            recipientEmail: student.email,
+            createdAt: Date.now(),
+            read: false
+          };
+          try {
+            await setDoc(doc(db, 'notifications', notification.id), notification);
+          } catch (err) {
+            console.log('Could not create notification for student:', student.email);
+          }
+        });
+        await Promise.all(notificationPromises);
+      }
+
+      showToast(`✅ "${quiz?.name}" assigned to ${targetClass.name}${studentCount > 0 ? ` (${studentCount} students notified)` : ''}!`, 'success');
     } catch (e) {
       console.error('Error saving assignment to Firestore:', e);
       if (e.code === 'unavailable' || e.message?.includes('network')) {
@@ -3192,6 +3271,78 @@ ${quizContent.substring(0, 40000)}
                   <button onClick={() => setModal(null)} className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg">Cancel</button>
                   <button onClick={() => { modal.onConfirm?.(); setModal(null); }} className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium">Confirm</button>
                 </div>
+              </>
+            )}
+
+            {/* Notifications Modal */}
+            {modal?.type === 'notifications' && (
+              <>
+                <div className="mb-4">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">🔔 Notifications</h3>
+                    {notifications.length > 0 && (
+                      <button
+                        onClick={() => { markAllNotificationsRead(); }}
+                        className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+                  {notifications.length === 0 ? (
+                    <div className="text-center py-8">
+                      <div className="text-4xl mb-2">📭</div>
+                      <p className="text-slate-500 dark:text-slate-400">No new notifications</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 max-h-80 overflow-y-auto">
+                      {notifications.map(notif => (
+                        <div
+                          key={notif.id}
+                          className="p-4 bg-slate-50 dark:bg-slate-700 rounded-xl border-l-4 border-indigo-500"
+                        >
+                          <div className="flex justify-between items-start gap-2">
+                            <div className="flex-1">
+                              <p className="font-semibold text-slate-900 dark:text-white">{notif.title}</p>
+                              <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">{notif.message}</p>
+                              {notif.dueDate && (
+                                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                                  📅 Due: {new Date(notif.dueDate).toLocaleDateString()}
+                                </p>
+                              )}
+                              <p className="text-xs text-slate-400 mt-2">
+                                From {notif.teacherName} • {new Date(notif.createdAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => markNotificationRead(notif.id)}
+                              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                              title="Dismiss"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                          <button
+                            onClick={() => {
+                              markNotificationRead(notif.id);
+                              setModal(null);
+                              setPage('student-classes');
+                            }}
+                            className="mt-3 w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg font-medium"
+                          >
+                            Go to Classes →
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => setModal(null)}
+                  className="w-full py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg"
+                >
+                  Close
+                </button>
               </>
             )}
 
@@ -5287,6 +5438,20 @@ ${quizContent.substring(0, 40000)}
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                {/* Notification Bell */}
+                <div className="relative">
+                  <button
+                    onClick={() => setModal({ type: 'notifications' })}
+                    className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg relative"
+                  >
+                    🔔
+                    {notifications.length > 0 && (
+                      <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                        {notifications.length > 9 ? '9+' : notifications.length}
+                      </span>
+                    )}
+                  </button>
+                </div>
                 <button onClick={() => setPage('profile')} className="flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900/50 hover:bg-blue-200 dark:hover:bg-blue-900/70 text-blue-700 dark:text-blue-300 text-sm font-medium rounded-full">
                   <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs">{user?.name?.charAt(0).toUpperCase() || '?'}</span>
                   <span className="hidden sm:inline">{user?.name || 'Student'}</span>
