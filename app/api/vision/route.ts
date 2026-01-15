@@ -3,13 +3,40 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { NextRequest, NextResponse } from 'next/server';
+import { rateLimit, getClientIP } from '@/lib/rate-limit';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
+// Rate limit: 20 vision requests per hour per IP
+const RATE_LIMIT_CONFIG = {
+  windowMs: 60 * 60 * 1000, // 1 hour
+  maxRequests: 20,
+};
+
 export async function POST(request: NextRequest) {
   try {
+    // Apply rate limiting
+    const clientIP = getClientIP(request);
+    const rateLimitResult = rateLimit(`vision:${clientIP}`, RATE_LIMIT_CONFIG);
+
+    if (!rateLimitResult.success) {
+      const resetMinutes = Math.ceil(rateLimitResult.resetIn / 60000);
+      return NextResponse.json(
+        {
+          error: `Rate limit exceeded. Try again in ${resetMinutes} minutes.`,
+          retryAfter: rateLimitResult.resetIn
+        },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(Math.ceil(rateLimitResult.resetIn / 1000)),
+          }
+        }
+      );
+    }
+
     const { images } = await request.json();
 
     if (!images || !Array.isArray(images) || images.length === 0) {
