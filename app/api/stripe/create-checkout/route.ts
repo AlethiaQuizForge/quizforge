@@ -2,10 +2,11 @@
 // NOTE: Not active until STRIPE_SECRET_KEY is configured
 
 import { NextRequest, NextResponse } from 'next/server';
-import { stripe, PLANS, PlanId, isOrgPlan } from '@/lib/stripe';
+import { getStripe, PLANS, PlanId, isOrgPlan } from '@/lib/stripe';
 
 export async function POST(request: NextRequest) {
-  // Check if Stripe is configured
+  // Check if Stripe is configured (lazy init at runtime)
+  const stripe = getStripe();
   if (!stripe) {
     return NextResponse.json(
       { error: 'Payments are not yet enabled' },
