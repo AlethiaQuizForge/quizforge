@@ -2,8 +2,20 @@
 // NOTE: Not active until STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET are configured
 
 import { NextRequest, NextResponse } from 'next/server';
-import { stripe } from '@/lib/stripe';
+import { stripe, isOrgPlan, PlanId } from '@/lib/stripe';
+import type { OrgPlanId } from '@/lib/organizations';
 import Stripe from 'stripe';
+
+// Dynamic imports to avoid Firebase initialization during build
+async function getFirebaseDb() {
+  const { db } = await import('@/lib/firebase');
+  return db;
+}
+
+async function getOrgHelpers() {
+  const { createOrganization } = await import('@/lib/organizations');
+  return { createOrganization };
+}
 
 // Disable body parsing, we need raw body for webhook verification
 export const dynamic = 'force-dynamic';
@@ -44,26 +56,54 @@ export async function POST(request: NextRequest) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
         const userId = session.metadata?.userId;
-        const planId = session.metadata?.planId;
+        const planId = session.metadata?.planId as PlanId | undefined;
+        const userEmail = session.customer_email || session.metadata?.userEmail;
+        const orgName = session.metadata?.orgName;
         const customerId = session.customer as string;
         const subscriptionId = session.subscription as string;
 
         if (userId && planId) {
-          // TODO: Update user's plan in Firebase
-          // This will be implemented when we connect to your user system
           console.log(`User ${userId} subscribed to ${planId}`, {
             customerId,
             subscriptionId,
           });
 
-          // Example Firebase update (uncomment when ready):
-          // await updateUserPlan(userId, {
-          //   planId,
-          //   stripeCustomerId: customerId,
-          //   stripeSubscriptionId: subscriptionId,
-          //   subscriptionStatus: 'active',
-          //   subscribedAt: new Date().toISOString(),
-          // });
+          // Check if this is an organization plan
+          if (isOrgPlan(planId)) {
+            // Create organization for School/University plans
+            try {
+              const { createOrganization } = await getOrgHelpers();
+              const org = await createOrganization({
+                name: orgName || `${planId === 'university' ? 'University' : 'School'} Organization`,
+                plan: planId as OrgPlanId,
+                adminUserId: userId,
+                adminEmail: userEmail || '',
+                stripeCustomerId: customerId,
+                stripeSubscriptionId: subscriptionId,
+              });
+
+              console.log(`Created organization ${org.id} for user ${userId}`);
+            } catch (err) {
+              console.error('Failed to create organization:', err);
+            }
+          } else {
+            // Individual plan (Pro) - update user's plan in Firebase
+            try {
+              const db = await getFirebaseDb();
+              const { doc, updateDoc } = await import('firebase/firestore');
+              const userDocRef = doc(db, 'userData', `quizforge-account-${userId}`);
+              await updateDoc(userDocRef, {
+                plan: planId,
+                stripeCustomerId: customerId,
+                stripeSubscriptionId: subscriptionId,
+                subscriptionStatus: 'active',
+                subscribedAt: new Date().toISOString(),
+              });
+              console.log(`Updated user ${userId} to plan ${planId}`);
+            } catch (err) {
+              console.error('Failed to update user plan:', err);
+            }
+          }
         }
         break;
       }

@@ -179,7 +179,12 @@ export default function QuizForge() {
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [showAnalytics, setShowAnalytics] = useState(null); // quiz id for analytics
   const [showProgressChart, setShowProgressChart] = useState(false);
-  
+
+  // Organization features
+  const [userOrganizations, setUserOrganizations] = useState([]); // User's org memberships
+  const [pendingOrgJoin, setPendingOrgJoin] = useState(null); // Pending org join from link
+  const [showAdminDashboard, setShowAdminDashboard] = useState(null); // Org ID to show admin for
+
   const fileInputRef = useRef(null);
   const timerRef = useRef(null);
 
@@ -249,6 +254,53 @@ export default function QuizForge() {
       setTimeout(() => {
         showToast('Click "Join" to join the class', 'info');
       }, 500);
+    }
+  };
+
+  // Check for pending organization join from link (e.g., /join/abc123)
+  const checkForPendingOrgJoin = async () => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const pendingOrgStr = sessionStorage.getItem('pendingOrgJoin');
+    const isOrgJoinFlow = params.get('join') === 'org';
+
+    if (pendingOrgStr && isOrgJoinFlow && auth.currentUser && userType === 'teacher') {
+      try {
+        const pendingOrg = JSON.parse(pendingOrgStr);
+        sessionStorage.removeItem('pendingOrgJoin');
+        window.history.replaceState({}, '', window.location.pathname);
+
+        // Dynamically import org helpers
+        const { joinOrganization } = await import('@/lib/organizations');
+        const result = await joinOrganization(pendingOrg.orgId, {
+          userId: auth.currentUser.uid,
+          email: user?.email || auth.currentUser.email || '',
+          displayName: user?.name || userName || 'Teacher',
+        });
+
+        if (result.success) {
+          showToast(`Welcome to ${pendingOrg.orgName}!`, 'success');
+          // Refresh user's organizations
+          loadUserOrganizations();
+        } else {
+          showToast(result.error || 'Could not join organization', 'error');
+        }
+      } catch (err) {
+        console.error('Failed to join organization:', err);
+        showToast('Unable to join organization. Please try again.', 'error');
+      }
+    }
+  };
+
+  // Load user's organization memberships
+  const loadUserOrganizations = async () => {
+    if (!auth.currentUser || userType !== 'teacher') return;
+    try {
+      const { getUserOrganizations } = await import('@/lib/organizations');
+      const orgs = await getUserOrganizations(auth.currentUser.uid);
+      setUserOrganizations(orgs);
+    } catch (err) {
+      console.error('Failed to load organizations:', err);
     }
   };
   
@@ -372,6 +424,8 @@ export default function QuizForge() {
       await checkForSharedQuiz();
       // Check for pending class join from link
       checkForPendingClassJoin();
+      // Check for pending org join from link (after class join since it needs user type)
+      checkForPendingOrgJoin();
       setIsLoading(false);
       setIsDataLoading(false);
     });
@@ -397,7 +451,14 @@ export default function QuizForge() {
     const timeoutId = setTimeout(saveData, 500);
     return () => clearTimeout(timeoutId);
   }, [quizzes, classes, joinedClasses, assignments, submissions, questionBank, studentProgress, user, isLoggedIn, isLoading]);
-  
+
+  // Load user's organizations when user type is set to teacher
+  useEffect(() => {
+    if (isLoggedIn && userType === 'teacher') {
+      loadUserOrganizations();
+    }
+  }, [isLoggedIn, userType]);
+
   // Real-time listener for class roster updates (teachers only)
   useEffect(() => {
     if (!isLoggedIn || userType !== 'teacher' || classes.length === 0) return;

@@ -2,7 +2,7 @@
 // NOTE: Not active until STRIPE_SECRET_KEY is configured
 
 import { NextRequest, NextResponse } from 'next/server';
-import { stripe, PLANS, PlanId } from '@/lib/stripe';
+import { stripe, PLANS, PlanId, isOrgPlan } from '@/lib/stripe';
 
 export async function POST(request: NextRequest) {
   // Check if Stripe is configured
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { planId, userId, userEmail } = await request.json();
+    const { planId, userId, userEmail, orgName } = await request.json();
 
     // Validate plan
     if (!planId || !PLANS[planId as PlanId]) {
@@ -51,6 +51,9 @@ export async function POST(request: NextRequest) {
       metadata: {
         userId,
         planId,
+        userEmail,
+        // Include org name for organization plans
+        ...(isOrgPlan(planId as PlanId) && orgName ? { orgName } : {}),
       },
       // For EU compliance
       billing_address_collection: 'required',
