@@ -261,22 +261,32 @@ export default function QuizForge() {
   };
 
   // Check for pending class join from link (e.g., /class/ABC123)
-  const checkForPendingClassJoin = () => {
+  const checkForPendingClassJoin = (isUserLoggedIn) => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     const pendingCode = sessionStorage.getItem('pendingClassCode');
     const isJoinFlow = params.get('join') === 'class';
 
     if (pendingCode && isJoinFlow) {
-      // Set the code in the input and clear from storage
+      // Set the code in the input
       setJoinCodeInput(pendingCode);
-      sessionStorage.removeItem('pendingClassCode');
       // Clear URL param
       window.history.replaceState({}, '', window.location.pathname);
-      // Show toast to prompt user
-      setTimeout(() => {
-        showToast('Click "Join" to join the class', 'info');
-      }, 500);
+
+      if (isUserLoggedIn) {
+        // User is logged in - go to student classes page and clear storage
+        sessionStorage.removeItem('pendingClassCode');
+        setPage('student-classes');
+        setTimeout(() => {
+          showToast(`Class code "${pendingCode}" ready - click "Join Class" to join!`, 'info');
+        }, 500);
+      } else {
+        // User needs to log in first - keep code in storage, show auth page
+        setPage('auth');
+        setTimeout(() => {
+          showToast('Please log in or sign up to join this class', 'info');
+        }, 500);
+      }
     }
   };
 
@@ -540,8 +550,8 @@ export default function QuizForge() {
 
       // Check for shared quiz BEFORE finishing loading
       await checkForSharedQuiz();
-      // Check for pending class join from link
-      checkForPendingClassJoin();
+      // Check for pending class join from link (pass login status)
+      checkForPendingClassJoin(!!firebaseUser);
       // Check for pending org join from link (after class join since it needs user type)
       checkForPendingOrgJoin();
       // Check for subscription success/cancel
@@ -919,7 +929,19 @@ export default function QuizForge() {
 
         showToast(`Welcome back, ${userData.name}!`, 'success');
         setAuthForm({ name: '', email: '', password: '', role: 'student' });
-        setPage(userData.role === 'teacher' ? 'teacher-dashboard' : userData.role === 'student' ? 'student-dashboard' : 'creator-dashboard');
+
+        // Check for pending class join after login
+        const pendingClassCode = sessionStorage.getItem('pendingClassCode');
+        if (pendingClassCode) {
+          setJoinCodeInput(pendingClassCode);
+          sessionStorage.removeItem('pendingClassCode');
+          setPage('student-classes');
+          setTimeout(() => {
+            showToast(`Class code "${pendingClassCode}" ready - click "Join Class" to join!`, 'info');
+          }, 500);
+        } else {
+          setPage(userData.role === 'teacher' ? 'teacher-dashboard' : userData.role === 'student' ? 'student-dashboard' : 'creator-dashboard');
+        }
       }
     } catch (err) {
       console.error('Login error:', err);
@@ -1007,7 +1029,19 @@ export default function QuizForge() {
       
       showToast(`Welcome to QuizForge, ${userData.name}!`, 'success');
       setAuthForm({ name: '', email: '', password: '', role: 'student' });
-      setPage(userData.role === 'teacher' ? 'teacher-dashboard' : userData.role === 'student' ? 'student-dashboard' : 'creator-dashboard');
+
+      // Check for pending class join after signup
+      const pendingClassCode = sessionStorage.getItem('pendingClassCode');
+      if (pendingClassCode) {
+        setJoinCodeInput(pendingClassCode);
+        sessionStorage.removeItem('pendingClassCode');
+        setPage('student-classes');
+        setTimeout(() => {
+          showToast(`Class code "${pendingClassCode}" ready - click "Join Class" to join!`, 'info');
+        }, 500);
+      } else {
+        setPage(userData.role === 'teacher' ? 'teacher-dashboard' : userData.role === 'student' ? 'student-dashboard' : 'creator-dashboard');
+      }
     } catch (err) {
       console.error('Signup error:', err);
       if (err.code === 'auth/email-already-in-use') {
@@ -1086,14 +1120,26 @@ export default function QuizForge() {
         }
 
         showToast(`Welcome back, ${userData.name}!`, 'success');
-        setPage(userData.role === 'teacher' ? 'teacher-dashboard' : userData.role === 'student' ? 'student-dashboard' : 'creator-dashboard');
+
+        // Check for pending class join after Google sign-in (existing user)
+        const pendingClassCodeGoogle = sessionStorage.getItem('pendingClassCode');
+        if (pendingClassCodeGoogle) {
+          setJoinCodeInput(pendingClassCodeGoogle);
+          sessionStorage.removeItem('pendingClassCode');
+          setPage('student-classes');
+          setTimeout(() => {
+            showToast(`Class code "${pendingClassCodeGoogle}" ready - click "Join Class" to join!`, 'info');
+          }, 500);
+        } else {
+          setPage(userData.role === 'teacher' ? 'teacher-dashboard' : userData.role === 'student' ? 'student-dashboard' : 'creator-dashboard');
+        }
       } else {
         // New user - need to select role
         if (!selectedRole) {
           setSocialAuthPending({ provider: 'google', user: firebaseUser });
           return;
         }
-        
+
         const userData = {
           id: firebaseUser.uid,
           name: firebaseUser.displayName || 'User',
@@ -1109,9 +1155,21 @@ export default function QuizForge() {
         setUserType(userData.role);
         setIsLoggedIn(true);
         setSocialAuthPending(null);
-        
+
         showToast(`Welcome to QuizForge, ${userData.name}!`, 'success');
-        setPage(userData.role === 'teacher' ? 'teacher-dashboard' : userData.role === 'student' ? 'student-dashboard' : 'creator-dashboard');
+
+        // Check for pending class join after Google sign-in
+        const pendingClassCode = sessionStorage.getItem('pendingClassCode');
+        if (pendingClassCode) {
+          setJoinCodeInput(pendingClassCode);
+          sessionStorage.removeItem('pendingClassCode');
+          setPage('student-classes');
+          setTimeout(() => {
+            showToast(`Class code "${pendingClassCode}" ready - click "Join Class" to join!`, 'info');
+          }, 500);
+        } else {
+          setPage(userData.role === 'teacher' ? 'teacher-dashboard' : userData.role === 'student' ? 'student-dashboard' : 'creator-dashboard');
+        }
       }
     } catch (err) {
       console.error('Google sign-in error:', err);
@@ -1187,14 +1245,26 @@ export default function QuizForge() {
         }
 
         showToast(`Welcome back, ${userData.name}!`, 'success');
-        setPage(userData.role === 'teacher' ? 'teacher-dashboard' : userData.role === 'student' ? 'student-dashboard' : 'creator-dashboard');
+
+        // Check for pending class join after Apple sign-in (existing user)
+        const pendingClassCodeExisting = sessionStorage.getItem('pendingClassCode');
+        if (pendingClassCodeExisting) {
+          setJoinCodeInput(pendingClassCodeExisting);
+          sessionStorage.removeItem('pendingClassCode');
+          setPage('student-classes');
+          setTimeout(() => {
+            showToast(`Class code "${pendingClassCodeExisting}" ready - click "Join Class" to join!`, 'info');
+          }, 500);
+        } else {
+          setPage(userData.role === 'teacher' ? 'teacher-dashboard' : userData.role === 'student' ? 'student-dashboard' : 'creator-dashboard');
+        }
       } else {
         // New user - need to select role
         if (!selectedRole) {
           setSocialAuthPending({ provider: 'apple', user: firebaseUser });
           return;
         }
-        
+
         const userData = {
           id: firebaseUser.uid,
           name: firebaseUser.displayName || 'User',
@@ -1202,17 +1272,29 @@ export default function QuizForge() {
           role: selectedRole,
           createdAt: Date.now()
         };
-        
+
         await storage.set(`quizforge-account-${firebaseUser.uid}`, JSON.stringify(userData));
-        
+
         setUser(userData);
         setUserName(userData.name);
         setUserType(userData.role);
         setIsLoggedIn(true);
         setSocialAuthPending(null);
-        
+
         showToast(`Welcome to QuizForge, ${userData.name}!`, 'success');
-        setPage(userData.role === 'teacher' ? 'teacher-dashboard' : userData.role === 'student' ? 'student-dashboard' : 'creator-dashboard');
+
+        // Check for pending class join after Apple sign-in (new user)
+        const pendingClassCodeNew = sessionStorage.getItem('pendingClassCode');
+        if (pendingClassCodeNew) {
+          setJoinCodeInput(pendingClassCodeNew);
+          sessionStorage.removeItem('pendingClassCode');
+          setPage('student-classes');
+          setTimeout(() => {
+            showToast(`Class code "${pendingClassCodeNew}" ready - click "Join Class" to join!`, 'info');
+          }, 500);
+        } else {
+          setPage(userData.role === 'teacher' ? 'teacher-dashboard' : userData.role === 'student' ? 'student-dashboard' : 'creator-dashboard');
+        }
       }
     } catch (err) {
       console.error('Apple sign-in error:', err);
