@@ -228,7 +228,7 @@ export default function PricingPage() {
           </h1>
           <p className={`text-xl max-w-2xl mx-auto mb-8 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
             Transform your course materials into engaging quizzes in seconds.
-            Join thousands of educators making assessment easier.
+            Start creating better assessments today.
           </p>
 
           {/* Billing Toggle */}
@@ -427,7 +427,7 @@ export default function PricingPage() {
             Why Teachers Love QuizForge
           </h2>
           <p className={`text-center mb-12 max-w-2xl mx-auto ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-            Join educators worldwide who are saving hours every week while creating better assessments
+            Create professional quizzes in minutes instead of hours
           </p>
           <div className="grid md:grid-cols-3 gap-8">
             {[
@@ -618,7 +618,7 @@ export default function PricingPage() {
             Ready to Transform Your Assessments?
           </h2>
           <p className="text-xl text-indigo-200 mb-8">
-            Join thousands of educators saving hours every week with AI-powered quiz generation.
+            Save hours every week with AI-powered quiz generation.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link
