@@ -170,6 +170,8 @@ export default function QuizForge() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [quizTagInput, setQuizTagInput] = useState('');
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [editProfileForm, setEditProfileForm] = useState({ name: '' });
   
   // A+ Features
   const [darkMode, setDarkMode] = useState(false);
@@ -1903,9 +1905,11 @@ ${quizContent.substring(0, 40000)}
       await setDoc(doc(db, 'classes', newClass.id), newClass);
       setClasses(prev => [...prev, newClass]);
       setCurrentClass(newClass);
-      showToast(`✅ Class "${newClass.name}" created! Code: ${newClass.code}`, 'success');
       setModal(null);
       setModalInput('');
+      // Navigate to class manager to show the new class
+      setPage('class-manager');
+      showToast(`✅ Class "${newClass.name}" created! Share code: ${newClass.code}`, 'success');
     } catch (e) {
       console.error('Error saving class to Firestore:', e);
       showToast('❌ Failed to create class. Please try again.', 'error');
@@ -2604,6 +2608,43 @@ ${quizContent.substring(0, 40000)}
     }
     
     showToast('🔄 All data reset!', 'info');
+  };
+
+  // Update user profile (name)
+  const updateProfile = async () => {
+    const newName = editProfileForm.name.trim();
+    if (!newName) {
+      showToast('⚠️ Name cannot be empty', 'error');
+      return;
+    }
+    if (newName === user?.name) {
+      setEditingProfile(false);
+      return;
+    }
+    setIsActionLoading(true);
+    try {
+      // Update local user state
+      const updatedUser = { ...user, name: newName };
+      setUser(updatedUser);
+      setUserName(newName);
+
+      // Save to Firestore
+      const key = `quizforge-account-${auth.currentUser?.uid}`;
+      const accountData = await storage.get(key);
+      if (accountData) {
+        const parsed = JSON.parse(accountData.value);
+        parsed.name = newName;
+        await storage.set(key, JSON.stringify(parsed));
+      }
+
+      setEditingProfile(false);
+      showToast('✅ Profile updated!', 'success');
+    } catch (err) {
+      console.error('Error updating profile:', err);
+      showToast('❌ Failed to update profile', 'error');
+    } finally {
+      setIsActionLoading(false);
+    }
   };
 
   // Derived values
@@ -3650,7 +3691,8 @@ ${quizContent.substring(0, 40000)}
               <span className="text-2xl">⚡</span>
               <span className="text-xl font-bold text-white">QuizForge</span>
             </div>
-            <div className="flex gap-3">
+            <div className="flex items-center gap-3">
+              <a href="/pricing" className="px-4 py-2 text-white/80 hover:text-white font-medium hidden sm:block">Pricing</a>
               {isLoggedIn ? (
                 <>
                   <button onClick={() => setPage('profile')} className="px-4 py-2 text-white/80 hover:text-white flex items-center gap-2">
@@ -3832,6 +3874,7 @@ ${quizContent.substring(0, 40000)}
                 <span className="text-slate-400 text-sm ml-2">© 2026</span>
               </div>
               <div className="flex gap-6 text-sm">
+                <a href="/pricing" className="text-slate-400 hover:text-white transition-colors">Pricing</a>
                 <a href="/privacy" className="text-slate-400 hover:text-white transition-colors">Privacy Policy</a>
                 <a href="/terms" className="text-slate-400 hover:text-white transition-colors">Terms of Service</a>
                 <button onClick={() => window.location.href = 'mailto:' + 'support' + '@' + 'quizforgeapp.com'} className="text-slate-400 hover:text-white transition-colors">Contact</button>
@@ -4055,12 +4098,17 @@ ${quizContent.substring(0, 40000)}
         <div className="min-h-screen bg-slate-100 dark:bg-slate-900">
           <nav className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3 sticky top-0 z-40">
             <div className="max-w-7xl mx-auto flex justify-between items-center">
-              <div className="flex items-center gap-8">
+              <div className="flex items-center gap-4 md:gap-8">
                 <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('landing')}>
                   <span className="text-xl">⚡</span>
-                  <span className="font-bold text-slate-900 dark:text-white">QuizForge</span>
+                  <span className="font-bold text-slate-900 dark:text-white hidden sm:inline">QuizForge</span>
                 </div>
-                <button onClick={() => setPage(getDashboard())} className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-sm font-medium">Dashboard</button>
+                <div className="hidden sm:flex items-center gap-4">
+                  <button onClick={() => setPage(getDashboard())} className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-sm font-medium">Dashboard</button>
+                  <button onClick={() => setPage('create-quiz')} className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-sm font-medium">Create</button>
+                  {userType === 'teacher' && <button onClick={() => setPage('class-manager')} className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-sm font-medium">Classes</button>}
+                  {userType === 'student' && <button onClick={() => setPage('student-classes')} className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-sm font-medium">My Classes</button>}
+                </div>
               </div>
               <span className={`px-3 py-1 ${userType === 'teacher' ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300' : userType === 'student' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300' : 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300'} text-xs font-medium rounded-full`}>
                 {userType === 'teacher' ? '👩‍🏫 Teacher' : userType === 'student' ? '👨‍🎓 Student' : '✨ Creator'}
@@ -4075,12 +4123,54 @@ ${quizContent.substring(0, 40000)}
                 <div className={`w-20 h-20 bg-gradient-to-br ${userType === 'creator' ? 'from-amber-500 to-orange-600' : 'from-indigo-500 to-purple-600'} rounded-full flex items-center justify-center text-white text-3xl font-bold`}>
                   {user?.name?.charAt(0).toUpperCase()}
                 </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{user?.name}</h1>
-                  <p className="text-slate-600 dark:text-slate-300">{user?.email}</p>
-                  <span className={`inline-block mt-1 px-2 py-1 ${userType === 'teacher' ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300' : userType === 'student' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300' : 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300'} text-xs font-medium rounded-full`}>
-                    {userType === 'teacher' ? '👩‍🏫 Teacher' : userType === 'student' ? '👨‍🎓 Student' : '✨ Quiz Creator'}
-                  </span>
+                <div className="flex-1">
+                  {editingProfile ? (
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={editProfileForm.name}
+                        onChange={e => setEditProfileForm(f => ({ ...f, name: e.target.value }))}
+                        placeholder="Your name"
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-lg font-bold"
+                        autoFocus
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={updateProfile}
+                          disabled={isActionLoading}
+                          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+                        >
+                          {isActionLoading ? 'Saving...' : 'Save'}
+                        </button>
+                        <button
+                          onClick={() => setEditingProfile(false)}
+                          className="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{user?.name}</h1>
+                        <button
+                          onClick={() => {
+                            setEditProfileForm({ name: user?.name || '' });
+                            setEditingProfile(true);
+                          }}
+                          className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                          title="Edit name"
+                        >
+                          ✏️
+                        </button>
+                      </div>
+                      <p className="text-slate-600 dark:text-slate-300">{user?.email}</p>
+                      <span className={`inline-block mt-1 px-2 py-1 ${userType === 'teacher' ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300' : userType === 'student' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300' : 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300'} text-xs font-medium rounded-full`}>
+                        {userType === 'teacher' ? '👩‍🏫 Teacher' : userType === 'student' ? '👨‍🎓 Student' : '✨ Quiz Creator'}
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -4089,11 +4179,27 @@ ${quizContent.substring(0, 40000)}
                 <h2 className="font-semibold text-slate-900 dark:text-white mb-4">Your Plan</h2>
                 {userPlan === 'pro' ? (
                   <div className="p-4 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl text-white">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xl">⭐</span>
-                      <span className="font-bold text-lg">Pro Plan</span>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">⭐</span>
+                        <span className="font-bold text-lg">Pro Plan</span>
+                      </div>
+                      <span className="text-xs bg-white/20 px-2 py-1 rounded-full">Active</span>
                     </div>
-                    <p className="text-indigo-100 text-sm">25 quizzes/month, 3 classes, 50 students each</p>
+                    <p className="text-indigo-100 text-sm mb-3">You have access to all Pro features:</p>
+                    <ul className="text-sm text-indigo-100 space-y-1">
+                      <li className="flex items-center gap-2"><span>✓</span> 25 quizzes per month</li>
+                      <li className="flex items-center gap-2"><span>✓</span> Up to 3 classes</li>
+                      <li className="flex items-center gap-2"><span>✓</span> 50 students per class</li>
+                      <li className="flex items-center gap-2"><span>✓</span> Full analytics dashboard</li>
+                      <li className="flex items-center gap-2"><span>✓</span> Priority support</li>
+                    </ul>
+                    <button
+                      onClick={() => window.open('https://billing.stripe.com/p/login/test', '_blank')}
+                      className="mt-4 w-full py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition"
+                    >
+                      Manage Subscription
+                    </button>
                   </div>
                 ) : (
                   <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
@@ -4272,10 +4378,10 @@ ${quizContent.substring(0, 40000)}
               <button onClick={() => setPage('create-quiz')} className="px-5 py-2.5 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-500 shadow-lg">⚡ Create Quiz</button>
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5"><p className="text-3xl font-bold text-slate-900 dark:text-white">{classes.length}</p><p className="text-sm text-slate-500 dark:text-slate-300">Classes</p></div>
-              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5"><p className="text-3xl font-bold text-slate-900 dark:text-white">{quizzes.length}</p><p className="text-sm text-slate-500 dark:text-slate-300">Quizzes</p></div>
-              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5"><p className="text-3xl font-bold text-slate-900 dark:text-white">{classes.reduce((s, c) => s + c.students.length, 0)}</p><p className="text-sm text-slate-500 dark:text-slate-300">Students</p></div>
-              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5"><p className="text-3xl font-bold text-green-600 dark:text-green-400">{submissions.length > 0 ? Math.round(submissions.reduce((s, sub) => s + sub.percentage, 0) / submissions.length) : '--'}%</p><p className="text-sm text-slate-500 dark:text-slate-300">Avg Score</p></div>
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 border-l-4 border-l-indigo-500"><p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">{classes.length}</p><p className="text-sm text-slate-500 dark:text-slate-400">Classes</p></div>
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 border-l-4 border-l-purple-500"><p className="text-3xl font-bold text-purple-600 dark:text-purple-400">{quizzes.length}</p><p className="text-sm text-slate-500 dark:text-slate-400">Quizzes</p></div>
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 border-l-4 border-l-blue-500"><p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{classes.reduce((s, c) => s + c.students.length, 0)}</p><p className="text-sm text-slate-500 dark:text-slate-400">Students</p></div>
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 border-l-4 border-l-green-500"><p className="text-3xl font-bold text-green-600 dark:text-green-400">{submissions.length > 0 ? Math.round(submissions.reduce((s, sub) => s + sub.percentage, 0) / submissions.length) : '--'}%</p><p className="text-sm text-slate-500 dark:text-slate-400">Avg Score</p></div>
             </div>
             {/* Smart Review for Teachers */}
             {(() => {
@@ -5258,8 +5364,12 @@ ${quizContent.substring(0, 40000)}
         <div className="min-h-screen bg-slate-100 dark:bg-slate-900">
           <nav className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3 sticky top-0 z-40">
             <div className="max-w-7xl mx-auto flex justify-between items-center">
-              <div className="flex items-center gap-8">
-                <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('landing')}><span className="text-xl">⚡</span><span className="font-bold text-slate-900 dark:text-white">QuizForge</span></div>
+              <div className="flex items-center gap-4 md:gap-8">
+                <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('landing')}><span className="text-xl">⚡</span><span className="font-bold text-slate-900 dark:text-white hidden sm:inline">QuizForge</span></div>
+                <div className="hidden sm:flex items-center gap-4">
+                  <button onClick={() => setPage(getDashboard())} className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-sm font-medium">Dashboard</button>
+                  {userType === 'teacher' && <button onClick={() => setPage('class-manager')} className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-sm font-medium">Classes</button>}
+                </div>
               </div>
               <span className={`px-3 py-1 ${userType === 'teacher' ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300' : userType === 'student' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300' : 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300'} text-xs font-medium rounded-full`}>
                 {userType === 'teacher' ? '👩‍🏫 Teacher' : userType === 'student' ? '👨‍🎓 Student' : '✨ Creator'}
@@ -5680,7 +5790,7 @@ ${quizContent.substring(0, 40000)}
               </div>
               {!isAnswered && (
                 <div className="flex items-center justify-between mt-6">
-                  <span className="text-slate-500 text-xs hidden sm:block">Press 1-{q.options.length} or A-{String.fromCharCode(64 + q.options.length)} to select, Enter to submit</span>
+                  <span className="text-slate-500 text-xs hidden lg:block">Press 1-{q.options.length} or A-{String.fromCharCode(64 + q.options.length)} to select, Enter to submit</span>
                   <button onClick={checkAnswer} disabled={quizState.selectedAnswer === null} className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg">Check Answer</button>
                 </div>
               )}
