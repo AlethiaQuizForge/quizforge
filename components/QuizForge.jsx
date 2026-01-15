@@ -159,6 +159,7 @@ export default function QuizForge() {
   
   const [modal, setModal] = useState(null);
   const [modalInput, setModalInput] = useState('');
+  const [classManagerTab, setClassManagerTab] = useState('assignments');
   const [joinCodeInput, setJoinCodeInput] = useState('');
   const [toast, setToast] = useState(null);
   const [uploadProgress, setUploadProgress] = useState({ active: false, step: '', progress: 0 });
@@ -4819,8 +4820,8 @@ ${quizContent.substring(0, 40000)}
                     {['assignments', 'students', 'gradebook'].map(tab => (
                       <button
                         key={tab}
-                        onClick={() => setModalInput(tab)}
-                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${(modalInput || 'assignments') === tab ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+                        onClick={() => setClassManagerTab(tab)}
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${classManagerTab === tab ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
                       >
                         {tab === 'assignments' ? '📋 Assignments' : tab === 'students' ? '👥 Students' : '📊 Gradebook'}
                       </button>
@@ -4828,7 +4829,7 @@ ${quizContent.substring(0, 40000)}
                   </div>
                   
                   {/* Assignments Tab */}
-                  {(modalInput || 'assignments') === 'assignments' && (
+                  {classManagerTab === 'assignments' && (
                     <div className="space-y-4">
                       {assignmentStats.length > 0 ? assignmentStats.map(a => {
                         const isOverdue = a.dueDate && new Date(a.dueDate) < new Date();
@@ -4892,7 +4893,7 @@ ${quizContent.substring(0, 40000)}
                   )}
                   
                   {/* Students Tab */}
-                  {modalInput === 'students' && (() => {
+                  {classManagerTab === 'students' && (() => {
                     // Calculate weighted grades for students tab
                     const studentGradesForTab = studentStats.map(student => {
                       let weightedSum = 0;
@@ -4950,7 +4951,7 @@ ${quizContent.substring(0, 40000)}
                   })()}
                   
                   {/* Gradebook Tab */}
-                  {modalInput === 'gradebook' && (() => {
+                  {classManagerTab === 'gradebook' && (() => {
                     // Calculate weighted grades for each student
                     const totalWeight = assignmentStats.reduce((sum, a) => sum + (a.weight || 10), 0);
                     
