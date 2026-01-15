@@ -44,15 +44,21 @@ quizforge-deploy 2/
 │   │   ├── generate/route.ts # Quiz generation endpoint (rate-limited)
 │   │   ├── vision/route.ts   # PDF image extraction (rate-limited)
 │   │   └── stripe/           # Stripe checkout, webhook, portal routes
+│   ├── pricing/page.tsx      # Marketing pricing page with plans comparison
 │   ├── join/[code]/page.tsx  # Organization invite join page
 │   ├── class/[code]/page.tsx # Class join redirect page
 │   ├── privacy/page.tsx      # Privacy policy
 │   └── terms/page.tsx        # Terms of service
 ├── components/
-│   ├── QuizForge.jsx         # Main app component (~6000 lines)
+│   ├── QuizForge.jsx         # Main app component (~6200 lines)
+│   ├── AdminDashboard.tsx    # Organization admin dashboard
 │   └── PricingCard.tsx       # Subscription pricing UI component
 ├── lib/
+│   ├── firebase.ts           # Firebase initialization with fallback config
 │   ├── stripe.ts             # Stripe plans and limit checking
+│   ├── organizations.ts      # Organization management helpers
+│   ├── constants.ts          # Centralized app constants
+│   ├── utils.ts              # Utility functions (shuffle, formatTime, etc.)
 │   └── rate-limit.ts         # In-memory rate limiter
 ├── docs/
 │   ├── STRIPE_SETUP.md       # Stripe activation guide
@@ -196,8 +202,10 @@ quizforge-deploy 2/
 - **Loading states**: Skeleton loaders, progress indicators, spinners
 - **Toast notifications**: Success, error, info, affirmation styles (auto-dismiss 3s)
 - **Modals**: Resume quiz, delete confirmation, export options, share link, timed setup
-- **Keyboard navigation**: 1-4, A-D, Enter key support
+- **Keyboard navigation**: 1-4, A-D, Enter key support (hidden on mobile/tablet)
 - **Onboarding flow** for new users
+- **Profile editing**: Edit display name from profile page
+- **Consistent navigation**: Dashboard, Create, Classes links across all pages
 
 ### Data & Sync
 
@@ -216,6 +224,7 @@ quizforge-deploy 2/
 ### Static Pages
 
 - `/` - Landing page with feature showcase and auth
+- `/pricing` - Marketing pricing page with plan comparison, FAQ, testimonials
 - `/privacy` - Privacy Policy
 - `/terms` - Terms of Service
 - `/join/[code]` - Organization invite page
@@ -337,6 +346,30 @@ Firebase config is currently hardcoded in `QuizForge.jsx` (project: quizforge-58
 - Members join via invite codes or email domain auto-join
 - Organization admins manage members and settings
 - Plans (School/University) are organization-level with per-teacher limits
+
+---
+
+## Recent Updates (January 2026)
+
+- **Pricing Page**: Full marketing page at `/pricing` with:
+  - Plan comparison cards with gradient styling
+  - Monthly/yearly billing toggle (17% savings)
+  - Feature comparison table
+  - Testimonials and FAQ sections
+  - Full dark/light mode support
+
+- **UX Improvements**:
+  - Dashboard stat cards have colored left borders for visual variety
+  - Navigation header consistent across all pages (Dashboard, Create, Classes)
+  - Class creation now navigates to Class Manager after success
+  - Pro Plan profile section shows full feature list
+  - Profile name editing with inline form
+
+- **Bug Fixes**:
+  - Fixed Stripe webhook not updating user plan (Firebase fallback config)
+  - Fixed 30 UX issues from comprehensive audit
+  - Safe JSON parsing throughout app
+  - Rate condition fixes in quiz navigation
 
 ---
 
