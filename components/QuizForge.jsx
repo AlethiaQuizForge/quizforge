@@ -1177,7 +1177,7 @@ export default function QuizForge() {
 
   // Handle Stripe checkout for Pro upgrade
   const handleUpgrade = async () => {
-    if (!user?.uid || !user?.email) {
+    if (!auth.currentUser || !user?.email) {
       showToast('Please log in to upgrade', 'error');
       return;
     }
@@ -1189,7 +1189,7 @@ export default function QuizForge() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           planId: 'pro',
-          userId: user.uid,
+          userId: auth.currentUser.uid,
           userEmail: user.email,
         }),
       });
