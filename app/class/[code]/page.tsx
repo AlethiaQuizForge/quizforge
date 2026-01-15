@@ -1,28 +1,69 @@
-'use client';
+import { Metadata } from 'next';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import JoinClassClient from './JoinClassClient';
 
-import { useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+type Props = {
+  params: Promise<{ code: string }>;
+};
 
-export default function JoinClassPage() {
-  const params = useParams();
-  const router = useRouter();
-  const code = params.code as string;
+// Fetch class data for metadata
+async function getClassData(code: string) {
+  try {
+    const classesRef = collection(db, 'classes');
+    const q = query(classesRef, where('code', '==', code.toUpperCase()));
+    const snapshot = await getDocs(q);
 
-  useEffect(() => {
-    // Store the class code in sessionStorage so the app can pick it up
-    if (code) {
-      sessionStorage.setItem('pendingClassCode', code.toUpperCase());
+    if (!snapshot.empty) {
+      const classData = snapshot.docs[0].data();
+      return {
+        name: classData.name || 'Class',
+        teacherName: classData.teacherName || 'a teacher',
+        code: code.toUpperCase()
+      };
     }
-    // Redirect to main app - it will handle the join flow
-    router.replace('/?join=class');
-  }, [code, router]);
+  } catch (error) {
+    console.error('Error fetching class for metadata:', error);
+  }
+  return null;
+}
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-        <p className="text-slate-600 dark:text-slate-300">Joining class...</p>
-      </div>
-    </div>
-  );
+// Dynamic metadata for link previews
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { code } = await params;
+  const classData = await getClassData(code);
+
+  if (classData) {
+    return {
+      title: `Join ${classData.name} | QuizForge`,
+      description: `You've been invited to join "${classData.name}" by ${classData.teacherName} on QuizForge. Join now to access quizzes and assignments!`,
+      openGraph: {
+        title: `Join ${classData.name} on QuizForge`,
+        description: `${classData.teacherName} invited you to join "${classData.name}". Click to join and start taking quizzes!`,
+        siteName: 'QuizForge - Create AI-Powered Quizzes in Seconds',
+        type: 'website',
+      },
+      twitter: {
+        card: 'summary',
+        title: `Join ${classData.name} on QuizForge`,
+        description: `${classData.teacherName} invited you to join "${classData.name}". Click to join and start taking quizzes!`,
+      },
+    };
+  }
+
+  // Fallback if class not found
+  return {
+    title: 'Join a Class | QuizForge',
+    description: 'Join a class on QuizForge to access quizzes and assignments from your teacher.',
+    openGraph: {
+      title: 'Join a Class on QuizForge',
+      description: 'Join a class on QuizForge to access quizzes and assignments from your teacher.',
+      siteName: 'QuizForge - Create AI-Powered Quizzes in Seconds',
+    },
+  };
+}
+
+export default async function JoinClassPage({ params }: Props) {
+  const { code } = await params;
+  return <JoinClassClient code={code} />;
 }
