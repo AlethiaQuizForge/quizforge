@@ -3,7 +3,22 @@
 
 import Stripe from 'stripe';
 
-// Server-side Stripe instance
+// Lazy-initialized Stripe instance to ensure env vars are available at runtime
+let stripeInstance: Stripe | null = null;
+
+export function getStripe(): Stripe | null {
+  if (stripeInstance) return stripeInstance;
+
+  if (process.env.STRIPE_SECRET_KEY) {
+    stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2025-12-15.clover',
+    });
+  }
+
+  return stripeInstance;
+}
+
+// For backwards compatibility - but prefer getStripe() for runtime usage
 export const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY, {
       apiVersion: '2025-12-15.clover',

@@ -2,7 +2,7 @@
 // NOTE: Not active until STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET are configured
 
 import { NextRequest, NextResponse } from 'next/server';
-import { stripe, isOrgPlan, PlanId } from '@/lib/stripe';
+import { getStripe, isOrgPlan, PlanId } from '@/lib/stripe';
 import type { OrgPlanId } from '@/lib/organizations';
 import Stripe from 'stripe';
 
@@ -21,6 +21,7 @@ async function getOrgHelpers() {
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
+  const stripe = getStripe();
   if (!stripe) {
     return NextResponse.json(
       { error: 'Payments are not enabled' },
