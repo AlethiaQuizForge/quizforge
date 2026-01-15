@@ -124,29 +124,6 @@ const FAQ_ITEMS = [
   },
 ];
 
-const TESTIMONIALS = [
-  {
-    quote: "QuizForge has completely transformed how I prepare assessments. What used to take me 3-4 hours now takes 10 minutes.",
-    author: "Dr. Sarah Chen",
-    role: "Professor of Economics",
-    school: "Copenhagen Business School",
-    avatar: "SC",
-  },
-  {
-    quote: "My students love the instant feedback. Their exam scores have improved significantly since we started using QuizForge for practice.",
-    author: "Michael Torres",
-    role: "High School Teacher",
-    school: "International School of Brussels",
-    avatar: "MT",
-  },
-  {
-    quote: "The AI-generated questions are genuinely good - they test concepts, not just memorization. Very impressed!",
-    author: "Emma Larsson",
-    role: "University Lecturer",
-    school: "Lund University",
-    avatar: "EL",
-  },
-];
 
 const FEATURES_COMPARISON = [
   { feature: 'AI Quiz Generation', free: true, pro: true, school: true, university: true },
@@ -574,44 +551,19 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section className={`py-16 px-6 ${darkMode ? 'bg-slate-800/50' : 'bg-gradient-to-br from-indigo-50 to-purple-50'}`}>
-        <div className="max-w-6xl mx-auto">
-          <h2 className={`text-3xl font-bold text-center mb-4 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-            Loved by Educators Worldwide
-          </h2>
-          <p className={`text-center mb-12 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-            See what teachers and professors are saying about QuizForge
-          </p>
-          <div className="grid md:grid-cols-3 gap-6">
-            {TESTIMONIALS.map((testimonial, idx) => (
-              <div
-                key={idx}
-                className={`p-6 rounded-2xl ${
-                  darkMode ? 'bg-slate-800 border border-slate-700' : 'bg-white shadow-lg'
-                }`}
-              >
-                <div className={`text-4xl mb-4 ${darkMode ? 'text-indigo-400' : 'text-indigo-500'}`}>"</div>
-                <p className={`mb-6 italic ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                  {testimonial.quote}
-                </p>
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
-                    darkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-100 text-indigo-700'
-                  }`}>
-                    {testimonial.avatar}
-                  </div>
-                  <div>
-                    <p className={`font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                      {testimonial.author}
-                    </p>
-                    <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                      {testimonial.role}, {testimonial.school}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
+      {/* Social Proof Badge */}
+      <section className={`py-8 px-6 ${darkMode ? 'bg-slate-800/50' : 'bg-gradient-to-br from-indigo-50 to-purple-50'}`}>
+        <div className="max-w-4xl mx-auto text-center">
+          <div className={`inline-flex items-center gap-3 px-6 py-3 rounded-full ${
+            darkMode ? 'bg-slate-700/50 border border-slate-600' : 'bg-white shadow-md'
+          }`}>
+            <span className="text-2xl">🎓</span>
+            <span className={`font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+              Loved by Educators Worldwide
+            </span>
+            <span className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              — Used by teachers at Copenhagen Business School and beyond
+            </span>
           </div>
         </div>
       </section>
