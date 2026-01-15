@@ -3102,6 +3102,28 @@ ${quizContent.substring(0, 40000)}
                     </div>
                   </button>
 
+                  {/* Share to Class - only show for teachers with classes */}
+                  {userType === 'teacher' && classes.length > 0 && (
+                    <button
+                      onClick={() => {
+                        setCurrentQuiz(modal.quiz);
+                        setModal(null);
+                        setPage('class-manager');
+                        // Show assign modal after a short delay to let page render
+                        setTimeout(() => {
+                          showToast('Select a class and click "Assign Quiz" to share with your students!', 'info');
+                        }, 500);
+                      }}
+                      className="w-full p-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl text-left flex items-center gap-4 hover:from-emerald-400 hover:to-teal-400"
+                    >
+                      <span className="text-2xl">👥</span>
+                      <div>
+                        <span className="font-semibold block">Send to Class</span>
+                        <span className="text-emerald-100 text-sm">Assign to {classes.length === 1 ? classes[0].name : `${classes.length} classes`}</span>
+                      </div>
+                    </button>
+                  )}
+
                   <button
                     onClick={() => {
                       const selected = shuffleArray([...modal.quiz.questions]).slice(0, 10).map(q => ({ ...q, options: shuffleArray([...q.options]) }));
