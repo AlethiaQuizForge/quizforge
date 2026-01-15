@@ -185,6 +185,10 @@ export default function QuizForge() {
   const [pendingOrgJoin, setPendingOrgJoin] = useState(null); // Pending org join from link
   const [showAdminDashboard, setShowAdminDashboard] = useState(null); // Org ID to show admin for
 
+  // Subscription/plan state
+  const [userPlan, setUserPlan] = useState('free'); // 'free' or 'pro'
+  const [isUpgrading, setIsUpgrading] = useState(false);
+
   const fileInputRef = useRef(null);
   const timerRef = useRef(null);
 
@@ -303,7 +307,32 @@ export default function QuizForge() {
       console.error('Failed to load organizations:', err);
     }
   };
-  
+
+  // Check for subscription success/cancel in URL params
+  const checkForSubscriptionStatus = async () => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const subscriptionStatus = params.get('subscription');
+
+    if (subscriptionStatus === 'success') {
+      // Clear URL params
+      window.history.replaceState({}, '', window.location.pathname);
+      showToast('🎉 Welcome to Pro! Your account has been upgraded.', 'success');
+      // Reload user data to get updated plan
+      if (auth.currentUser) {
+        const result = await storage.get(`quizforge-account-${auth.currentUser.uid}`);
+        if (result && result.value) {
+          const userData = JSON.parse(result.value);
+          setUser(userData);
+          setUserPlan(userData.plan || 'free');
+        }
+      }
+    } else if (subscriptionStatus === 'cancelled') {
+      window.history.replaceState({}, '', window.location.pathname);
+      showToast('Subscription cancelled. You can upgrade anytime.', 'info');
+    }
+  };
+
   // Listen for Firebase auth state changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -316,6 +345,7 @@ export default function QuizForge() {
             setUser(userData);
             setUserName(userData.name);
             setUserType(userData.role);
+            setUserPlan(userData.plan || 'free');
             setIsLoggedIn(true);
             
             // Load user's data
@@ -426,6 +456,8 @@ export default function QuizForge() {
       checkForPendingClassJoin();
       // Check for pending org join from link (after class join since it needs user type)
       checkForPendingOrgJoin();
+      // Check for subscription success/cancel
+      checkForSubscriptionStatus();
       setIsLoading(false);
       setIsDataLoading(false);
     });
@@ -1141,6 +1173,42 @@ export default function QuizForge() {
   const showToast = (message, type = 'info') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  // Handle Stripe checkout for Pro upgrade
+  const handleUpgrade = async () => {
+    if (!user?.uid || !user?.email) {
+      showToast('Please log in to upgrade', 'error');
+      return;
+    }
+
+    setIsUpgrading(true);
+    try {
+      const response = await fetch('/api/stripe/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          planId: 'pro',
+          userId: user.uid,
+          userEmail: user.email,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create checkout session');
+      }
+
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error('Upgrade error:', error);
+      showToast(error.message || 'Failed to start upgrade. Please try again.', 'error');
+    } finally {
+      setIsUpgrading(false);
+    }
   };
 
   // Export quiz to PDF
@@ -3824,8 +3892,54 @@ ${quizContent.substring(0, 40000)}
                   </span>
                 </div>
               </div>
-              
+
+              {/* Plan Section */}
               <div className="border-t border-slate-200 dark:border-slate-700 pt-6">
+                <h2 className="font-semibold text-slate-900 dark:text-white mb-4">Your Plan</h2>
+                {userPlan === 'pro' ? (
+                  <div className="p-4 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl text-white">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xl">⭐</span>
+                      <span className="font-bold text-lg">Pro Plan</span>
+                    </div>
+                    <p className="text-indigo-100 text-sm">25 quizzes/month, 3 classes, 50 students each</p>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xl">📚</span>
+                          <span className="font-medium text-slate-900 dark:text-white">Free Plan</span>
+                        </div>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm">5 quizzes/month, 1 class, 30 students</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleUpgrade}
+                      disabled={isUpgrading}
+                      className="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-medium hover:from-indigo-500 hover:to-purple-500 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isUpgrading ? (
+                        <>
+                          <span className="animate-spin">⏳</span>
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <span>⭐</span>
+                          Upgrade to Pro - $9/month
+                        </>
+                      )}
+                    </button>
+                    <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-2">
+                      5x more quizzes, 3x more classes
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t border-slate-200 dark:border-slate-700 pt-6 mt-6">
                 <h2 className="font-semibold text-slate-900 dark:text-white mb-4">Your Stats</h2>
                 <div className="grid grid-cols-2 gap-4">
                   {userType === 'teacher' ? (
