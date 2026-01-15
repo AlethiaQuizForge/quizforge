@@ -13,12 +13,20 @@ Go to Stripe Dashboard → Products → Add Product
 
 ### Pro Plan ($9/month)
 - Name: QuizForge Pro
-- Price: $9.00 / month
+- Description: 1 user, 25 quizzes/month (resets, no stacking), 3 classes with 50 students each
+- Price: $9.00 / month (recurring)
 - Copy the **Price ID** (starts with `price_`)
 
-### Institution Plan ($199/month)
-- Name: QuizForge Institution
-- Price: $199.00 / month
+### School Plan ($199/month)
+- Name: QuizForge School
+- Description: 25 teachers, 25 quizzes per teacher/month, 3 classes with 50 students each
+- Price: $199.00 / month (recurring)
+- Copy the **Price ID**
+
+### University Plan ($499/month)
+- Name: QuizForge University
+- Description: 50 professors, 35 quizzes per professor/month, unlimited classes & students, admin dashboard, invoice billing
+- Price: $499.00 / month (recurring)
 - Copy the **Price ID**
 
 ## Step 2: Get API Keys
@@ -53,7 +61,8 @@ Add these:
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | pk_live_... |
 | `STRIPE_WEBHOOK_SECRET` | whsec_... |
 | `STRIPE_PRO_PRICE_ID` | price_... |
-| `STRIPE_INSTITUTION_PRICE_ID` | price_... |
+| `STRIPE_SCHOOL_PRICE_ID` | price_... |
+| `STRIPE_UNIVERSITY_PRICE_ID` | price_... |
 
 ## Step 5: Redeploy
 

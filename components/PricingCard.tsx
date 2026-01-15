@@ -109,15 +109,6 @@ export function PricingCard({
         )}
       </button>
 
-      {planId === 'institution' && (
-        <p
-          className={`text-center text-sm mt-3 ${
-            highlighted ? 'text-indigo-200' : 'text-slate-500 dark:text-slate-400'
-          }`}
-        >
-          Contact us for custom pricing
-        </p>
-      )}
     </div>
   );
 }
@@ -143,7 +134,7 @@ export function PricingSection({
         </p>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto px-6">
+      <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto px-6">
         <PricingCard
           planId="free"
           currentPlan={currentPlan}
@@ -157,16 +148,13 @@ export function PricingSection({
           isLoading={isLoading}
           highlighted
         />
-        <PricingCard
-          planId="institution"
-          currentPlan={currentPlan}
-          onSelectPlan={onSelectPlan}
-          isLoading={isLoading}
-        />
       </div>
 
       <p className="text-center text-slate-500 dark:text-slate-400 mt-8 text-sm">
         All plans include: Full quiz quality • All question types • PDF export • Analytics
+      </p>
+      <p className="text-center text-slate-400 dark:text-slate-500 mt-2 text-xs">
+        Quiz limits reset monthly • School & University plans coming soon
       </p>
     </div>
   );
