@@ -3,8 +3,8 @@
 
 export default function PrivacyPolicy() {
   return (
-    <div className="min-h-screen bg-slate-50 py-12 px-6">
-      <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-8 md:p-12">
+    <main id="main-content" className="min-h-screen bg-slate-50 py-12 px-6">
+      <article className="max-w-3xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-8 md:p-12">
         <h1 className="text-3xl font-bold text-slate-900 mb-2">Privacy Policy</h1>
         <p className="text-slate-500 mb-8">Last updated: January 12, 2026</p>
         
@@ -106,7 +106,7 @@ export default function PrivacyPolicy() {
         <div className="mt-12 pt-8 border-t border-slate-200">
           <a href="/" className="text-indigo-600 hover:text-indigo-500 font-medium">← Back to QuizForge</a>
         </div>
-      </div>
-    </div>
+      </article>
+    </main>
   );
 }

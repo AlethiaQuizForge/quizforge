@@ -2961,7 +2961,7 @@ ${quizContent.substring(0, 40000)}
   }
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'dark bg-slate-900' : ''}`}>
+    <div className={`min-h-screen ${darkMode ? 'dark bg-slate-900' : ''}`} id="main-content">
       {/* Dark Mode Toggle - Fixed position */}
       <button
         onClick={() => setDarkMode(!darkMode)}
@@ -3607,7 +3607,7 @@ ${quizContent.substring(0, 40000)}
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">Edit Question</h2>
-              <button onClick={() => setEditingQuestion(null)} className="text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-2xl">×</button>
+              <button onClick={() => setEditingQuestion(null)} className="text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-2xl" aria-label="Close edit dialog">×</button>
             </div>
 
             <div className="space-y-4">
@@ -3864,7 +3864,7 @@ ${quizContent.substring(0, 40000)}
             <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-3xl max-h-[85vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white">📊 Quiz Analytics</h2>
-                <button onClick={() => setShowAnalytics(null)} className="text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-2xl">×</button>
+                <button onClick={() => setShowAnalytics(null)} className="text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-2xl" aria-label="Close analytics">×</button>
               </div>
 
               <div className="mb-6">
@@ -3954,7 +3954,7 @@ ${quizContent.substring(0, 40000)}
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-2xl max-h-[85vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">📈 Your Progress</h2>
-              <button onClick={() => setShowProgressChart(false)} className="text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-2xl">×</button>
+              <button onClick={() => setShowProgressChart(false)} className="text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-2xl" aria-label="Close progress chart">×</button>
             </div>
             
             {/* Stats Overview */}
@@ -4087,15 +4087,6 @@ ${quizContent.substring(0, 40000)}
           </nav>
 
           <div className="max-w-7xl mx-auto px-6 pt-12 md:pt-16 pb-8 md:pb-12 relative">
-            {/* Love Note Sticker */}
-            <div className="absolute top-0 right-0 md:right-4 transform rotate-3 hidden sm:block">
-              <div className="bg-pink-500/90 backdrop-blur-sm text-white px-3 py-2 rounded-lg shadow-lg text-xs font-medium">
-                <span className="flex items-center gap-1.5">
-                  💝 Made with love for my GF
-                </span>
-              </div>
-            </div>
-            
             <div className="max-w-2xl">
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/20 text-amber-400 text-sm rounded-full mb-4">
                 🎯 AI-Powered Assessment Platform

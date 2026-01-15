@@ -213,6 +213,7 @@ export default function PricingPage() {
         </div>
       </nav>
 
+      <main id="main-content">
       {/* Hero Section */}
       <section className="pt-12 pb-8 px-6">
         <div className="max-w-4xl mx-auto text-center">
@@ -633,6 +634,7 @@ export default function PricingPage() {
           </p>
         </div>
       </section>
+      </main>
 
       {/* Footer */}
       <footer className={`py-8 px-6 ${darkMode ? 'bg-slate-900 border-t border-slate-800' : 'bg-slate-900'}`}>

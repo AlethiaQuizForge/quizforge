@@ -299,6 +299,7 @@ Extracts text from PDF page images using Claude Vision.
 | `assignments` | Global assignments with embedded quiz questions |
 | `submissions` | Student submissions (studentId, email, assignmentId, score, answers) |
 | `organizations` | Organization data (members, settings, invite codes) |
+| `notifications` | Student notifications (recipientEmail, type, message, read, createdAt) |
 | `shared-{id}` | Publicly shared quizzes (includes `timesTaken` counter, leaderboard) |
 
 ### Document Patterns
@@ -351,6 +352,29 @@ Firebase config is currently hardcoded in `QuizForge.jsx` (project: quizforge-58
 
 ## Recent Updates (January 2026)
 
+- **Student Notification System** (Jan 15):
+  - **Real-time notifications** when teachers assign quizzes to classes
+  - **Bell icon (🔔)** in student dashboard header with unread count badge
+  - **Notifications modal** to view and manage notifications
+  - **Mark as read** individual notifications or mark all as read
+  - New `notifications` Firestore collection for cross-user messaging
+
+- **"Send to Class" Feature** (Jan 15):
+  - After creating a quiz, teachers see a **"Send to Class"** button in the success modal
+  - Green gradient button with 👥 icon for quick assignment workflow
+  - Navigates directly to Class Manager with the quiz pre-selected
+
+- **Dynamic Link Previews** (Jan 15):
+  - **Class invite links** (`/class/[code]`) show class name and teacher in Open Graph metadata
+  - **Organization invite links** (`/join/[code]`) show org name in link previews
+  - Server-side `generateMetadata` with Firestore queries for rich social sharing
+  - New client components: `JoinClassClient.tsx`, `JoinOrgClient.tsx`
+
+- **Join Flow Fixes** (Jan 15):
+  - **Class join links work for non-logged-in users** - redirects to auth, then processes join after login
+  - **Org invite links work for non-logged-in teachers** - same flow with sessionStorage persistence
+  - Pending join codes checked after all auth methods (email, Google, Apple)
+
 - **Data Architecture Improvements** (Jan 15):
   - **New subcollection structure** for scalable user data storage (`/lib/userData.ts`)
   - **Migration utilities** for gradual migration from monolithic docs (`/lib/migration.ts`)
@@ -366,6 +390,7 @@ Firebase config is currently hardcoded in `QuizForge.jsx` (project: quizforge-58
   - Feature comparison table
   - Testimonials and FAQ sections
   - Full dark/light mode support
+  - **Honest messaging** - removed inflated claims ("Join thousands...")
 
 - **UX Improvements**:
   - Dashboard stat cards have colored left borders for visual variety
@@ -381,8 +406,15 @@ Firebase config is currently hardcoded in `QuizForge.jsx` (project: quizforge-58
   - Fixed 30 UX issues from comprehensive audit
   - Safe JSON parsing throughout app
   - Rate condition fixes in quiz navigation
-  - **Fixed class creation modal bug** - modal now passes `modalInput` as parameter to `onConfirm` callback to avoid stale closure issue
+  - **Fixed class creation modal stale closure bug** - `createClass` now accepts `inputValue` as parameter, modal passes `modalInput` to `onConfirm` callback
   - **Unified contact email** - all contact emails now use `support@quizforgeapp.com`
+
+- **Accessibility & UX Audit Fixes** (Jan 15):
+  - **Removed "Made with love for my GF" badge** - unprofessional for business product
+  - **Added skip-to-content link** in root layout for screen readers (WCAG 2.1 AA)
+  - **Added aria-labels** to all icon-only close buttons (×) in modals
+  - **Improved semantic HTML** - Added `<main>` and `<article>` tags to pages
+  - **Created custom 404 page** (`app/not-found.tsx`) with branded design
 
 ---
 
@@ -394,6 +426,9 @@ Firebase config is currently hardcoded in `QuizForge.jsx` (project: quizforge-58
 | `lib/migration.ts` | Migration utilities for moving users to new data structure |
 | `lib/orgAnalytics.ts` | Organization-wide analytics functions |
 | `firestore.indexes.json` | Composite indexes for common queries |
+| `app/class/[code]/JoinClassClient.tsx` | Client component for class join redirect flow |
+| `app/join/[code]/JoinOrgClient.tsx` | Client component for organization invite join flow |
+| `app/not-found.tsx` | Custom branded 404 error page |
 
 ---
 
@@ -452,4 +487,4 @@ npx cap open ios     # Open in Xcode
 
 ---
 
-*Last updated: January 15, 2026*
+*Last updated: January 15, 2026 (Session 3 - Accessibility Audit Fixes)*
