@@ -5962,9 +5962,13 @@ ${quizContent.substring(0, 40000)}
                   <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Questions</label>
                     <select value={numQuestions} onChange={e => setNumQuestions(parseInt(e.target.value))} className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl">
-                      <option value={5}>5</option><option value={10}>10</option><option value={15}>15</option><option value={20}>20</option><option value={25}>25</option><option value={30}>30</option><option value={40}>40</option><option value={50}>50</option>
+                      <option value={5}>5</option><option value={10}>10</option><option value={15}>15</option><option value={20}>20</option><option value={25}>25</option><option value={30}>30</option>
                     </select>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">All questions can be shared with friends</p>
+                    {numQuestions >= 10 && numQuestions <= 20 ? (
+                      <p className="text-xs text-green-500 dark:text-green-400 mt-1">✓ Best quality range</p>
+                    ) : (
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">10-20 questions for best quality</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Difficulty</label>
