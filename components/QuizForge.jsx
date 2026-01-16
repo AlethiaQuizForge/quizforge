@@ -2372,10 +2372,28 @@ ${quizContent.substring(0, 40000)}
     };
   };
 
-  // Limit question bank size (keep most recent 500)
+  // Limit question bank size based on plan tier
+  const getQuestionBankLimit = () => {
+    // Check if user is in an organization (school/university plans)
+    if (userOrganizations.length > 0) {
+      const org = userOrganizations[0];
+      if (org.plan === 'university') return 5000;
+      if (org.plan === 'school') return 2000;
+    }
+    // Individual plans
+    return 500; // Free and Pro
+  };
+
   const limitQuestionBank = (questions) => {
-    if (questions.length > 500) {
-      return questions.slice(-500);
+    const limit = getQuestionBankLimit();
+    if (questions.length > limit) {
+      // Show one-time warning for free/pro users
+      const warningKey = 'quizforge-bank-limit-warned';
+      if (!localStorage.getItem(warningKey) && userOrganizations.length === 0) {
+        localStorage.setItem(warningKey, 'true');
+        showToast(`ℹ️ Question bank limited to ${limit} most recent questions`, 'info');
+      }
+      return questions.slice(-limit);
     }
     return questions;
   };
