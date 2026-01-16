@@ -1631,45 +1631,54 @@ export default function QuizForge() {
   
   // Get or create shareId for a quiz (used by social share buttons)
   const getShareUrl = async (quiz) => {
-    // If quiz is already a shared quiz (id starts with 's'), use its id directly
-    if (quiz.id && quiz.id.startsWith('s')) {
-      return `${window.location.origin}?quiz=${quiz.id}`;
-    }
-
-    let shareId = quiz.shareId;
-
-    if (!shareId) {
-      shareId = `s${Date.now()}`;
-
-      const questionsToShare = quiz.questions.length > 50
-        ? quiz.questions.slice(0, 50)
-        : quiz.questions;
-
-      if (quiz.questions.length > 50) {
-        showToast(`ℹ️ Sharing first 50 of ${quiz.questions.length} questions`, 'info');
+    try {
+      // If quiz is already a shared quiz (id starts with 's'), use its id directly
+      if (quiz.id && quiz.id.startsWith('s')) {
+        return `${window.location.origin}?quiz=${quiz.id}`;
       }
 
-      const shareData = {
-        id: shareId,
-        name: quiz.name,
-        questions: questionsToShare,
-        subject: quiz.subject || 'General',
-        createdBy: user?.name || 'Anonymous',
-        createdAt: Date.now(),
-        timesTaken: 0
-      };
+      let shareId = quiz.shareId;
 
-      await storage.set(`shared-${shareId}`, JSON.stringify(shareData));
+      if (!shareId) {
+        shareId = `s${Date.now()}`;
 
-      // Update quiz with shareId
-      const updatedQuiz = { ...quiz, shareId };
-      setQuizzes(prev => prev.map(q => q.id === quiz.id ? updatedQuiz : q));
-      if (currentQuiz.id === quiz.id) {
-        setCurrentQuiz(updatedQuiz);
+        const questionsToShare = quiz.questions.length > 50
+          ? quiz.questions.slice(0, 50)
+          : quiz.questions;
+
+        if (quiz.questions.length > 50) {
+          showToast(`ℹ️ Sharing first 50 of ${quiz.questions.length} questions`, 'info');
+        }
+
+        const shareData = {
+          id: shareId,
+          name: quiz.name,
+          questions: questionsToShare,
+          subject: quiz.subject || 'General',
+          createdBy: user?.name || 'Anonymous',
+          createdAt: Date.now(),
+          timesTaken: 0
+        };
+
+        const result = await storage.set(`shared-${shareId}`, JSON.stringify(shareData));
+        if (!result) {
+          throw new Error('Failed to save share data');
+        }
+
+        // Update quiz with shareId
+        const updatedQuiz = { ...quiz, shareId };
+        setQuizzes(prev => prev.map(q => q.id === quiz.id ? updatedQuiz : q));
+        if (currentQuiz?.id === quiz.id) {
+          setCurrentQuiz(updatedQuiz);
+        }
       }
-    }
 
-    return `${window.location.origin}?quiz=${shareId}`;
+      return `${window.location.origin}?quiz=${shareId}`;
+    } catch (err) {
+      console.error('getShareUrl error:', err);
+      showToast('❌ Failed to create share link', 'error');
+      return null;
+    }
   };
 
   const navigate = (newPage, type = null) => {
@@ -3582,7 +3591,7 @@ ${quizContent.substring(0, 40000)}
               <>
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-xl font-bold text-slate-900 dark:text-white">📋 Review Answers</h3>
-                  <button onClick={() => setModal(null)} className="text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-2xl">&times;</button>
+                  <button onClick={() => setModal(null)} className="text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-2xl" aria-label="Close review">&times;</button>
                 </div>
                 <div className="space-y-4">
                   {modal.results.map((result, idx) => {
@@ -5548,6 +5557,7 @@ ${quizContent.substring(0, 40000)}
                   <button
                     onClick={() => setModal({ type: 'notifications' })}
                     className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg relative"
+                    aria-label={`Notifications${notifications.length > 0 ? ` (${notifications.length} unread)` : ''}`}
                   >
                     🔔
                     {notifications.length > 0 && (
