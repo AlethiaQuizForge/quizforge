@@ -3204,19 +3204,13 @@ ${quizContent.substring(0, 40000)}
                   )}
 
                   <button
-                    onClick={() => {
-                      const selected = shuffleArray([...modal.quiz.questions]).slice(0, 10).map(q => ({ ...q, options: shuffleArray([...q.options]) }));
-                      setCurrentQuiz({ ...modal.quiz, questions: selected });
-                      setQuizState({ currentQuestion: 0, selectedAnswer: null, answeredQuestions: new Set(), score: 0, results: [] });
-                      setModal(null);
-                      setPage('take-quiz');
-                    }}
+                    onClick={() => setModal({ type: 'practice-setup', quiz: modal.quiz })}
                     className="w-full p-4 bg-amber-500 hover:bg-amber-400 text-white rounded-xl text-left flex items-center gap-4"
                   >
                     <span className="text-2xl">🎯</span>
                     <div>
                       <span className="font-semibold block">Practice Now</span>
-                      <span className="text-amber-100 text-sm">{estimateQuizTime(modal.quiz.questions.slice(0, 10))} • 10 questions max</span>
+                      <span className="text-amber-100 text-sm">{estimateQuizTime(modal.quiz.questions)} • {modal.quiz.questions.length} questions</span>
                     </div>
                   </button>
 
@@ -3453,6 +3447,50 @@ ${quizContent.substring(0, 40000)}
                     className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-300 dark:disabled:bg-slate-600 text-white rounded-lg font-medium"
                   >
                     Start Quiz ⏱️
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Practice Setup Modal */}
+            {modal?.type === 'practice-setup' && (
+              <>
+                <div className="text-center mb-4">
+                  <div className="text-5xl mb-2">🎯</div>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">Practice Quiz</h3>
+                  <p className="text-slate-600 dark:text-slate-300 mt-1">{modal.quiz.name}</p>
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">How many questions?</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[...new Set([5, 10, 15, 20, modal.quiz.questions.length])].filter(n => n <= modal.quiz.questions.length).sort((a, b) => a - b).map(num => (
+                      <button
+                        key={num}
+                        onClick={() => setModalInput(num.toString())}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition ${modalInput === num.toString() ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300'}`}
+                      >
+                        {num === modal.quiz.questions.length ? `All ${num}` : num}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Questions will be shuffled randomly</p>
+                <div className="flex gap-3">
+                  <button onClick={() => { setModal(null); setModalInput(''); }} className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg">Cancel</button>
+                  <button
+                    onClick={() => {
+                      const count = parseInt(modalInput) || modal.quiz.questions.length;
+                      const selected = shuffleArray([...modal.quiz.questions]).slice(0, count).map(q => ({ ...q, options: shuffleArray([...q.options]) }));
+                      setCurrentQuiz({ ...modal.quiz, questions: selected });
+                      setQuizState({ currentQuestion: 0, selectedAnswer: null, answeredQuestions: new Set(), score: 0, results: [] });
+                      setModal(null);
+                      setModalInput('');
+                      setPage('take-quiz');
+                    }}
+                    disabled={!modalInput}
+                    className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-300 dark:disabled:bg-slate-600 text-white rounded-lg font-medium"
+                  >
+                    Start Practice
                   </button>
                 </div>
               </>
@@ -4972,12 +5010,7 @@ ${quizContent.substring(0, 40000)}
                             )}
                             <button onClick={() => shareQuiz(quiz)} className="px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/50 hover:bg-indigo-200 dark:hover:bg-indigo-900/70 text-indigo-700 dark:text-indigo-300 rounded-lg text-sm" title="Share quiz">🔗 Share</button>
                             <button onClick={() => { setCurrentQuiz(quiz); setPage('review-quiz'); }} className="px-3 py-1.5 bg-slate-200 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-500 text-slate-700 dark:text-white rounded-lg text-sm">View</button>
-                            <button onClick={() => {
-                              const selected = shuffleArray([...quiz.questions]).slice(0, 10).map(q => ({ ...q, options: shuffleArray([...q.options]) }));
-                              setCurrentQuiz({ ...quiz, questions: selected });
-                              setQuizState({ currentQuestion: 0, selectedAnswer: null, answeredQuestions: new Set(), score: 0, results: [] });
-                              setPage('take-quiz');
-                            }} className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-white rounded-lg text-sm">Practice</button>
+                            <button onClick={() => setModal({ type: 'practice-setup', quiz })} className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-white rounded-lg text-sm">Practice</button>
                           </div>
                         </div>
                       ))}
@@ -5625,12 +5658,7 @@ ${quizContent.substring(0, 40000)}
                             <button onClick={() => setModal({ type: 'delete-confirm', quizId: quiz.id, quizName: quiz.name })} className="px-2 py-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity" title="Delete">🗑️</button>
                             <button onClick={() => shareQuiz(quiz)} className="px-3 py-1.5 bg-indigo-100 dark:bg-indigo-500/20 hover:bg-indigo-200 dark:hover:bg-indigo-500/30 text-indigo-700 dark:text-indigo-300 rounded-lg text-sm font-medium" title="Share with friends">🔗 Share</button>
                             <button onClick={() => { setCurrentQuiz(quiz); setPage('review-quiz'); }} className="px-3 py-1.5 bg-slate-200 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-500 text-slate-700 dark:text-white rounded-lg text-sm font-medium">View</button>
-                            <button onClick={() => {
-                              const selected = shuffleArray([...quiz.questions]).slice(0, 10).map(q => ({ ...q, options: shuffleArray([...q.options]) }));
-                              setCurrentQuiz({ ...quiz, questions: selected });
-                              setQuizState({ currentQuestion: 0, selectedAnswer: null, answeredQuestions: new Set(), score: 0, results: [] });
-                              setPage('take-quiz');
-                            }} className="px-3 py-1.5 bg-indigo-500 hover:bg-indigo-400 text-white rounded-lg text-sm font-medium">Practice</button>
+                            <button onClick={() => setModal({ type: 'practice-setup', quiz })} className="px-3 py-1.5 bg-indigo-500 hover:bg-indigo-400 text-white rounded-lg text-sm font-medium">Practice</button>
                           </div>
                         </div>
                       ))}
@@ -6006,12 +6034,7 @@ ${quizContent.substring(0, 40000)}
                       </button>
                     )}
                     <button
-                      onClick={() => {
-                        const selected = shuffleArray([...currentQuiz.questions]).slice(0, 10).map(q => ({ ...q, options: shuffleArray([...q.options]) }));
-                        setCurrentQuiz({ ...currentQuiz, questions: selected });
-                        setQuizState({ currentQuestion: 0, selectedAnswer: null, answeredQuestions: new Set(), score: 0, results: [] });
-                        setPage('take-quiz');
-                      }}
+                      onClick={() => setModal({ type: 'practice-setup', quiz: currentQuiz })}
                       className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-white rounded-lg font-medium"
                     >
                       🎯 Practice
