@@ -416,6 +416,37 @@ Firebase config is currently hardcoded in `QuizForge.jsx` (project: quizforge-58
   - **Improved semantic HTML** - Added `<main>` and `<article>` tags to pages
   - **Created custom 404 page** (`app/not-found.tsx`) with branded design
 
+- **Practice Quiz Improvements** (Jan 16):
+  - **Configurable question count** - All practice modes now show a modal to choose how many questions (5, 10, 15, 20, or All)
+  - **Fixed 4 hardcoded limits** that were cutting quizzes to 10 questions:
+    - Quiz preview/take test from teacher dashboard
+    - Practice button in student dashboard
+    - Practice Now button in quiz creation success modal
+    - Practice button in quiz review page
+  - **Topic practice** - Was hardcoded to 5 questions, now configurable
+  - **Timed quiz** - Now lets users choose both time limit AND question count (was hardcoded to 20)
+
+- **Quiz Generation Quality** (Jan 16):
+  - **Reduced max questions from 50 to 30** for better AI accuracy
+  - **Quality indicator** - Shows green "✓ Best quality range" when 10-20 selected
+  - **Helpful hint** - "10-20 questions for best quality" shown otherwise
+
+- **Tier-Based Question Bank Limits** (Jan 16):
+  - **Free/Pro**: 500 questions max (with one-time info toast when limit hit)
+  - **School**: 2,000 questions max
+  - **University**: 5,000 questions max
+  - **One-time warning** for individual users stored in localStorage
+
+- **Share Quiz Truncation Fix** (Jan 16):
+  - **Added toast notification** when sharing quizzes >50 questions: "ℹ️ Sharing first 50 of X questions"
+  - Previously truncated silently without telling the user
+
+- **Error Handling & Accessibility** (Jan 16):
+  - **getShareUrl()** - Added try/catch with user-friendly error toast
+  - **Storage validation** - Validates storage.set() result before proceeding
+  - **Notification bell** - Added aria-label with dynamic unread count
+  - **Review modal** - Added aria-label to close button
+
 ---
 
 ## New Files Added (Jan 15)
@@ -487,4 +518,4 @@ npx cap open ios     # Open in Xcode
 
 ---
 
-*Last updated: January 15, 2026 (Session 3 - Accessibility Audit Fixes)*
+*Last updated: January 16, 2026 (Session 4 - Practice Quiz Fixes & Quality Limits)*
