@@ -1537,6 +1537,48 @@ export default function QuizForge() {
     }
   };
 
+  // Handle opening Stripe billing portal for subscription management
+  const handleManageSubscription = async () => {
+    if (!auth.currentUser) {
+      showToast('Please log in to manage your subscription', 'error');
+      return;
+    }
+
+    // Get stripeCustomerId from user data
+    const stripeCustomerId = user?.stripeCustomerId;
+    if (!stripeCustomerId) {
+      showToast('No subscription found', 'error');
+      return;
+    }
+
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch('/api/stripe/portal', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          customerId: stripeCustomerId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to open billing portal');
+      }
+
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error('Billing portal error:', error);
+      showToast(error.message || 'Failed to open billing portal', 'error');
+    }
+  };
+
   // Export quiz to PDF
   const exportQuizToPDF = (quiz, includeAnswers = false) => {
     const printWindow = window.open('', '_blank');
@@ -4806,7 +4848,7 @@ ${quizContent.substring(0, 40000)}
                       <li className="flex items-center gap-2"><span>✓</span> Priority support</li>
                     </ul>
                     <button
-                      onClick={() => window.open('https://billing.stripe.com/p/login/test', '_blank')}
+                      onClick={handleManageSubscription}
                       className="mt-4 w-full py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition"
                     >
                       Manage Subscription
