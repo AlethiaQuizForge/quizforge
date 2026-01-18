@@ -16,11 +16,6 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Check if the authenticated user matches the given userId
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-
     // Extract userId from document ID pattern: quizforge-account-{userId}
     function getUserIdFromAccountDoc(docId) {
       return docId.replace('quizforge-account-', '');
@@ -225,8 +220,9 @@ service cloud.firestore {
     // Shared Quiz Rules (Public)
     // =========================================================================
 
-    // Public shared quizzes (shared-{id} documents)
-    match /{document=**} {
+    // Public shared quizzes (shared-{id} documents at root level)
+    // Using single-level match to avoid type issues with document.matches()
+    match /{document} {
       // Allow read access to shared quiz documents for anyone (public quizzes)
       allow read: if document.matches('shared-.*');
 
