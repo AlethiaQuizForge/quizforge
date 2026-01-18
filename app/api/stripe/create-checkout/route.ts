@@ -56,44 +56,54 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Generate idempotency key to prevent duplicate sessions from double-clicks
+    // Key is valid for 24 hours, based on user + plan + 5-minute window
+    const timeWindow = Math.floor(Date.now() / (5 * 60 * 1000)); // 5-minute windows
+    const idempotencyKey = `checkout_${userId}_${planId}_${timeWindow}`;
+
     // Create Stripe checkout session
-    const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price: plan.priceId,
-          quantity: 1,
-        },
-      ],
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.quizforgeapp.com'}?subscription=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.quizforgeapp.com'}?subscription=cancelled`,
-      customer_email: userEmail,
-      client_reference_id: userId,
-      metadata: {
-        userId,
-        planId,
-        userEmail: userEmail || '',
-        // Include org name for organization plans
-        ...(isOrgPlan(planId as PlanId) && orgName ? { orgName } : {}),
-      },
-      // For EU compliance
-      billing_address_collection: 'required',
-      tax_id_collection: {
-        enabled: true,
-      },
-      // Enable invoice generation and emails
-      invoice_creation: {
-        enabled: true,
-      },
-      // Subscription settings
-      subscription_data: {
+    const session = await stripe.checkout.sessions.create(
+      {
+        mode: 'subscription',
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price: plan.priceId,
+            quantity: 1,
+          },
+        ],
+        success_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.quizforgeapp.com'}?subscription=success&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.quizforgeapp.com'}?subscription=cancelled`,
+        customer_email: userEmail,
+        client_reference_id: userId,
         metadata: {
           userId,
           planId,
+          userEmail: userEmail || '',
+          // Include org name for organization plans
+          ...(isOrgPlan(planId as PlanId) && orgName ? { orgName } : {}),
+        },
+        // For EU compliance
+        billing_address_collection: 'required',
+        tax_id_collection: {
+          enabled: true,
+        },
+        // Enable invoice generation and emails
+        invoice_creation: {
+          enabled: true,
+        },
+        // Subscription settings
+        subscription_data: {
+          metadata: {
+            userId,
+            planId,
+          },
         },
       },
-    });
+      {
+        idempotencyKey,
+      }
+    );
 
     return NextResponse.json({ url: session.url });
   } catch (error) {

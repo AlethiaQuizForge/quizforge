@@ -2056,19 +2056,34 @@ ${quizContent.substring(0, 40000)}
       setGeneration(g => ({ ...g, step: `Generating ${numQuestions} questions with AI... (typically 30-90 seconds)`, progress: 15 }));
       currentProgress = 15;
 
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content: quizContent,
-          subject: quizSubject,
-          numQuestions,
-          difficulty,
-          topicFocus: topicFocus.trim(),
-          questionStyle,
-          questionType
-        })
-      });
+      // Create AbortController with 3 minute timeout for long generations
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minutes
+
+      let response;
+      try {
+        response = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({
+            content: quizContent,
+            subject: quizSubject,
+            numQuestions,
+            difficulty,
+            topicFocus: topicFocus.trim(),
+            questionStyle,
+            questionType
+          })
+        });
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError.name === 'AbortError') {
+          throw new Error('Quiz generation timed out. Please try again with less content or fewer questions.');
+        }
+        throw fetchError;
+      }
+      clearTimeout(timeoutId);
 
       clearInterval(progressInterval);
 

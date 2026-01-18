@@ -2,6 +2,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 // Dynamic import with code splitting - reduces initial bundle size
 const QuizForge = dynamic(() => import('@/components/QuizForge'), {
@@ -18,5 +19,9 @@ const QuizForge = dynamic(() => import('@/components/QuizForge'), {
 });
 
 export default function Home() {
-  return <QuizForge />
+  return (
+    <ErrorBoundary>
+      <QuizForge />
+    </ErrorBoundary>
+  );
 }
