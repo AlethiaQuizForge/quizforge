@@ -17,6 +17,8 @@
     "@capacitor/status-bar": "^8.0.0",
     "@sentry/nextjs": "^10.34.0",
     "@stripe/stripe-js": "^8.6.1",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.36.1",
     "@vercel/analytics": "^1.6.1",
     "firebase": "^10.7.0",
     "firebase-admin": "^13.6.0",

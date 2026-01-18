@@ -5,7 +5,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { NextRequest, NextResponse } from 'next/server';
-import { rateLimit } from '@/lib/rate-limit';
+import { rateLimitAsync } from '@/lib/rate-limit';
 import { verifyAuthFromRequest } from '@/lib/firebase-admin';
 import { sanitizeQuestion } from '@/lib/utils';
 
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Apply rate limiting per authenticated user (more reliable than IP)
-    const rateLimitResult = rateLimit(`generate:${auth.userId}`, RATE_LIMIT_CONFIG);
+    const rateLimitResult = await rateLimitAsync(`generate:${auth.userId}`, RATE_LIMIT_CONFIG);
 
     if (!rateLimitResult.success) {
       const resetMinutes = Math.ceil(rateLimitResult.resetIn / 60000);
