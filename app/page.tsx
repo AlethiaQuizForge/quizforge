@@ -1,21 +1,6 @@
 // app/page.tsx
 import { Metadata } from 'next';
-import dynamic from 'next/dynamic';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
-
-// Dynamic import with code splitting - reduces initial bundle size
-const QuizForge = dynamic(() => import('@/components/QuizForge'), {
-  loading: () => (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 flex items-center justify-center">
-      <div className="text-center">
-        <div className="text-6xl mb-4 animate-pulse">⚡</div>
-        <p className="text-white text-xl font-semibold">QuizForge</p>
-        <p className="text-indigo-300 mt-2">Loading...</p>
-      </div>
-    </div>
-  ),
-  ssr: false // Client-side only since it uses browser APIs (localStorage, etc.)
-});
+import HomeClient from '@/components/HomeClient';
 
 // Fetch shared quiz data for OG metadata
 async function getSharedQuizData(quizId: string) {
@@ -123,9 +108,5 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 }
 
 export default function Home() {
-  return (
-    <ErrorBoundary>
-      <QuizForge />
-    </ErrorBoundary>
-  );
+  return <HomeClient />;
 }
