@@ -55,6 +55,8 @@ test.describe('Navigation', () => {
   test('should have navigation elements', async ({ page }) => {
     await page.goto('/');
     await page.waitForSelector('text=QuizForge', { timeout: 15000 });
+    // Wait for loading to complete
+    await page.waitForFunction(() => !document.body.innerText.includes('Loading...'), { timeout: 15000 });
 
     // Check for navigation - either nav element or header with links
     const navElements = page.locator('nav, header, [role="navigation"]');
