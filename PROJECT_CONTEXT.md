@@ -376,6 +376,21 @@ NEXT_PUBLIC_FIREBASE_APP_ID=...
 
 ## Recent Updates (January 2026)
 
+- **Security Audit Final Completion** (Jan 18, Session 7):
+  - **Firestore Rules for Shared Quizzes** - Fixed access control for `shared-*` documents in userData collection:
+    - Public read access (no auth required) for shared quizzes
+    - Authenticated create/update for sharing quizzes
+    - Delete only by original sharer (via `sharedBy` field)
+  - **`sharedBy` Field Tracking** - Added ownership tracking to shared quiz documents at root level for Firestore rules verification
+  - **Fixed Billing Portal** - Replaced hardcoded test URL (`https://billing.stripe.com/p/login/test`) with proper `/api/stripe/portal` API call that creates real billing portal sessions
+  - **Playwright E2E Test Suite** - 24 automated tests covering:
+    - Homepage rendering (title, logo, features, auth forms)
+    - Authentication flows (login, signup, password reset, social login)
+    - Accessibility (focus management, ARIA labels, keyboard nav, color contrast)
+    - Shared quiz access (loading, taking quiz, leaderboard)
+  - **Test Configuration** - Added playwright.config.ts with proper setup
+  - **TypeScript Build Fix** - Excluded test files from production build
+
 - **Security Audit Completion** (Jan 18, Session 6):
   - **Removed hardcoded Firebase credentials** - Moved to environment variables (`NEXT_PUBLIC_FIREBASE_*`)
   - **Improved CSP** - Removed `unsafe-eval` in production builds
@@ -533,6 +548,11 @@ NEXT_PUBLIC_FIREBASE_APP_ID=...
 | `app/class/[code]/JoinClassClient.tsx` | Client component for class join redirect flow |
 | `app/join/[code]/JoinOrgClient.tsx` | Client component for organization invite join flow |
 | `app/not-found.tsx` | Custom branded 404 error page |
+| `playwright.config.ts` | Playwright test configuration |
+| `tests/homepage.spec.ts` | Homepage rendering tests |
+| `tests/auth.spec.ts` | Authentication flow tests |
+| `tests/accessibility.spec.ts` | Accessibility compliance tests |
+| `tests/shared-quiz.spec.ts` | Shared quiz functionality tests |
 
 ---
 
@@ -580,9 +600,16 @@ npm run dev          # Start dev server (localhost:3000)
 npm run build        # Build for production
 npm run start        # Start production server
 
+# Testing
+npm test             # Run Playwright tests
+npm run test:ui      # Run tests with Playwright UI
+
 # Deployment
 vercel               # Deploy to Vercel
 vercel --prod        # Deploy to production
+
+# Firebase
+firebase deploy --only firestore:rules  # Deploy Firestore security rules
 
 # iOS (Capacitor)
 npx cap sync ios     # Sync web assets to iOS
@@ -591,4 +618,4 @@ npx cap open ios     # Open in Xcode
 
 ---
 
-*Last updated: January 18, 2026 (Session 6 - Security Audit Completion)*
+*Last updated: January 18, 2026 (Session 7 - Security Audit Final, Playwright Tests, Billing Portal Fix)*
