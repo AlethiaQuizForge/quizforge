@@ -330,64 +330,43 @@ export async function getActiveMemberCount(orgId: string): Promise<number> {
 
 /**
  * Add a teacher to an organization (via invite link)
+ * SECURITY: Uses server-side API to validate user is a teacher
  */
 export async function joinOrganization(
   orgId: string,
-  user: { userId: string; email: string; displayName: string }
-): Promise<{ success: boolean; error?: string }> {
-  // Get the organization
-  const org = await getOrganization(orgId);
-  if (!org) {
-    return { success: false, error: 'Organization not found' };
-  }
-
-  // Check if already a member
-  const memberDoc = await getDoc(doc(db, 'organizations', orgId, 'members', user.userId));
-  if (memberDoc.exists()) {
-    const member = memberDoc.data() as OrgMember;
-    if (member.status === 'active') {
-      return { success: false, error: 'You are already a member of this organization' };
-    }
-    // Reactivate if previously removed
-    await updateDoc(doc(db, 'organizations', orgId, 'members', user.userId), {
-      status: 'active',
-      joinedAt: serverTimestamp(),
+  user: { userId: string; email: string; displayName: string },
+  authToken: string
+): Promise<{ success: boolean; error?: string; orgName?: string }> {
+  try {
+    // Call the secure server-side API that validates user role
+    const response = await fetch('/api/org/join', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`,
+      },
+      body: JSON.stringify({ orgId }),
     });
-    return { success: true };
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return { success: false, error: data.error || 'Failed to join organization' };
+    }
+
+    // Update user's organization membership in their userData (client-side cache)
+    await addOrgMembershipToUser(user.userId, {
+      orgId,
+      orgName: data.orgName || 'Organization',
+      role: 'teacher',
+      joinedAt: Timestamp.now(),
+    });
+
+    return { success: true, orgName: data.orgName };
+  } catch (error) {
+    console.error('Error joining organization:', error);
+    return { success: false, error: 'Failed to join organization. Please try again.' };
   }
-
-  // Check member limit
-  const memberCount = await getActiveMemberCount(orgId);
-  const limits = getOrgLimits(org.plan);
-  if (memberCount >= limits.teachers) {
-    return {
-      success: false,
-      error: `This organization has reached its limit of ${limits.teachers} teachers`
-    };
-  }
-
-  // Add new member
-  const newMember: OrgMember = {
-    id: user.userId,
-    orgId,
-    userId: user.userId,
-    email: user.email,
-    displayName: user.displayName,
-    role: 'teacher',
-    joinedAt: Timestamp.now(),
-    status: 'active',
-  };
-  await setDoc(doc(db, 'organizations', orgId, 'members', user.userId), newMember);
-
-  // Update user's organization membership in their userData
-  await addOrgMembershipToUser(user.userId, {
-    orgId,
-    orgName: org.name,
-    role: 'teacher',
-    joinedAt: Timestamp.now(),
-  });
-
-  return { success: true };
 }
 
 /**

@@ -6,8 +6,9 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { NextRequest, NextResponse } from 'next/server';
 import { rateLimitAsync } from '@/lib/rate-limit';
-import { verifyAuthFromRequest } from '@/lib/firebase-admin';
+import { verifyAuthFromRequest, getServerUserData, getAdminFirestore } from '@/lib/firebase-admin';
 import { sanitizeQuestion } from '@/lib/utils';
+import { PLANS, PlanId } from '@/lib/stripe';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -28,6 +29,40 @@ export async function POST(request: NextRequest) {
         { error: auth.error || 'Authentication required. Please sign in to generate quizzes.' },
         { status: 401 }
       );
+    }
+
+    // SECURITY: Check subscription limits before processing
+    const userData = await getServerUserData(auth.userId);
+    const userPlan = (userData?.plan as PlanId) || 'free';
+    const planLimits = PLANS[userPlan]?.limits || PLANS.free.limits;
+    const monthlyQuizLimit = planLimits.quizzesPerMonth;
+
+    // Count quizzes created this month
+    const db = getAdminFirestore();
+    if (db) {
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      // Get user's quiz count from their data
+      if (userData && 'quizzes' in userData) {
+        const quizzes = (userData as { quizzes?: Array<{ createdAt?: number }> }).quizzes || [];
+        const quizzesThisMonth = quizzes.filter(
+          (q) => q.createdAt && q.createdAt >= startOfMonth.getTime()
+        ).length;
+
+        if (quizzesThisMonth >= monthlyQuizLimit) {
+          return NextResponse.json(
+            {
+              error: userPlan === 'free'
+                ? `You've reached your ${monthlyQuizLimit} quiz limit for this month. Upgrade to Pro for more quizzes!`
+                : `You've reached your ${monthlyQuizLimit} quiz limit for this month.`,
+              limitReached: true,
+              currentPlan: userPlan,
+            },
+            { status: 429 }
+          );
+        }
+      }
     }
 
     // Apply rate limiting per authenticated user (more reliable than IP)

@@ -177,6 +177,8 @@ service cloud.firestore {
                       resource.data.adminUserId == request.auth.uid;
 
       // Organization members subcollection
+      // SECURITY: Members can only be added through the server-side API (admin SDK)
+      // which validates that the user is a teacher before allowing them to join
       match /members/{memberId} {
         // Members can read the member list
         allow read: if isAuthenticated() && (
@@ -188,13 +190,11 @@ service cloud.firestore {
         allow write: if isAuthenticated() &&
                        get(/databases/$(database)/documents/organizations/$(orgId)).data.adminUserId == request.auth.uid;
 
-        // Users can add themselves (join via invite)
-        allow create: if isAuthenticated() &&
+        // Users can update their own membership status (e.g., leave the org)
+        // But cannot change their role or other sensitive fields
+        allow update: if isAuthenticated() &&
                         memberId == request.auth.uid &&
-                        request.resource.data.userId == request.auth.uid;
-
-        // Users can update their own membership (e.g., leave)
-        allow update: if isAuthenticated() && memberId == request.auth.uid;
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
       }
 
       // Shared quizzes subcollection

@@ -4,16 +4,16 @@ import React, { useState, useRef, useEffect } from 'react';
 import * as mammoth from 'mammoth';
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, GoogleAuthProvider, OAuthProvider, signInWithPopup } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs, updateDoc, addDoc, onSnapshot } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs, updateDoc, addDoc, onSnapshot, arrayUnion, arrayRemove, runTransaction } from 'firebase/firestore';
 
-// Firebase configuration - uses env vars if available, falls back to defaults
+// Firebase configuration - requires environment variables
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyAi6pp6BHnPBbTAqUn78ldOeXO_y6LGouY",
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "quizforge-58f79.firebaseapp.com",
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "quizforge-58f79",
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "quizforge-58f79.firebasestorage.app",
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "437296472306",
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:437296472306:web:7cee86fa4aa7dbc16c306b"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
 // Initialize Firebase (prevent multiple initializations)
@@ -330,16 +330,23 @@ export default function QuizForge() {
         }
         sessionStorage.removeItem('pendingOrgJoin');
 
+        // Get auth token for secure API call
+        const authToken = await auth.currentUser.getIdToken();
+
         // Dynamically import org helpers
         const { joinOrganization } = await import('@/lib/organizations');
-        const result = await joinOrganization(pendingOrg.orgId, {
-          userId: auth.currentUser.uid,
-          email: user?.email || auth.currentUser.email || '',
-          displayName: user?.name || userName || 'Teacher',
-        });
+        const result = await joinOrganization(
+          pendingOrg.orgId,
+          {
+            userId: auth.currentUser.uid,
+            email: user?.email || auth.currentUser.email || '',
+            displayName: user?.name || userName || 'Teacher',
+          },
+          authToken
+        );
 
         if (result.success) {
-          showToast(`Welcome to ${pendingOrg.orgName}!`, 'success');
+          showToast(`Welcome to ${result.orgName || pendingOrg.orgName}!`, 'success');
           // Refresh user's organizations
           loadUserOrganizations();
         } else {
@@ -2001,6 +2008,25 @@ export default function QuizForge() {
   };
 
   const generateQuestions = async () => {
+    // SECURITY: Pre-check subscription limits before making API call
+    const planLimits = { free: 5, pro: 25 };
+    const monthlyLimit = planLimits[userPlan] || planLimits.free;
+
+    // Count quizzes created this month
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    const quizzesThisMonth = quizzes.filter(q => q.createdAt && q.createdAt >= startOfMonth).length;
+
+    if (quizzesThisMonth >= monthlyLimit) {
+      showToast(
+        userPlan === 'free'
+          ? `You've reached your ${monthlyLimit} quiz limit this month. Upgrade to Pro for more quizzes!`
+          : `You've reached your ${monthlyLimit} quiz limit for this month.`,
+        'error'
+      );
+      return;
+    }
+
     setPage('generating');
     setGeneration({ isGenerating: true, step: 'Analyzing your content...', progress: 5, error: null });
 
@@ -2227,14 +2253,27 @@ ${quizContent.substring(0, 40000)}
         const classDoc = querySnapshot.docs[0];
         const foundClass = { id: classDoc.id, ...classDoc.data() };
 
-        // Add student to the class
+        // Check if student already exists in this class (server-side check)
+        const existingStudent = (foundClass.students || []).find(
+          s => s.email === user.email || (s.name === user.name && !s.email)
+        );
+        if (existingStudent) {
+          showToast('ℹ️ You already joined this class', 'info');
+          setIsActionLoading(false);
+          return;
+        }
+
+        // Add student to the class using atomic arrayUnion to prevent race conditions
         const studentName = user.name;
         const studentEmail = user.email;
         const newStudent = { id: `s_${Date.now()}`, name: studentName, email: studentEmail, joinedAt: Date.now() };
-        const updatedStudents = [...(foundClass.students || []), newStudent];
 
-        // Update in Firestore
-        await updateDoc(doc(db, 'classes', foundClass.id), { students: updatedStudents });
+        // Atomic update - prevents race condition when multiple students join simultaneously
+        await updateDoc(doc(db, 'classes', foundClass.id), {
+          students: arrayUnion(newStudent)
+        });
+
+        const updatedStudents = [...(foundClass.students || []), newStudent];
 
         // Fetch assignments for this class
         const assignmentsRef = collection(db, 'assignments');
@@ -2265,24 +2304,37 @@ ${quizContent.substring(0, 40000)}
     setIsActionLoading(false);
   };
 
-  // Leave class function
+  // Leave class function - uses transaction for atomic update
   const leaveClass = async (classId) => {
     setIsActionLoading(true);
     const classToLeave = joinedClasses.find(c => c.id === classId);
     if (classToLeave) {
-      // Remove student from class
-      const updatedStudents = (classToLeave.students || []).filter(s => s.email !== user?.email && s.name !== user?.name);
-
-      // Update in Firestore
       try {
-        await updateDoc(doc(db, 'classes', classId), { students: updatedStudents });
+        const classRef = doc(db, 'classes', classId);
+
+        // Use transaction for atomic read-modify-write to prevent race conditions
+        const updatedStudents = await runTransaction(db, async (transaction) => {
+          const classDoc = await transaction.get(classRef);
+          if (!classDoc.exists()) {
+            throw new Error('Class no longer exists');
+          }
+
+          const currentStudents = classDoc.data().students || [];
+          const filteredStudents = currentStudents.filter(
+            s => s.email !== user?.email && s.name !== user?.name
+          );
+
+          transaction.update(classRef, { students: filteredStudents });
+          return filteredStudents;
+        });
+
         // Update local state only on success
         setClasses(prev => prev.map(c => c.id === classId ? { ...c, students: updatedStudents } : c));
         setJoinedClasses(prev => prev.filter(c => c.id !== classId));
         showToast(`Left "${classToLeave.name}"`, 'info');
         setModal(null);
       } catch (e) {
-        console.error('Error updating class in Firestore:', e);
+        console.error('Error leaving class:', e);
         showToast('❌ Failed to leave class. Please try again.', 'error');
       }
     }

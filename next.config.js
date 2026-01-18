@@ -6,6 +6,15 @@ const nextConfig = {
 
   // SECURITY: Add security headers to all responses
   async headers() {
+    // In production, we can be stricter with CSP
+    // Note: 'unsafe-inline' for styles is needed for Next.js and Tailwind
+    // Note: 'unsafe-eval' is needed in development for HMR, removed in production
+    const isDev = process.env.NODE_ENV === 'development';
+
+    const scriptSrc = isDev
+      ? "'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.firebaseapp.com https://*.googleapis.com"
+      : "'self' 'unsafe-inline' https://js.stripe.com https://*.firebaseapp.com https://*.googleapis.com";
+
     return [
       {
         source: '/:path*',
@@ -14,7 +23,7 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.firebaseapp.com https://*.googleapis.com",
+              `script-src ${scriptSrc}`,
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: blob: https:",
@@ -24,6 +33,7 @@ const nextConfig = {
               "base-uri 'self'",
               "form-action 'self'",
               "frame-ancestors 'none'",
+              "upgrade-insecure-requests",
             ].join('; '),
           },
           {
