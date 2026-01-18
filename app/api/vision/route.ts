@@ -17,9 +17,11 @@ const RATE_LIMIT_CONFIG = {
   maxRequests: 30,
 };
 
-// SECURITY: Image size limits to prevent DoS
-const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB per image
-const MAX_TOTAL_SIZE_BYTES = 20 * 1024 * 1024; // 20MB total for all images
+// Image size limits - generous for full semester uploads
+// (lectures, readings, cases, past exams)
+const MAX_IMAGES = 100; // Full lecture deck + extras
+const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB per image (high-res diagrams)
+const MAX_TOTAL_SIZE_BYTES = 150 * 1024 * 1024; // 150MB total per request
 
 export async function POST(request: NextRequest) {
   try {
@@ -60,9 +62,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (images.length > 10) {
+    if (images.length > MAX_IMAGES) {
       return NextResponse.json(
-        { error: 'Maximum 10 images allowed' },
+        { error: `Maximum ${MAX_IMAGES} images allowed per request` },
         { status: 400 }
       );
     }
@@ -85,7 +87,7 @@ export async function POST(request: NextRequest) {
 
       if (estimatedSize > MAX_IMAGE_SIZE_BYTES) {
         return NextResponse.json(
-          { error: `Image ${i + 1} exceeds maximum size of 5MB` },
+          { error: `Image ${i + 1} exceeds maximum size of 10MB` },
           { status: 400 }
         );
       }
@@ -95,7 +97,7 @@ export async function POST(request: NextRequest) {
 
     if (totalSize > MAX_TOTAL_SIZE_BYTES) {
       return NextResponse.json(
-        { error: 'Total image size exceeds maximum of 20MB' },
+        { error: 'Total image size exceeds maximum of 150MB. Try uploading in smaller batches.' },
         { status: 400 }
       );
     }
