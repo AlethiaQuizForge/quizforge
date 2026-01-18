@@ -119,7 +119,7 @@ async function calculateOrgOverview(orgId: string): Promise<OrgOverview> {
   let quizzesThisMonth = 0;
 
   const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
 
   // Aggregate data for each member
   for (const memberId of memberIds) {
@@ -133,9 +133,15 @@ async function calculateOrgOverview(orgId: string): Promise<OrgOverview> {
         const quizzes = userData.quizzes || [];
         totalQuizzes += quizzes.length;
 
-        // Count quizzes this month
+        // Count quizzes this month (handle both timestamp and ISO string formats)
         quizzesThisMonth += quizzes.filter(
-          (q: { createdAt: string }) => q.createdAt >= startOfMonth
+          (q: { createdAt: string | number }) => {
+            if (!q.createdAt) return false;
+            const createdTime = typeof q.createdAt === 'number'
+              ? q.createdAt
+              : new Date(q.createdAt).getTime();
+            return createdTime >= startOfMonth;
+          }
         ).length;
       }
 

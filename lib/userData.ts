@@ -32,7 +32,7 @@ export interface Quiz {
   title: string;
   subject: string;
   questions: QuizQuestion[];
-  createdAt: string;
+  createdAt: string | number; // Can be ISO string or timestamp
   tags?: string[];
   published?: boolean;
   shareId?: string;
@@ -545,8 +545,15 @@ function getDefaultAchievements(): UserAchievements {
  */
 export async function getQuizzesThisMonth(userId: string): Promise<number> {
   const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
 
   const quizzes = await getUserQuizzes(userId);
-  return quizzes.filter(q => q.createdAt >= startOfMonth).length;
+  // Note: createdAt can be either a timestamp (number) or ISO string
+  return quizzes.filter(q => {
+    if (!q.createdAt) return false;
+    const createdTime = typeof q.createdAt === 'number'
+      ? q.createdAt
+      : new Date(q.createdAt).getTime();
+    return createdTime >= startOfMonth;
+  }).length;
 }

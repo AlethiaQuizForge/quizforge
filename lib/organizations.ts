@@ -175,7 +175,7 @@ export async function createOrganization(data: {
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
 }): Promise<Organization> {
-  const orgId = `org_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const orgId = `org_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   const inviteCode = generateInviteCode();
 
   const org: Organization = {
@@ -625,7 +625,7 @@ export async function shareQuizWithOrg(
     }
 
     // Create shared quiz document
-    const sharedQuizId = `shared_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const sharedQuizId = `shared_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
     const sharedQuiz: SharedQuiz = {
       id: sharedQuizId,
       title: quiz.title,
@@ -701,7 +701,7 @@ export async function copySharedQuizToUser(
     });
 
     // Create new quiz ID for the copy
-    const newQuizId = `quiz_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const newQuizId = `quiz_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 
     // Return the quiz data - caller is responsible for saving to their quizzes
     return {

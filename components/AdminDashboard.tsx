@@ -168,7 +168,7 @@ export function AdminDashboard({ orgId, userId, onBack, showToast, onCopyQuiz }:
       }
 
       // Create a new quiz ID for the copy
-      const newQuizId = `quiz_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const newQuizId = `quiz_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 
       // Call the callback with the quiz data
       onCopyQuiz({

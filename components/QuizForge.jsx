@@ -1488,7 +1488,8 @@ export default function QuizForge() {
   
   const showToast = (message, type = 'info') => {
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
+    // 5 seconds for better readability (was 3s, too fast for some users)
+    setTimeout(() => setToast(null), 5000);
   };
 
   // Handle Stripe checkout for Pro upgrade
@@ -2705,7 +2706,7 @@ ${quizContent.substring(0, 40000)}
       if (studentCount > 0) {
         const notificationPromises = targetClass.students.map(async (student) => {
           const notification = {
-            id: `notif_${Date.now()}_${student.odinal || Math.random().toString(36).substr(2, 9)}`,
+            id: `notif_${Date.now()}_${student.id || Math.random().toString(36).slice(2, 11)}`,
             type: 'new_assignment',
             title: 'New Quiz Assigned!',
             message: `"${quiz?.name}" has been assigned to ${targetClass.name}`,
@@ -2923,7 +2924,13 @@ ${quizContent.substring(0, 40000)}
 
       // Wait for all updates to complete (but don't block - already navigated to results)
       if (updatePromises.length > 0) {
-        Promise.allSettled(updatePromises).catch(() => {});
+        Promise.allSettled(updatePromises).then((results) => {
+          // Log any failed promises for debugging
+          const failures = results.filter(r => r.status === 'rejected');
+          if (failures.length > 0) {
+            console.error('Some quiz completion updates failed:', failures);
+          }
+        });
       }
     }
   };
@@ -3445,6 +3452,7 @@ ${quizContent.substring(0, 40000)}
                               onClick={() => markNotificationRead(notif.id)}
                               className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                               title="Dismiss"
+                              aria-label="Dismiss notification"
                             >
                               ✕
                             </button>
@@ -4954,18 +4962,18 @@ ${quizContent.substring(0, 40000)}
                   <span className="w-6 h-6 bg-purple-500 text-white rounded-full flex items-center justify-center text-xs">{user?.name?.charAt(0).toUpperCase() || '?'}</span>
                   <span className="hidden sm:inline">{user?.name || 'Teacher'}</span>
                 </button>
-                <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="sm:hidden p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
+                <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="sm:hidden p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg" aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'} aria-expanded={mobileMenuOpen}>
                   {mobileMenuOpen ? '✕' : '☰'}
                 </button>
               </div>
             </div>
             {/* Mobile menu */}
             {mobileMenuOpen && (
-              <div className="sm:hidden border-t border-slate-200 dark:border-slate-700 mt-3 pt-3 pb-2 space-y-2">
+              <nav className="sm:hidden border-t border-slate-200 dark:border-slate-700 mt-3 pt-3 pb-2 space-y-2" aria-label="Mobile navigation">
                 <button onClick={() => { setPage('teacher-dashboard'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">📊 Dashboard</button>
                 <button onClick={() => { setPage('create-quiz'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">⚡ Create Quiz</button>
                 <button onClick={() => { setPage('class-manager'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">👥 Classes</button>
-              </div>
+              </nav>
             )}
           </nav>
           <div className="max-w-7xl mx-auto px-6 py-8">
@@ -5103,16 +5111,16 @@ ${quizContent.substring(0, 40000)}
                   <span className="w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center text-xs">{user?.name?.charAt(0).toUpperCase() || '?'}</span>
                   <span className="hidden sm:inline">{user?.name || 'Creator'}</span>
                 </button>
-                <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="sm:hidden p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
+                <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="sm:hidden p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg" aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'} aria-expanded={mobileMenuOpen}>
                   {mobileMenuOpen ? '✕' : '☰'}
                 </button>
               </div>
             </div>
             {mobileMenuOpen && (
-              <div className="sm:hidden border-t border-slate-200 dark:border-slate-700 mt-3 pt-3 pb-2 space-y-2">
+              <nav className="sm:hidden border-t border-slate-200 dark:border-slate-700 mt-3 pt-3 pb-2 space-y-2" aria-label="Mobile navigation">
                 <button onClick={() => { setPage('creator-dashboard'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">📊 Dashboard</button>
                 <button onClick={() => { setPage('create-quiz'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">✨ Create Quiz</button>
-              </div>
+              </nav>
             )}
           </nav>
           <div className="max-w-7xl mx-auto px-6 py-8">
@@ -5672,17 +5680,17 @@ ${quizContent.substring(0, 40000)}
                   <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs">{user?.name?.charAt(0).toUpperCase() || '?'}</span>
                   <span className="hidden sm:inline">{user?.name || 'Student'}</span>
                 </button>
-                <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="sm:hidden p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
+                <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="sm:hidden p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg" aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'} aria-expanded={mobileMenuOpen}>
                   {mobileMenuOpen ? '✕' : '☰'}
                 </button>
               </div>
             </div>
             {mobileMenuOpen && (
-              <div className="sm:hidden border-t border-slate-200 dark:border-slate-700 mt-3 pt-3 pb-2 space-y-2">
+              <nav className="sm:hidden border-t border-slate-200 dark:border-slate-700 mt-3 pt-3 pb-2 space-y-2" aria-label="Mobile navigation">
                 <button onClick={() => { setPage('student-dashboard'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">📊 Dashboard</button>
                 <button onClick={() => { setPage('create-quiz'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">⚡ Create Quiz</button>
                 <button onClick={() => { setPage('student-classes'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">👥 Classes</button>
-              </div>
+              </nav>
             )}
           </nav>
           <div className="max-w-7xl mx-auto px-6 py-8">
