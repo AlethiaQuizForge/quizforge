@@ -3,8 +3,10 @@ import { test, expect } from '@playwright/test';
 test.describe('Authentication UI', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    // Wait for app to load
+    // Wait for app to fully load (not just loading screen)
     await page.waitForSelector('text=QuizForge', { timeout: 15000 });
+    // Wait for loading to complete
+    await page.waitForFunction(() => !document.body.innerText.includes('Loading...'), { timeout: 15000 });
   });
 
   test('should display auth options on landing page', async ({ page }) => {

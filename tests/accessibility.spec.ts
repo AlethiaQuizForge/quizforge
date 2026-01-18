@@ -3,7 +3,10 @@ import { test, expect } from '@playwright/test';
 test.describe('Accessibility', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    // Wait for app to fully load (not just loading screen)
     await page.waitForSelector('text=QuizForge', { timeout: 15000 });
+    // Wait for loading to complete
+    await page.waitForFunction(() => !document.body.innerText.includes('Loading...'), { timeout: 15000 });
   });
 
   test('should have heading structure', async ({ page }) => {
