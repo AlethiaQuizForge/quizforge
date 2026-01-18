@@ -2,6 +2,22 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
+import { initializeApp, getApps } from 'firebase/app';
+
+// Initialize Firebase (same config as main app)
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+};
+
+// Initialize Firebase only if not already initialized
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+const auth = getAuth(app);
 
 // Plan data
 const PLANS = {
@@ -146,6 +162,83 @@ export default function PricingPage() {
   const [darkMode, setDarkMode] = useState(false);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [showOrgModal, setShowOrgModal] = useState(false);
+  const [selectedOrgPlan, setSelectedOrgPlan] = useState<'school' | 'university' | null>(null);
+  const [orgName, setOrgName] = useState('');
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState('');
+
+  // Listen for auth state
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Handle checkout for any plan
+  const handleCheckout = async (planId: string, orgName?: string) => {
+    if (!user) {
+      // Redirect to main app to sign in first
+      window.location.href = '/?redirect=pricing&plan=' + planId;
+      return;
+    }
+
+    setCheckoutLoading(true);
+    setCheckoutError('');
+
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch('/api/stripe/create-checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          planId,
+          ...(orgName ? { orgName } : {}),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create checkout session');
+      }
+
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (err) {
+      setCheckoutError(err instanceof Error ? err.message : 'Something went wrong');
+      setCheckoutLoading(false);
+    }
+  };
+
+  // Handle org plan button click
+  const handleOrgPlanClick = (planId: 'school' | 'university') => {
+    if (!user) {
+      window.location.href = '/?redirect=pricing&plan=' + planId;
+      return;
+    }
+    setSelectedOrgPlan(planId);
+    setOrgName('');
+    setCheckoutError('');
+    setShowOrgModal(true);
+  };
+
+  // Handle org checkout submit
+  const handleOrgCheckoutSubmit = () => {
+    if (!orgName.trim()) {
+      setCheckoutError('Please enter your organization name');
+      return;
+    }
+    if (!selectedOrgPlan) return;
+    setShowOrgModal(false);
+    handleCheckout(selectedOrgPlan, orgName.trim());
+  };
 
   // Check for dark mode preference
   useEffect(() => {
@@ -317,18 +410,26 @@ export default function PricingPage() {
                         </li>
                       ))}
                     </ul>
-                    <Link
-                      href="/"
-                      className={`block w-full py-3 rounded-xl font-semibold text-center transition-all ${
-                        isPro
-                          ? 'bg-white text-indigo-600 hover:bg-indigo-50 shadow-lg'
-                          : darkMode
+                    {isPro ? (
+                      <button
+                        onClick={() => handleCheckout('pro')}
+                        disabled={checkoutLoading}
+                        className={`block w-full py-3 rounded-xl font-semibold text-center transition-all bg-white text-indigo-600 hover:bg-indigo-50 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed`}
+                      >
+                        {checkoutLoading ? 'Loading...' : plan.cta}
+                      </button>
+                    ) : (
+                      <Link
+                        href="/"
+                        className={`block w-full py-3 rounded-xl font-semibold text-center transition-all ${
+                          darkMode
                             ? 'bg-indigo-600 text-white hover:bg-indigo-500'
                             : 'bg-slate-900 text-white hover:bg-slate-800'
-                      }`}
-                    >
-                      {plan.cta}
-                    </Link>
+                        }`}
+                      >
+                        {plan.cta}
+                      </Link>
+                    )}
                   </div>
                 );
               })}
@@ -402,8 +503,9 @@ export default function PricingPage() {
                       ))}
                     </ul>
                     <button
-                      onClick={() => window.location.href = 'mailto:support@quizforgeapp.com?subject=' + encodeURIComponent(`QuizForge ${plan.name} Plan Inquiry`)}
-                      className={`block w-full py-3 rounded-xl font-semibold text-center transition-all ${
+                      onClick={() => handleOrgPlanClick(planId as 'school' | 'university')}
+                      disabled={checkoutLoading}
+                      className={`block w-full py-3 rounded-xl font-semibold text-center transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                         isUniversity
                           ? 'bg-white text-amber-700 hover:bg-amber-50 shadow-lg'
                           : darkMode
@@ -411,7 +513,7 @@ export default function PricingPage() {
                             : 'bg-slate-900 text-white hover:bg-slate-800'
                       }`}
                     >
-                      {plan.cta}
+                      {checkoutLoading ? 'Loading...' : `Get ${plan.name}`}
                     </button>
                   </div>
                 );
@@ -635,6 +737,87 @@ export default function PricingPage() {
         </div>
       </section>
       </main>
+
+      {/* Organization Name Modal */}
+      {showOrgModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className={`w-full max-w-md rounded-2xl p-6 shadow-2xl ${
+            darkMode ? 'bg-slate-800 border border-slate-700' : 'bg-white'
+          }`}>
+            <h3 className={`text-xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+              Set Up Your Organization
+            </h3>
+            <p className={`text-sm mb-6 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+              Enter your {selectedOrgPlan === 'university' ? 'university' : 'school'} name to get started.
+            </p>
+
+            <div className="mb-6">
+              <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Organization Name
+              </label>
+              <input
+                type="text"
+                value={orgName}
+                onChange={(e) => setOrgName(e.target.value)}
+                placeholder={selectedOrgPlan === 'university' ? 'e.g., Stanford University' : 'e.g., Lincoln High School'}
+                className={`w-full px-4 py-3 rounded-xl border transition-colors ${
+                  darkMode
+                    ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-400 focus:border-indigo-500'
+                    : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-indigo-500'
+                } focus:outline-none focus:ring-2 focus:ring-indigo-500/20`}
+                onKeyDown={(e) => e.key === 'Enter' && handleOrgCheckoutSubmit()}
+                autoFocus
+              />
+            </div>
+
+            {checkoutError && (
+              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-600 dark:text-red-400 text-sm">
+                {checkoutError}
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowOrgModal(false)}
+                className={`flex-1 py-3 rounded-xl font-medium transition-colors ${
+                  darkMode
+                    ? 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleOrgCheckoutSubmit}
+                disabled={checkoutLoading || !orgName.trim()}
+                className={`flex-1 py-3 rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  selectedOrgPlan === 'university'
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-400 hover:to-orange-400'
+                    : 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white hover:from-indigo-400 hover:to-purple-400'
+                }`}
+              >
+                {checkoutLoading ? 'Loading...' : 'Continue to Checkout'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Checkout Error Toast */}
+      {checkoutError && !showOrgModal && (
+        <div className="fixed bottom-4 right-4 z-50 max-w-sm p-4 bg-red-500 text-white rounded-xl shadow-lg">
+          <div className="flex items-start gap-3">
+            <span className="text-xl">⚠️</span>
+            <div>
+              <p className="font-medium">Checkout Error</p>
+              <p className="text-sm text-red-100">{checkoutError}</p>
+            </div>
+            <button onClick={() => setCheckoutError('')} className="text-red-200 hover:text-white">
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className={`py-8 px-6 ${darkMode ? 'bg-slate-900 border-t border-slate-800' : 'bg-slate-900'}`}>
