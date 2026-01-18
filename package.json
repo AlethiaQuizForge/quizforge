@@ -19,6 +19,7 @@
     "@stripe/stripe-js": "^8.6.1",
     "@vercel/analytics": "^1.6.1",
     "firebase": "^10.7.0",
+    "firebase-admin": "^13.6.0",
     "jszip": "^3.10.1",
     "mammoth": "^1.6.0",
     "next": "^16.1.1",
