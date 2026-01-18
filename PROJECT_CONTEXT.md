@@ -322,8 +322,24 @@ STRIPE_SECRET_KEY=sk_live_...
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_PRO_PRICE_ID=price_...
+STRIPE_PRO_YEARLY_PRICE_ID=price_...
 STRIPE_SCHOOL_PRICE_ID=price_...
+STRIPE_SCHOOL_YEARLY_PRICE_ID=price_...
 STRIPE_UNIVERSITY_PRICE_ID=price_...
+STRIPE_UNIVERSITY_YEARLY_PRICE_ID=price_...
+```
+
+For Firebase Admin SDK (server-side auth):
+```
+FIREBASE_PROJECT_ID=quizforge-58f79
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk-...@quizforge-58f79.iam.gserviceaccount.com
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+```
+
+For Upstash Redis rate limiting:
+```
+UPSTASH_REDIS_REST_URL=https://...upstash.io
+UPSTASH_REDIS_REST_TOKEN=...
 ```
 
 Firebase config is currently hardcoded in `QuizForge.jsx` (project: quizforge-58f79)
@@ -351,6 +367,37 @@ Firebase config is currently hardcoded in `QuizForge.jsx` (project: quizforge-58
 ---
 
 ## Recent Updates (January 2026)
+
+- **Security Hardening & Audit Fixes** (Jan 18):
+  - **Firestore Security Rules** - Complete rewrite with proper access control:
+    - Assignments: Only teacher/enrolled students can read
+    - Submissions: Uses `studentId` (uid) only, not email (prevents spoofing)
+    - Notifications: Uses `recipientUserId` instead of email
+    - Organizations: Proper admin/member verification
+  - **Invite Code Strengthening** - 12 chars with `crypto.getRandomValues()` (~59 bits entropy)
+  - **Vision API Limits** - Max 100 images, 10MB each, 150MB total per request
+  - **CSP Headers** - Full Content-Security-Policy in next.config.js
+  - **Firebase Admin SDK** - Server-side auth verification (`lib/firebase-admin.ts`)
+  - **Upstash Redis Rate Limiting** - Global rate limiting across serverless instances
+  - **XSS Sanitization** - `sanitizeText()`, `sanitizeQuestion()`, `sanitizeUrl()` utilities
+  - **Stripe Idempotency** - Prevents duplicate checkout sessions
+
+- **Pricing & Checkout Improvements** (Jan 18):
+  - **Self-Service Org Checkout** - School/University plans now have direct checkout (not "Contact Sales")
+  - **Organization Name Modal** - Prompts for org name before checkout
+  - **Monthly/Yearly Billing** - Full support with separate Stripe price IDs
+  - **New Year Promo** - 20% off School/University in Jan-Feb (auto-activates)
+  - **Student Discount Note** - "Student on a budget? Reach out" with mailto link
+  - **Yearly Savings Badge** - Shows "Save 17% — 2 months free" when yearly selected
+
+- **Environment Variables** (new for Stripe yearly):
+  ```
+  STRIPE_PRO_YEARLY_PRICE_ID=price_...
+  STRIPE_SCHOOL_YEARLY_PRICE_ID=price_...
+  STRIPE_UNIVERSITY_YEARLY_PRICE_ID=price_...
+  UPSTASH_REDIS_REST_URL=https://...
+  UPSTASH_REDIS_REST_TOKEN=...
+  ```
 
 - **Student Notification System** (Jan 15):
   - **Real-time notifications** when teachers assign quizzes to classes
@@ -449,14 +496,17 @@ Firebase config is currently hardcoded in `QuizForge.jsx` (project: quizforge-58
 
 ---
 
-## New Files Added (Jan 15)
+## New Files Added (Jan 15-18)
 
 | File | Purpose |
 |------|---------|
 | `lib/userData.ts` | Data access layer with dual-mode support (legacy + subcollections) |
 | `lib/migration.ts` | Migration utilities for moving users to new data structure |
 | `lib/orgAnalytics.ts` | Organization-wide analytics functions |
+| `lib/firebase-admin.ts` | Firebase Admin SDK for server-side auth verification |
+| `firestore.rules` | Comprehensive Firestore security rules |
 | `firestore.indexes.json` | Composite indexes for common queries |
+| `components/ErrorBoundary.tsx` | React error boundary for graceful error handling |
 | `app/class/[code]/JoinClassClient.tsx` | Client component for class join redirect flow |
 | `app/join/[code]/JoinOrgClient.tsx` | Client component for organization invite join flow |
 | `app/not-found.tsx` | Custom branded 404 error page |
@@ -518,4 +568,4 @@ npx cap open ios     # Open in Xcode
 
 ---
 
-*Last updated: January 16, 2026 (Session 4 - Practice Quiz Fixes & Quality Limits)*
+*Last updated: January 18, 2026 (Session 5 - Security Audit, Org Plan Checkout, Billing Cycle)*
