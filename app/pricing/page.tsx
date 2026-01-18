@@ -46,7 +46,7 @@ const PLANS = {
     id: 'pro',
     name: 'Pro',
     price: 9,
-    description: 'For teachers who want more',
+    description: 'For power users who want more',
     limits: {
       users: 1,
       quizzesPerMonth: 25,
