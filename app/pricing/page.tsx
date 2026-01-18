@@ -504,26 +504,30 @@ export default function PricingPage() {
                       </p>
                     </div>
                     <div className="text-center mb-6">
-                      {showPromo && 'promoPrice' in plan ? (
-                        <>
-                          <span className={`text-2xl line-through opacity-60 mr-2 ${
-                            isUniversity ? 'text-white' : darkMode ? 'text-slate-400' : 'text-slate-400'
-                          }`}>
-                            ${plan.price}
-                          </span>
-                          <span className={`text-5xl font-bold ${
-                            isUniversity ? 'text-white' : darkMode ? 'text-white' : 'text-slate-900'
-                          }`}>
-                            ${(plan as typeof plan & { promoPrice: number }).promoPrice}
-                          </span>
-                        </>
-                      ) : (
-                        <span className={`text-5xl font-bold ${
-                          isUniversity ? 'text-white' : darkMode ? 'text-white' : 'text-slate-900'
-                        }`}>
-                          {getPrice(plan.price)}
-                        </span>
-                      )}
+                      {(() => {
+                        const basePrice = showPromo && 'promoPrice' in plan
+                          ? (plan as typeof plan & { promoPrice: number }).promoPrice
+                          : plan.price;
+                        const displayPrice = billingCycle === 'yearly' ? Math.round(basePrice * 10) : basePrice;
+                        const originalPrice = billingCycle === 'yearly' ? Math.round(plan.price * 10) : plan.price;
+
+                        return (
+                          <>
+                            {showPromo && 'promoPrice' in plan && (
+                              <span className={`text-2xl line-through opacity-60 mr-2 ${
+                                isUniversity ? 'text-white' : darkMode ? 'text-slate-400' : 'text-slate-400'
+                              }`}>
+                                ${originalPrice}
+                              </span>
+                            )}
+                            <span className={`text-5xl font-bold ${
+                              isUniversity ? 'text-white' : darkMode ? 'text-white' : 'text-slate-900'
+                            }`}>
+                              ${displayPrice}
+                            </span>
+                          </>
+                        );
+                      })()}
                       <span className={`text-lg ${
                         isUniversity ? 'text-amber-200' : darkMode ? 'text-slate-400' : 'text-slate-500'
                       }`}>
