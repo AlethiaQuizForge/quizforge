@@ -443,7 +443,13 @@ export default function PricingPage() {
                 );
               })}
             </div>
+            {/* Student discount note */}
+          <div className={`mt-8 text-center p-4 rounded-xl ${darkMode ? 'bg-slate-800/50' : 'bg-slate-50'}`}>
+            <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+              🎓 Student on a budget? <button onClick={() => window.location.href = 'mailto:support@quizforgeapp.com?subject=Student%20Discount%20Request'} className="text-indigo-500 hover:text-indigo-400 font-medium underline underline-offset-2">Reach out to us</button> — we'll hook you up with a discount.
+            </p>
           </div>
+        </div>
 
           {/* Organization Plans */}
           <div>
