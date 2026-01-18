@@ -10,11 +10,6 @@ export async function POST(request: NextRequest) {
   // Check if Stripe is configured (lazy init at runtime)
   const stripe = getStripe();
 
-  // Debug: Log whether env var exists (not the value itself)
-  console.log('STRIPE_SECRET_KEY exists:', !!process.env.STRIPE_SECRET_KEY);
-  console.log('STRIPE_SECRET_KEY length:', process.env.STRIPE_SECRET_KEY?.length || 0);
-  console.log('Stripe instance created:', !!stripe);
-
   if (!stripe) {
     return NextResponse.json(
       { error: 'Payments are not yet enabled' },

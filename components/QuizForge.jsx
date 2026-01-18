@@ -1821,9 +1821,18 @@ export default function QuizForge() {
         setUploadController(controller);
         
         // Use server-side API route for vision (keeps API key secure)
+        // Get auth token for authenticated request
+        const token = auth.currentUser ? await auth.currentUser.getIdToken() : null;
+        if (!token) {
+          throw new Error('Please sign in to process PDFs');
+        }
+
         const response = await fetch('/api/vision', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
           signal: controller.signal,
           body: JSON.stringify({ images: pageImages })
         });
@@ -2060,11 +2069,20 @@ ${quizContent.substring(0, 40000)}
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minutes
 
+      // Get auth token for authenticated request
+      const token = auth.currentUser ? await auth.currentUser.getIdToken() : null;
+      if (!token) {
+        throw new Error('Please sign in to generate quizzes');
+      }
+
       let response;
       try {
         response = await fetch('/api/generate', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
           signal: controller.signal,
           body: JSON.stringify({
             content: quizContent,

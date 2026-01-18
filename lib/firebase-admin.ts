@@ -229,3 +229,52 @@ export async function updateServerUserData(
     return false;
   }
 }
+
+/**
+ * Store a mapping from Stripe customerId to userId for efficient lookups
+ * This avoids scanning all users to find one by customerId
+ */
+export async function setStripeCustomerMapping(
+  customerId: string,
+  userId: string
+): Promise<boolean> {
+  const db = getAdminFirestore();
+  if (!db) {
+    return false;
+  }
+
+  try {
+    await db.collection('stripeCustomers').doc(customerId).set({
+      userId,
+      createdAt: new Date(),
+    });
+    return true;
+  } catch (error) {
+    console.error('Failed to set Stripe customer mapping:', error);
+    return false;
+  }
+}
+
+/**
+ * Get userId from Stripe customerId using indexed lookup
+ * Returns null if not found
+ */
+export async function getUserIdByStripeCustomer(
+  customerId: string
+): Promise<string | null> {
+  const db = getAdminFirestore();
+  if (!db) {
+    return null;
+  }
+
+  try {
+    const doc = await db.collection('stripeCustomers').doc(customerId).get();
+    if (!doc.exists) {
+      return null;
+    }
+    return doc.data()?.userId || null;
+  } catch (error) {
+    console.error('Failed to get user by Stripe customer:', error);
+    return null;
+  }
+}

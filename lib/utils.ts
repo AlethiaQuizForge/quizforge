@@ -105,3 +105,80 @@ export function chunkArray<T>(array: T[], size: number): T[][] {
   }
   return chunks;
 }
+
+/**
+ * Sanitize text to prevent XSS attacks
+ * Escapes HTML special characters
+ */
+export function sanitizeText(text: string | undefined | null): string {
+  if (!text) return '';
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
+/**
+ * Sanitize a quiz question object
+ * Cleans all text fields to prevent XSS
+ */
+export function sanitizeQuestion(question: {
+  question?: string;
+  explanation?: string;
+  topic?: string;
+  options?: Array<{ text?: string; isCorrect?: boolean }>;
+  [key: string]: unknown;
+}): typeof question {
+  return {
+    ...question,
+    question: sanitizeText(question.question),
+    explanation: sanitizeText(question.explanation),
+    topic: sanitizeText(question.topic),
+    options: question.options?.map(opt => ({
+      ...opt,
+      text: sanitizeText(opt.text),
+    })),
+  };
+}
+
+/**
+ * Validate and sanitize a URL
+ * Prevents javascript: and data: URIs
+ * Returns empty string if URL is invalid or potentially dangerous
+ */
+export function sanitizeUrl(url: string | undefined | null): string {
+  if (!url) return '';
+
+  // Trim whitespace
+  const trimmed = url.trim();
+
+  // Block dangerous protocols
+  const lower = trimmed.toLowerCase();
+  if (
+    lower.startsWith('javascript:') ||
+    lower.startsWith('data:') ||
+    lower.startsWith('vbscript:')
+  ) {
+    return '';
+  }
+
+  // Allow http, https, mailto, and relative URLs
+  if (
+    lower.startsWith('http://') ||
+    lower.startsWith('https://') ||
+    lower.startsWith('mailto:') ||
+    lower.startsWith('/') ||
+    lower.startsWith('#')
+  ) {
+    return trimmed;
+  }
+
+  // For other URLs, prepend https:// if it looks like a domain
+  if (/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z]{2,})+/i.test(trimmed)) {
+    return `https://${trimmed}`;
+  }
+
+  return '';
+}

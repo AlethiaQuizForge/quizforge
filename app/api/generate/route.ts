@@ -1,26 +1,37 @@
 // app/api/generate/route.ts
 // This API route securely proxies requests to Claude API
 // Your API key stays on the server, never exposed to clients
+// SECURITY: Requires authentication to prevent API credit abuse
 
 import Anthropic from '@anthropic-ai/sdk';
 import { NextRequest, NextResponse } from 'next/server';
-import { rateLimit, getClientIP } from '@/lib/rate-limit';
+import { rateLimit } from '@/lib/rate-limit';
+import { verifyAuthFromRequest } from '@/lib/firebase-admin';
+import { sanitizeQuestion } from '@/lib/utils';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-// Rate limit: 10 quiz generations per hour per IP
+// Rate limit: 20 quiz generations per hour per authenticated user
 const RATE_LIMIT_CONFIG = {
   windowMs: 60 * 60 * 1000, // 1 hour
-  maxRequests: 10,
+  maxRequests: 20,
 };
 
 export async function POST(request: NextRequest) {
   try {
-    // Apply rate limiting
-    const clientIP = getClientIP(request);
-    const rateLimitResult = rateLimit(`generate:${clientIP}`, RATE_LIMIT_CONFIG);
+    // SECURITY: Verify authentication first
+    const auth = await verifyAuthFromRequest(request);
+    if (!auth.authenticated || !auth.userId) {
+      return NextResponse.json(
+        { error: auth.error || 'Authentication required. Please sign in to generate quizzes.' },
+        { status: 401 }
+      );
+    }
+
+    // Apply rate limiting per authenticated user (more reliable than IP)
+    const rateLimitResult = rateLimit(`generate:${auth.userId}`, RATE_LIMIT_CONFIG);
 
     if (!rateLimitResult.success) {
       const resetMinutes = Math.ceil(rateLimitResult.resetIn / 60000);
@@ -249,7 +260,10 @@ Generate exactly ${numQuestions} questions. Return ONLY valid JSON, no markdown.
       throw new Error('Invalid quiz format');
     }
 
-    return NextResponse.json(quizData);
+    // Sanitize all question content to prevent XSS
+    const sanitizedQuestions = quizData.questions.map(sanitizeQuestion);
+
+    return NextResponse.json({ questions: sanitizedQuestions });
   } catch (error) {
     console.error('Quiz generation error:', error);
     return NextResponse.json(

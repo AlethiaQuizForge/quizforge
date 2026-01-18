@@ -5,7 +5,7 @@
   "firestore": {
     "database": "(default)",
     "location": "nam5",
-    "rules": "git push",
-    "indexes": "firebase deploy --only firestore:indexes"
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
   }
 }

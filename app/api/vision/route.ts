@@ -1,25 +1,35 @@
 // app/api/vision/route.ts
 // This API route handles image-based PDF text extraction via Claude Vision
+// SECURITY: Requires authentication to prevent API credit abuse
 
 import Anthropic from '@anthropic-ai/sdk';
 import { NextRequest, NextResponse } from 'next/server';
-import { rateLimit, getClientIP } from '@/lib/rate-limit';
+import { rateLimit } from '@/lib/rate-limit';
+import { verifyAuthFromRequest } from '@/lib/firebase-admin';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-// Rate limit: 20 vision requests per hour per IP
+// Rate limit: 30 vision requests per hour per authenticated user
 const RATE_LIMIT_CONFIG = {
   windowMs: 60 * 60 * 1000, // 1 hour
-  maxRequests: 20,
+  maxRequests: 30,
 };
 
 export async function POST(request: NextRequest) {
   try {
-    // Apply rate limiting
-    const clientIP = getClientIP(request);
-    const rateLimitResult = rateLimit(`vision:${clientIP}`, RATE_LIMIT_CONFIG);
+    // SECURITY: Verify authentication first
+    const auth = await verifyAuthFromRequest(request);
+    if (!auth.authenticated || !auth.userId) {
+      return NextResponse.json(
+        { error: auth.error || 'Authentication required. Please sign in to process images.' },
+        { status: 401 }
+      );
+    }
+
+    // Apply rate limiting per authenticated user (more reliable than IP)
+    const rateLimitResult = rateLimit(`vision:${auth.userId}`, RATE_LIMIT_CONFIG);
 
     if (!rateLimitResult.success) {
       const resetMinutes = Math.ceil(rateLimitResult.resetIn / 60000);

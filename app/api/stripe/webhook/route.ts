@@ -5,13 +5,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getStripe, isOrgPlan, PlanId } from '@/lib/stripe';
 import type { OrgPlanId } from '@/lib/organizations';
 import Stripe from 'stripe';
+import {
+  updateServerUserData,
+  setStripeCustomerMapping,
+  getUserIdByStripeCustomer,
+} from '@/lib/firebase-admin';
 
 // Dynamic imports to avoid Firebase initialization during build
-async function getFirebaseDb() {
-  const { db } = await import('@/lib/firebase');
-  return db;
-}
-
 async function getOrgHelpers() {
   const { createOrganization } = await import('@/lib/organizations');
   return { createOrganization };
@@ -63,11 +63,9 @@ export async function POST(request: NextRequest) {
         const customerId = session.customer as string;
         const subscriptionId = session.subscription as string;
 
-        if (userId && planId) {
-          console.log(`User ${userId} subscribed to ${planId}`, {
-            customerId,
-            subscriptionId,
-          });
+        if (userId && planId && customerId) {
+          // Store the customerId -> userId mapping for efficient future lookups
+          await setStripeCustomerMapping(customerId, userId);
 
           // Check if this is an organization plan
           if (isOrgPlan(planId)) {
@@ -88,49 +86,19 @@ export async function POST(request: NextRequest) {
               console.error('Failed to create organization:', err);
             }
           } else {
-            // Individual plan (Pro) - update user's plan in Firebase
-            // QuizForge stores user data as { value: JSON.stringify(userData) }
-            try {
-              const db = await getFirebaseDb();
-              const { doc, getDoc, updateDoc } = await import('firebase/firestore');
-              const userDocRef = doc(db, 'userData', `quizforge-account-${userId}`);
+            // Individual plan (Pro) - update user's plan using admin SDK
+            const updated = await updateServerUserData(userId, {
+              plan: planId,
+              stripeCustomerId: customerId,
+              stripeSubscriptionId: subscriptionId,
+              subscriptionStatus: 'active',
+              subscribedAt: new Date().toISOString(),
+            });
 
-              // Get existing user data
-              const userDoc = await getDoc(userDocRef);
-              if (userDoc.exists()) {
-                const existingData = userDoc.data();
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                let userData: Record<string, any> = {};
-
-                // Parse existing value if it exists
-                if (existingData.value) {
-                  try {
-                    userData = JSON.parse(existingData.value);
-                  } catch {
-                    userData = existingData;
-                  }
-                } else {
-                  userData = existingData;
-                }
-
-                // Update with plan info
-                userData.plan = planId;
-                userData.stripeCustomerId = customerId;
-                userData.stripeSubscriptionId = subscriptionId;
-                userData.subscriptionStatus = 'active';
-                userData.subscribedAt = new Date().toISOString();
-
-                // Save back in the same format
-                await updateDoc(userDocRef, {
-                  value: JSON.stringify(userData),
-                  updatedAt: new Date(),
-                });
-                console.log(`Updated user ${userId} to plan ${planId}`);
-              } else {
-                console.error(`User document not found for ${userId}`);
-              }
-            } catch (err) {
-              console.error('Failed to update user plan:', err);
+            if (updated) {
+              console.log(`Updated user ${userId} to plan ${planId}`);
+            } else {
+              console.error(`Failed to update user ${userId} plan`);
             }
           }
         }
@@ -142,48 +110,20 @@ export async function POST(request: NextRequest) {
         const customerId = subscription.customer as string;
         const status = subscription.status;
 
-        console.log(`Subscription ${subscription.id} updated to ${status}`, {
-          customerId,
-        });
+        // Use indexed lookup instead of scanning all users
+        const userId = await getUserIdByStripeCustomer(customerId);
 
-        // Update subscription status in Firebase
-        try {
-          const db = await getFirebaseDb();
-          const { collection, query, where, getDocs, updateDoc } = await import('firebase/firestore');
+        if (userId) {
+          const updated = await updateServerUserData(userId, {
+            subscriptionStatus: status,
+            subscriptionUpdatedAt: new Date().toISOString(),
+          });
 
-          // Find user with this Stripe customer ID
-          const usersRef = collection(db, 'userData');
-          const q = query(usersRef);
-          const snapshot = await getDocs(q);
-
-          for (const userDoc of snapshot.docs) {
-            const data = userDoc.data();
-            let userData: Record<string, unknown> = {};
-
-            if (data.value) {
-              try {
-                userData = JSON.parse(data.value);
-              } catch {
-                userData = data;
-              }
-            } else {
-              userData = data;
-            }
-
-            if (userData.stripeCustomerId === customerId) {
-              userData.subscriptionStatus = status;
-              userData.subscriptionUpdatedAt = new Date().toISOString();
-
-              await updateDoc(userDoc.ref, {
-                value: JSON.stringify(userData),
-                updatedAt: new Date(),
-              });
-              console.log(`Updated subscription status for user ${userDoc.id} to ${status}`);
-              break;
-            }
+          if (updated) {
+            console.log(`Updated subscription status for user ${userId} to ${status}`);
           }
-        } catch (err) {
-          console.error('Failed to update subscription status:', err);
+        } else {
+          console.warn(`No user found for Stripe customer ${customerId}`);
         }
         break;
       }
@@ -192,50 +132,22 @@ export async function POST(request: NextRequest) {
         const subscription = event.data.object as Stripe.Subscription;
         const customerId = subscription.customer as string;
 
-        console.log(`Subscription ${subscription.id} cancelled`, {
-          customerId,
-        });
+        // Use indexed lookup instead of scanning all users
+        const userId = await getUserIdByStripeCustomer(customerId);
 
-        // Downgrade user to free plan in Firebase
-        try {
-          const db = await getFirebaseDb();
-          const { collection, query, getDocs, updateDoc } = await import('firebase/firestore');
+        if (userId) {
+          const updated = await updateServerUserData(userId, {
+            plan: 'free',
+            subscriptionStatus: 'cancelled',
+            subscriptionCancelledAt: new Date().toISOString(),
+            // Keep stripeCustomerId for potential resubscription
+          });
 
-          // Find user with this Stripe customer ID
-          const usersRef = collection(db, 'userData');
-          const q = query(usersRef);
-          const snapshot = await getDocs(q);
-
-          for (const userDoc of snapshot.docs) {
-            const data = userDoc.data();
-            let userData: Record<string, unknown> = {};
-
-            if (data.value) {
-              try {
-                userData = JSON.parse(data.value);
-              } catch {
-                userData = data;
-              }
-            } else {
-              userData = data;
-            }
-
-            if (userData.stripeCustomerId === customerId) {
-              userData.plan = 'free';
-              userData.subscriptionStatus = 'cancelled';
-              userData.subscriptionCancelledAt = new Date().toISOString();
-              // Keep stripeCustomerId for potential resubscription
-
-              await updateDoc(userDoc.ref, {
-                value: JSON.stringify(userData),
-                updatedAt: new Date(),
-              });
-              console.log(`Downgraded user ${userDoc.id} to free plan`);
-              break;
-            }
+          if (updated) {
+            console.log(`Downgraded user ${userId} to free plan`);
           }
-        } catch (err) {
-          console.error('Failed to downgrade user:', err);
+        } else {
+          console.warn(`No user found for Stripe customer ${customerId}`);
         }
         break;
       }
@@ -244,51 +156,26 @@ export async function POST(request: NextRequest) {
         const invoice = event.data.object as Stripe.Invoice;
         const customerId = invoice.customer as string;
 
-        console.log(`Payment failed for customer ${customerId}`);
+        // Use indexed lookup instead of scanning all users
+        const userId = await getUserIdByStripeCustomer(customerId);
 
-        // Update subscription status to past_due
-        try {
-          const db = await getFirebaseDb();
-          const { collection, query, getDocs, updateDoc } = await import('firebase/firestore');
+        if (userId) {
+          const updated = await updateServerUserData(userId, {
+            subscriptionStatus: 'past_due',
+            paymentFailedAt: new Date().toISOString(),
+          });
 
-          // Find user with this Stripe customer ID
-          const usersRef = collection(db, 'userData');
-          const q = query(usersRef);
-          const snapshot = await getDocs(q);
-
-          for (const userDoc of snapshot.docs) {
-            const data = userDoc.data();
-            let userData: Record<string, unknown> = {};
-
-            if (data.value) {
-              try {
-                userData = JSON.parse(data.value);
-              } catch {
-                userData = data;
-              }
-            } else {
-              userData = data;
-            }
-
-            if (userData.stripeCustomerId === customerId) {
-              userData.subscriptionStatus = 'past_due';
-              userData.paymentFailedAt = new Date().toISOString();
-
-              await updateDoc(userDoc.ref, {
-                value: JSON.stringify(userData),
-                updatedAt: new Date(),
-              });
-              console.log(`Marked payment failed for user ${userDoc.id}`);
-              break;
-            }
+          if (updated) {
+            console.log(`Marked payment failed for user ${userId}`);
           }
-        } catch (err) {
-          console.error('Failed to update payment status:', err);
+        } else {
+          console.warn(`No user found for Stripe customer ${customerId}`);
         }
         break;
       }
 
       default:
+        // Log unhandled events for debugging (remove in production if too noisy)
         console.log(`Unhandled event type: ${event.type}`);
     }
 

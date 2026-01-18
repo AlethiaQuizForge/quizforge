@@ -1,7 +1,22 @@
 // Simple in-memory rate limiter for serverless
-// Note: On Vercel, each serverless instance has its own memory,
-// so this provides per-instance rate limiting. For stricter limits,
-// use Redis (Upstash) or Vercel KV.
+//
+// ⚠️  PRODUCTION WARNING: This in-memory rate limiter has limitations!
+// On Vercel/serverless, each instance has its own memory, so rate limits
+// are per-instance, not global. A user could bypass limits by hitting
+// different serverless instances.
+//
+// For production, implement Redis-based rate limiting with Upstash:
+// 1. Sign up at https://upstash.com/ (free tier available)
+// 2. Add UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN to env
+// 3. Replace this with @upstash/ratelimit package
+//
+// Example with Upstash:
+// import { Ratelimit } from "@upstash/ratelimit";
+// import { Redis } from "@upstash/redis";
+// const ratelimit = new Ratelimit({
+//   redis: Redis.fromEnv(),
+//   limiter: Ratelimit.slidingWindow(20, "1 h"),
+// });
 
 interface RateLimitEntry {
   count: number;
