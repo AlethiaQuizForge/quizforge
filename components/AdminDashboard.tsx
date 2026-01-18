@@ -221,9 +221,13 @@ export function AdminDashboard({ orgId, userId, onBack, showToast, onCopyQuiz }:
     if (!org || !isAdmin) return;
     setIsActionLoading(true);
     try {
-      const newCode = await regenerateInviteCode(orgId);
-      setOrg({ ...org, inviteCode: newCode });
-      showToast('Invite link regenerated', 'success');
+      const result = await regenerateInviteCode(orgId, userId);
+      if (result.success && result.newCode) {
+        setOrg({ ...org, inviteCode: result.newCode });
+        showToast('Invite link regenerated', 'success');
+      } else {
+        showToast(result.error || 'Failed to regenerate invite link', 'error');
+      }
     } catch (err) {
       showToast('Failed to regenerate invite link', 'error');
     } finally {
@@ -241,11 +245,15 @@ export function AdminDashboard({ orgId, userId, onBack, showToast, onCopyQuiz }:
 
     setIsActionLoading(true);
     try {
-      await removeMemberFromOrg(orgId, memberId);
-      setMembers(members.map(m =>
-        m.userId === memberId ? { ...m, status: 'removed' } : m
-      ));
-      showToast(`${memberName} has been removed`, 'success');
+      const result = await removeMemberFromOrg(orgId, userId, memberId);
+      if (result.success) {
+        setMembers(members.map(m =>
+          m.userId === memberId ? { ...m, status: 'removed' } : m
+        ));
+        showToast(`${memberName} has been removed`, 'success');
+      } else {
+        showToast(result.error || 'Failed to remove member', 'error');
+      }
     } catch (err) {
       showToast('Failed to remove member', 'error');
     } finally {
@@ -257,10 +265,14 @@ export function AdminDashboard({ orgId, userId, onBack, showToast, onCopyQuiz }:
     if (!org || !isAdmin || !nameInput.trim()) return;
     setIsActionLoading(true);
     try {
-      await updateOrganization(orgId, { name: nameInput.trim() });
-      setOrg({ ...org, name: nameInput.trim() });
-      setEditingName(false);
-      showToast('Organization name updated', 'success');
+      const result = await updateOrganization(orgId, userId, { name: nameInput.trim() });
+      if (result.success) {
+        setOrg({ ...org, name: nameInput.trim() });
+        setEditingName(false);
+        showToast('Organization name updated', 'success');
+      } else {
+        showToast(result.error || 'Failed to update name', 'error');
+      }
     } catch (err) {
       showToast('Failed to update name', 'error');
     } finally {
@@ -273,9 +285,13 @@ export function AdminDashboard({ orgId, userId, onBack, showToast, onCopyQuiz }:
     setIsActionLoading(true);
     try {
       const domain = domainInput.trim() || null;
-      await updateOrganization(orgId, { emailDomain: domain });
-      setOrg({ ...org, emailDomain: domain });
-      showToast(domain ? 'Email domain updated' : 'Email domain removed', 'success');
+      const result = await updateOrganization(orgId, userId, { emailDomain: domain });
+      if (result.success) {
+        setOrg({ ...org, emailDomain: domain });
+        showToast(domain ? 'Email domain updated' : 'Email domain removed', 'success');
+      } else {
+        showToast(result.error || 'Failed to update domain', 'error');
+      }
     } catch (err) {
       showToast('Failed to update domain', 'error');
     } finally {

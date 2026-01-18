@@ -216,27 +216,56 @@ export async function getOrganizationByInviteCode(inviteCode: string): Promise<O
 
 /**
  * Update organization settings
+ * SECURITY: Requires admin verification
  */
 export async function updateOrganization(
   orgId: string,
+  adminUserId: string,
   updates: Partial<Pick<Organization, 'name' | 'emailDomain'>>
-): Promise<void> {
+): Promise<{ success: boolean; error?: string }> {
+  // Verify the caller is the org admin
+  const org = await getOrganization(orgId);
+  if (!org) {
+    return { success: false, error: 'Organization not found' };
+  }
+
+  if (org.adminUserId !== adminUserId) {
+    return { success: false, error: 'Only organization admins can update settings' };
+  }
+
   await updateDoc(doc(db, 'organizations', orgId), {
     ...updates,
     updatedAt: serverTimestamp(),
   });
+
+  return { success: true };
 }
 
 /**
  * Regenerate invite code for an organization
+ * SECURITY: Requires admin verification
  */
-export async function regenerateInviteCode(orgId: string): Promise<string> {
+export async function regenerateInviteCode(
+  orgId: string,
+  adminUserId: string
+): Promise<{ success: boolean; newCode?: string; error?: string }> {
+  // Verify the caller is the org admin
+  const org = await getOrganization(orgId);
+  if (!org) {
+    return { success: false, error: 'Organization not found' };
+  }
+
+  if (org.adminUserId !== adminUserId) {
+    return { success: false, error: 'Only organization admins can regenerate invite codes' };
+  }
+
   const newCode = generateInviteCode();
   await updateDoc(doc(db, 'organizations', orgId), {
     inviteCode: newCode,
     updatedAt: serverTimestamp(),
   });
-  return newCode;
+
+  return { success: true, newCode };
 }
 
 // =============================================================================
@@ -326,9 +355,10 @@ export async function joinOrganization(
 }
 
 /**
- * Remove a member from an organization
+ * Remove a member from an organization (internal function)
+ * Note: This should only be called after authorization is verified
  */
-export async function removeMemberFromOrg(orgId: string, userId: string): Promise<void> {
+async function removeMemberInternal(orgId: string, userId: string): Promise<void> {
   // Mark as removed (don't delete to preserve history)
   await updateDoc(doc(db, 'organizations', orgId, 'members', userId), {
     status: 'removed',
@@ -336,6 +366,34 @@ export async function removeMemberFromOrg(orgId: string, userId: string): Promis
 
   // Remove from user's organization list
   await removeOrgMembershipFromUser(userId, orgId);
+}
+
+/**
+ * Remove a member from an organization
+ * SECURITY: Requires admin verification
+ */
+export async function removeMemberFromOrg(
+  orgId: string,
+  adminUserId: string,
+  targetUserId: string
+): Promise<{ success: boolean; error?: string }> {
+  // Verify the caller is the org admin
+  const org = await getOrganization(orgId);
+  if (!org) {
+    return { success: false, error: 'Organization not found' };
+  }
+
+  if (org.adminUserId !== adminUserId) {
+    return { success: false, error: 'Only organization admins can remove members' };
+  }
+
+  // Cannot remove the admin
+  if (targetUserId === org.adminUserId) {
+    return { success: false, error: 'Cannot remove the organization admin' };
+  }
+
+  await removeMemberInternal(orgId, targetUserId);
+  return { success: true };
 }
 
 /**
@@ -352,7 +410,7 @@ export async function leaveOrganization(orgId: string, userId: string): Promise<
     return { success: false, error: 'Organization admin cannot leave. Transfer ownership first.' };
   }
 
-  await removeMemberFromOrg(orgId, userId);
+  await removeMemberInternal(orgId, userId);
   return { success: true };
 }
 

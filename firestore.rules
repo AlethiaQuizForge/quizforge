@@ -1,0 +1,272 @@
+rules_version = '2';
+
+// QuizForge Firestore Security Rules
+// These rules enforce access control at the database level
+// Last updated: January 2026
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================================
+    // Helper Functions
+    // =========================================================================
+
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if the authenticated user matches the given userId
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Extract userId from document ID pattern: quizforge-account-{userId}
+    function getUserIdFromAccountDoc(docId) {
+      return docId.replace('quizforge-account-', '');
+    }
+
+    // Extract userId from document ID pattern: quizforge-data-{userId}
+    function getUserIdFromDataDoc(docId) {
+      return docId.replace('quizforge-data-', '');
+    }
+
+    // =========================================================================
+    // User Data Rules
+    // =========================================================================
+
+    // User account documents (quizforge-account-{uid})
+    // Users can only read/write their own account data
+    match /userData/{docId} {
+      allow read: if isAuthenticated() && (
+        // Account documents
+        (docId.matches('quizforge-account-.*') &&
+         request.auth.uid == getUserIdFromAccountDoc(docId)) ||
+        // Data documents
+        (docId.matches('quizforge-data-.*') &&
+         request.auth.uid == getUserIdFromDataDoc(docId))
+      );
+
+      allow write: if isAuthenticated() && (
+        (docId.matches('quizforge-account-.*') &&
+         request.auth.uid == getUserIdFromAccountDoc(docId)) ||
+        (docId.matches('quizforge-data-.*') &&
+         request.auth.uid == getUserIdFromDataDoc(docId))
+      );
+
+      // Subcollections under userData documents
+      match /{subcollection}/{subDoc} {
+        allow read, write: if isAuthenticated() && (
+          (docId.matches('quizforge-account-.*') &&
+           request.auth.uid == getUserIdFromAccountDoc(docId)) ||
+          (docId.matches('quizforge-data-.*') &&
+           request.auth.uid == getUserIdFromDataDoc(docId))
+        );
+      }
+    }
+
+    // =========================================================================
+    // Class Rules
+    // =========================================================================
+
+    match /classes/{classId} {
+      // Anyone authenticated can read classes (needed for join by code)
+      allow read: if isAuthenticated();
+
+      // Only the teacher who created the class can write
+      allow create: if isAuthenticated() &&
+                      request.resource.data.teacherId == request.auth.uid;
+
+      allow update: if isAuthenticated() && (
+        // Teacher can update their own class
+        resource.data.teacherId == request.auth.uid ||
+        // Students can only update the students array to add/remove themselves
+        (resource.data.students != null &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['students']) &&
+         (
+           // Adding self to students
+           request.resource.data.students.hasAll([request.auth.uid]) ||
+           // Removing self from students
+           !request.resource.data.students.hasAny([request.auth.uid])
+         ))
+      );
+
+      allow delete: if isAuthenticated() &&
+                      resource.data.teacherId == request.auth.uid;
+    }
+
+    // =========================================================================
+    // Assignment Rules
+    // =========================================================================
+
+    match /assignments/{assignmentId} {
+      // Teachers can read their own assignments
+      // Students can read assignments for classes they're enrolled in
+      allow read: if isAuthenticated() && (
+        resource.data.teacherId == request.auth.uid ||
+        resource.data.classId in getStudentClasses()
+      );
+
+      // Only the teacher can create/update/delete their assignments
+      allow create: if isAuthenticated() &&
+                      request.resource.data.teacherId == request.auth.uid;
+
+      allow update, delete: if isAuthenticated() &&
+                              resource.data.teacherId == request.auth.uid;
+    }
+
+    // Helper to get classes a student is enrolled in (simplified - actual implementation needs query)
+    function getStudentClasses() {
+      // Note: This is a simplified version. In production, you may need to
+      // structure data differently or use custom claims for efficient access control
+      return [];
+    }
+
+    // =========================================================================
+    // Submission Rules
+    // =========================================================================
+
+    match /submissions/{submissionId} {
+      // Students can read their own submissions
+      // Teachers can read submissions for their assignments
+      allow read: if isAuthenticated() && (
+        resource.data.studentId == request.auth.uid ||
+        resource.data.studentEmail == request.auth.token.email
+        // Note: Teacher access should be validated via assignment ownership
+      );
+
+      // Students can only create submissions for themselves
+      allow create: if isAuthenticated() && (
+        request.resource.data.studentId == request.auth.uid ||
+        request.resource.data.studentEmail == request.auth.token.email
+      );
+
+      // Students can update their own submissions (for retakes)
+      allow update: if isAuthenticated() && (
+        resource.data.studentId == request.auth.uid ||
+        resource.data.studentEmail == request.auth.token.email
+      );
+
+      // Only allow delete by the student who created it
+      allow delete: if isAuthenticated() && (
+        resource.data.studentId == request.auth.uid
+      );
+    }
+
+    // =========================================================================
+    // Organization Rules
+    // =========================================================================
+
+    match /organizations/{orgId} {
+      // Members can read organization data
+      allow read: if isAuthenticated() && (
+        resource.data.adminUserId == request.auth.uid ||
+        isMemberOfOrg(orgId)
+      );
+
+      // Only admins can update organization settings
+      allow update: if isAuthenticated() &&
+                      resource.data.adminUserId == request.auth.uid;
+
+      // Anyone can create an organization (they become admin)
+      allow create: if isAuthenticated() &&
+                      request.resource.data.adminUserId == request.auth.uid;
+
+      // Only admin can delete
+      allow delete: if isAuthenticated() &&
+                      resource.data.adminUserId == request.auth.uid;
+
+      // Organization members subcollection
+      match /members/{memberId} {
+        // Members can read the member list
+        allow read: if isAuthenticated() && (
+          isMemberOfOrg(orgId) ||
+          get(/databases/$(database)/documents/organizations/$(orgId)).data.adminUserId == request.auth.uid
+        );
+
+        // Admin can add/update/remove members
+        allow write: if isAuthenticated() &&
+                       get(/databases/$(database)/documents/organizations/$(orgId)).data.adminUserId == request.auth.uid;
+
+        // Users can add themselves (join via invite)
+        allow create: if isAuthenticated() &&
+                        memberId == request.auth.uid &&
+                        request.resource.data.userId == request.auth.uid;
+
+        // Users can update their own membership (e.g., leave)
+        allow update: if isAuthenticated() && memberId == request.auth.uid;
+      }
+
+      // Shared quizzes subcollection
+      match /sharedQuizzes/{quizId} {
+        // Members can read shared quizzes
+        allow read: if isAuthenticated() && isMemberOfOrg(orgId);
+
+        // Members can create shared quizzes
+        allow create: if isAuthenticated() &&
+                        isMemberOfOrg(orgId) &&
+                        request.resource.data.sharedBy == request.auth.uid;
+
+        // Owner or admin can update/delete
+        allow update, delete: if isAuthenticated() && (
+          resource.data.sharedBy == request.auth.uid ||
+          get(/databases/$(database)/documents/organizations/$(orgId)).data.adminUserId == request.auth.uid
+        );
+      }
+    }
+
+    // Helper to check org membership
+    function isMemberOfOrg(orgId) {
+      return exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.status == 'active';
+    }
+
+    // =========================================================================
+    // Shared Quiz Rules (Public)
+    // =========================================================================
+
+    // Public shared quizzes (shared-{id} documents)
+    match /{document=**} {
+      // Allow read access to shared quiz documents for anyone (public quizzes)
+      allow read: if document.matches('shared-.*');
+
+      // Only authenticated users can create shared quizzes
+      allow create: if document.matches('shared-.*') && isAuthenticated();
+
+      // Only the creator can update/delete (check sharedBy field)
+      allow update, delete: if document.matches('shared-.*') &&
+                              isAuthenticated() &&
+                              resource.data.sharedBy == request.auth.uid;
+    }
+
+    // =========================================================================
+    // Notifications Rules
+    // =========================================================================
+
+    match /notifications/{notificationId} {
+      // Users can only read their own notifications
+      allow read: if isAuthenticated() &&
+                    resource.data.recipientEmail == request.auth.token.email;
+
+      // Teachers can create notifications for students
+      allow create: if isAuthenticated();
+
+      // Users can update their own notifications (mark as read)
+      allow update: if isAuthenticated() &&
+                      resource.data.recipientEmail == request.auth.token.email;
+
+      // Users can delete their own notifications
+      allow delete: if isAuthenticated() &&
+                      resource.data.recipientEmail == request.auth.token.email;
+    }
+
+    // =========================================================================
+    // Default Deny
+    // =========================================================================
+
+    // Deny all other access by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

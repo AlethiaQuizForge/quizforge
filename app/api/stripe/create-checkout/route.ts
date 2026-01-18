@@ -1,8 +1,10 @@
 // API route to create Stripe checkout session
 // NOTE: Not active until STRIPE_SECRET_KEY is configured
+// SECURITY: Requires authentication and uses authenticated user's ID
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getStripe, PLANS, PlanId, isOrgPlan } from '@/lib/stripe';
+import { verifyAuthFromRequest } from '@/lib/firebase-admin';
 
 export async function POST(request: NextRequest) {
   // Check if Stripe is configured (lazy init at runtime)
@@ -21,7 +23,20 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { planId, userId, userEmail, orgName } = await request.json();
+    // SECURITY: Verify authentication and use authenticated user's ID
+    const auth = await verifyAuthFromRequest(request);
+    if (!auth.authenticated || !auth.userId) {
+      return NextResponse.json(
+        { error: auth.error || 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const { planId, orgName } = await request.json();
+
+    // SECURITY: Use authenticated user's ID and email, not client-provided values
+    const userId = auth.userId;
+    const userEmail = auth.email;
 
     // Validate plan
     if (!planId || !PLANS[planId as PlanId]) {

@@ -146,7 +146,45 @@ export async function POST(request: NextRequest) {
           customerId,
         });
 
-        // TODO: Update subscription status in Firebase
+        // Update subscription status in Firebase
+        try {
+          const db = await getFirebaseDb();
+          const { collection, query, where, getDocs, updateDoc } = await import('firebase/firestore');
+
+          // Find user with this Stripe customer ID
+          const usersRef = collection(db, 'userData');
+          const q = query(usersRef);
+          const snapshot = await getDocs(q);
+
+          for (const userDoc of snapshot.docs) {
+            const data = userDoc.data();
+            let userData: Record<string, unknown> = {};
+
+            if (data.value) {
+              try {
+                userData = JSON.parse(data.value);
+              } catch {
+                userData = data;
+              }
+            } else {
+              userData = data;
+            }
+
+            if (userData.stripeCustomerId === customerId) {
+              userData.subscriptionStatus = status;
+              userData.subscriptionUpdatedAt = new Date().toISOString();
+
+              await updateDoc(userDoc.ref, {
+                value: JSON.stringify(userData),
+                updatedAt: new Date(),
+              });
+              console.log(`Updated subscription status for user ${userDoc.id} to ${status}`);
+              break;
+            }
+          }
+        } catch (err) {
+          console.error('Failed to update subscription status:', err);
+        }
         break;
       }
 
@@ -158,7 +196,47 @@ export async function POST(request: NextRequest) {
           customerId,
         });
 
-        // TODO: Downgrade user to free plan in Firebase
+        // Downgrade user to free plan in Firebase
+        try {
+          const db = await getFirebaseDb();
+          const { collection, query, getDocs, updateDoc } = await import('firebase/firestore');
+
+          // Find user with this Stripe customer ID
+          const usersRef = collection(db, 'userData');
+          const q = query(usersRef);
+          const snapshot = await getDocs(q);
+
+          for (const userDoc of snapshot.docs) {
+            const data = userDoc.data();
+            let userData: Record<string, unknown> = {};
+
+            if (data.value) {
+              try {
+                userData = JSON.parse(data.value);
+              } catch {
+                userData = data;
+              }
+            } else {
+              userData = data;
+            }
+
+            if (userData.stripeCustomerId === customerId) {
+              userData.plan = 'free';
+              userData.subscriptionStatus = 'cancelled';
+              userData.subscriptionCancelledAt = new Date().toISOString();
+              // Keep stripeCustomerId for potential resubscription
+
+              await updateDoc(userDoc.ref, {
+                value: JSON.stringify(userData),
+                updatedAt: new Date(),
+              });
+              console.log(`Downgraded user ${userDoc.id} to free plan`);
+              break;
+            }
+          }
+        } catch (err) {
+          console.error('Failed to downgrade user:', err);
+        }
         break;
       }
 
@@ -168,7 +246,45 @@ export async function POST(request: NextRequest) {
 
         console.log(`Payment failed for customer ${customerId}`);
 
-        // TODO: Notify user and/or update status
+        // Update subscription status to past_due
+        try {
+          const db = await getFirebaseDb();
+          const { collection, query, getDocs, updateDoc } = await import('firebase/firestore');
+
+          // Find user with this Stripe customer ID
+          const usersRef = collection(db, 'userData');
+          const q = query(usersRef);
+          const snapshot = await getDocs(q);
+
+          for (const userDoc of snapshot.docs) {
+            const data = userDoc.data();
+            let userData: Record<string, unknown> = {};
+
+            if (data.value) {
+              try {
+                userData = JSON.parse(data.value);
+              } catch {
+                userData = data;
+              }
+            } else {
+              userData = data;
+            }
+
+            if (userData.stripeCustomerId === customerId) {
+              userData.subscriptionStatus = 'past_due';
+              userData.paymentFailedAt = new Date().toISOString();
+
+              await updateDoc(userDoc.ref, {
+                value: JSON.stringify(userData),
+                updatedAt: new Date(),
+              });
+              console.log(`Marked payment failed for user ${userDoc.id}`);
+              break;
+            }
+          }
+        } catch (err) {
+          console.error('Failed to update payment status:', err);
+        }
         break;
       }
 
