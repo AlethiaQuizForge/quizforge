@@ -45,11 +45,8 @@ test.describe('Shared Quiz Access', () => {
 });
 
 test.describe('Shared Quiz with Real ID', () => {
-  // To run these tests, set SHARED_QUIZ_ID environment variable
-  // Example: SHARED_QUIZ_ID=abc123 npx playwright test shared-quiz
-  const SHARED_QUIZ_ID = process.env.SHARED_QUIZ_ID;
-
-  test.skip(!SHARED_QUIZ_ID, 'Set SHARED_QUIZ_ID env var to run');
+  // Use env var or default test quiz
+  const SHARED_QUIZ_ID = process.env.SHARED_QUIZ_ID || 's1768775890777';
 
   test('should load shared quiz', async ({ page }) => {
     await page.goto(`/?quiz=${SHARED_QUIZ_ID}`);
