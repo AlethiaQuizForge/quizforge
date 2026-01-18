@@ -100,11 +100,18 @@ service cloud.firestore {
     // =========================================================================
 
     match /assignments/{assignmentId} {
-      // Allow authenticated users to read assignments
-      // Note: Application-level logic restricts students to only see assignments
-      // for classes they're enrolled in. Firestore rules can't efficiently query
-      // across collections to verify class membership.
-      allow read: if isAuthenticated();
+      // SECURITY: Only allow reading assignments if user is:
+      // 1. The teacher who created it, OR
+      // 2. A student enrolled in the assignment's class
+      // We store classId in the assignment and check class membership
+      allow read: if isAuthenticated() && (
+        // Teacher who created this assignment
+        resource.data.teacherId == request.auth.uid ||
+        // Student enrolled in the class - check if class document has this user in students array
+        (resource.data.classId != null &&
+         exists(/databases/$(database)/documents/classes/$(resource.data.classId)) &&
+         request.auth.uid in get(/databases/$(database)/documents/classes/$(resource.data.classId)).data.students)
+      );
 
       // Only the teacher can create/update/delete their assignments
       allow create: if isAuthenticated() &&
@@ -119,30 +126,31 @@ service cloud.firestore {
     // =========================================================================
 
     match /submissions/{submissionId} {
+      // SECURITY: Use ONLY studentId (uid) for identity verification
+      // Email-based checks removed to prevent spoofing attacks
+
       // Students can read their own submissions
-      // Teachers can read submissions for their assignments
+      // Teachers can read submissions for assignments they created
       allow read: if isAuthenticated() && (
         resource.data.studentId == request.auth.uid ||
-        resource.data.studentEmail == request.auth.token.email
-        // Note: Teacher access should be validated via assignment ownership
+        // Allow teacher to read submissions for their assignments
+        (resource.data.assignmentId != null &&
+         exists(/databases/$(database)/documents/assignments/$(resource.data.assignmentId)) &&
+         get(/databases/$(database)/documents/assignments/$(resource.data.assignmentId)).data.teacherId == request.auth.uid)
       );
 
-      // Students can only create submissions for themselves
-      allow create: if isAuthenticated() && (
-        request.resource.data.studentId == request.auth.uid ||
-        request.resource.data.studentEmail == request.auth.token.email
-      );
+      // SECURITY: Students can ONLY create submissions with their own uid
+      // The studentEmail field is informational only - not used for auth
+      allow create: if isAuthenticated() &&
+        request.resource.data.studentId == request.auth.uid;
 
       // Students can update their own submissions (for retakes)
-      allow update: if isAuthenticated() && (
-        resource.data.studentId == request.auth.uid ||
-        resource.data.studentEmail == request.auth.token.email
-      );
+      allow update: if isAuthenticated() &&
+        resource.data.studentId == request.auth.uid;
 
       // Only allow delete by the student who created it
-      allow delete: if isAuthenticated() && (
-        resource.data.studentId == request.auth.uid
-      );
+      allow delete: if isAuthenticated() &&
+        resource.data.studentId == request.auth.uid;
     }
 
     // =========================================================================
@@ -236,20 +244,21 @@ service cloud.firestore {
     // =========================================================================
 
     match /notifications/{notificationId} {
+      // SECURITY: Use recipientUserId for identity verification (not email)
       // Users can only read their own notifications
       allow read: if isAuthenticated() &&
-                    resource.data.recipientEmail == request.auth.token.email;
+                    resource.data.recipientUserId == request.auth.uid;
 
       // Teachers can create notifications for students
       allow create: if isAuthenticated();
 
       // Users can update their own notifications (mark as read)
       allow update: if isAuthenticated() &&
-                      resource.data.recipientEmail == request.auth.token.email;
+                      resource.data.recipientUserId == request.auth.uid;
 
       // Users can delete their own notifications
       allow delete: if isAuthenticated() &&
-                      resource.data.recipientEmail == request.auth.token.email;
+                      resource.data.recipientUserId == request.auth.uid;
     }
 
     // =========================================================================

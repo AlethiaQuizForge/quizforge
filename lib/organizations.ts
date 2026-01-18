@@ -126,15 +126,31 @@ export const ORG_PLANS: Record<OrgPlanId, {
 // =============================================================================
 
 /**
- * Generate a short, unique invite code for an organization
+ * Generate a secure, unique invite code for an organization
+ * SECURITY: Uses 12 characters from crypto-random source for ~59 bits of entropy
+ * This makes brute-force attacks computationally infeasible
  */
 export function generateInviteCode(): string {
-  const chars = 'abcdefghjkmnpqrstuvwxyz23456789'; // Removed confusing chars (i, l, o, 0, 1)
+  const chars = 'abcdefghjkmnpqrstuvwxyz23456789'; // 30 chars (removed i, l, o, 0, 1)
+  const codeLength = 12; // 30^12 = ~5.3 × 10^17 combinations
   let code = '';
-  for (let i = 0; i < 6; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
+
+  // Use crypto.getRandomValues for secure randomness (browser/Node compatible)
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const randomBytes = new Uint8Array(codeLength);
+    crypto.getRandomValues(randomBytes);
+    for (let i = 0; i < codeLength; i++) {
+      code += chars[randomBytes[i] % chars.length];
+    }
+  } else {
+    // Fallback for environments without crypto (shouldn't happen in modern runtimes)
+    for (let i = 0; i < codeLength; i++) {
+      code += chars[Math.floor(Math.random() * chars.length)];
+    }
   }
-  return code;
+
+  // Format as XXX-XXXX-XXXXX for readability
+  return `${code.slice(0, 3)}-${code.slice(3, 7)}-${code.slice(7, 12)}`;
 }
 
 /**
@@ -206,12 +222,32 @@ export async function getOrganization(orgId: string): Promise<Organization | nul
 
 /**
  * Get organization by invite code
+ * Handles both old 6-char codes and new XXX-XXXX-XXXXX format
  */
 export async function getOrganizationByInviteCode(inviteCode: string): Promise<Organization | null> {
-  const q = query(collection(db, 'organizations'), where('inviteCode', '==', inviteCode.toLowerCase()));
-  const snapshot = await getDocs(q);
-  if (snapshot.empty) return null;
-  return snapshot.docs[0].data() as Organization;
+  // Normalize the invite code: remove dashes/spaces, lowercase
+  const normalizedCode = inviteCode.toLowerCase().replace(/[-\s]/g, '');
+
+  // Try exact match first (for new formatted codes)
+  let q = query(collection(db, 'organizations'), where('inviteCode', '==', inviteCode.toLowerCase()));
+  let snapshot = await getDocs(q);
+
+  if (!snapshot.empty) {
+    return snapshot.docs[0].data() as Organization;
+  }
+
+  // Try matching without dashes (for user convenience)
+  // Get all orgs and check normalized versions
+  const allOrgsSnapshot = await getDocs(collection(db, 'organizations'));
+  for (const doc of allOrgsSnapshot.docs) {
+    const org = doc.data() as Organization;
+    const orgCodeNormalized = org.inviteCode.toLowerCase().replace(/[-\s]/g, '');
+    if (orgCodeNormalized === normalizedCode) {
+      return org;
+    }
+  }
+
+  return null;
 }
 
 /**

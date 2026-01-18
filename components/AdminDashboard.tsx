@@ -25,6 +25,7 @@ import {
   getTopicStats,
   refreshOrgAnalytics,
 } from '@/lib/orgAnalytics';
+import { sanitizeText } from '@/lib/utils';
 
 interface CopiedQuiz {
   id: string;

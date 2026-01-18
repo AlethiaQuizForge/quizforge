@@ -17,6 +17,10 @@ const RATE_LIMIT_CONFIG = {
   maxRequests: 30,
 };
 
+// SECURITY: Image size limits to prevent DoS
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB per image
+const MAX_TOTAL_SIZE_BYTES = 20 * 1024 * 1024; // 20MB total for all images
+
 export async function POST(request: NextRequest) {
   try {
     // SECURITY: Verify authentication first
@@ -59,6 +63,39 @@ export async function POST(request: NextRequest) {
     if (images.length > 10) {
       return NextResponse.json(
         { error: 'Maximum 10 images allowed' },
+        { status: 400 }
+      );
+    }
+
+    // SECURITY: Validate image sizes to prevent DoS attacks
+    let totalSize = 0;
+    for (let i = 0; i < images.length; i++) {
+      const img = images[i];
+
+      // Validate that each image is a string (base64)
+      if (typeof img !== 'string') {
+        return NextResponse.json(
+          { error: `Image ${i + 1} is not a valid base64 string` },
+          { status: 400 }
+        );
+      }
+
+      // Calculate approximate decoded size (base64 is ~4/3 of original)
+      const estimatedSize = Math.ceil((img.length * 3) / 4);
+
+      if (estimatedSize > MAX_IMAGE_SIZE_BYTES) {
+        return NextResponse.json(
+          { error: `Image ${i + 1} exceeds maximum size of 5MB` },
+          { status: 400 }
+        );
+      }
+
+      totalSize += estimatedSize;
+    }
+
+    if (totalSize > MAX_TOTAL_SIZE_BYTES) {
+      return NextResponse.json(
+        { error: 'Total image size exceeds maximum of 20MB' },
         { status: 400 }
       );
     }
