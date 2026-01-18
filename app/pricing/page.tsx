@@ -347,7 +347,7 @@ export default function PricingPage() {
             </span>
             {billingCycle === 'yearly' && (
               <span className="px-2 py-1 bg-green-500/20 text-green-600 dark:text-green-400 text-xs font-bold rounded-full">
-                Save 17%
+                Save 17% — 2 months free
               </span>
             )}
           </div>
