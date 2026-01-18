@@ -54,7 +54,7 @@ quizforge-deploy 2/
 │   ├── AdminDashboard.tsx    # Organization admin dashboard
 │   └── PricingCard.tsx       # Subscription pricing UI component
 ├── lib/
-│   ├── firebase.ts           # Firebase initialization with fallback config
+│   ├── firebase.ts           # Firebase initialization (uses env vars)
 │   ├── stripe.ts             # Stripe plans and limit checking
 │   ├── organizations.ts      # Organization management helpers
 │   ├── constants.ts          # Centralized app constants
@@ -200,7 +200,7 @@ quizforge-deploy 2/
 - **Dark mode**: Toggle with localStorage persistence
 - **Responsive design**: Mobile, tablet, desktop optimized
 - **Loading states**: Skeleton loaders, progress indicators, spinners
-- **Toast notifications**: Success, error, info, affirmation styles (auto-dismiss 3s)
+- **Toast notifications**: Success, error, info, affirmation styles (auto-dismiss 5s)
 - **Modals**: Resume quiz, delete confirmation, export options, share link, timed setup
 - **Keyboard navigation**: 1-4, A-D, Enter key support (hidden on mobile/tablet)
 - **Onboarding flow** for new users
@@ -342,7 +342,15 @@ UPSTASH_REDIS_REST_URL=https://...upstash.io
 UPSTASH_REDIS_REST_TOKEN=...
 ```
 
-Firebase config is currently hardcoded in `QuizForge.jsx` (project: quizforge-58f79)
+For Firebase client SDK (used in browser):
+```
+NEXT_PUBLIC_FIREBASE_API_KEY=...
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=quizforge-58f79.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=quizforge-58f79
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=quizforge-58f79.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
+NEXT_PUBLIC_FIREBASE_APP_ID=...
+```
 
 ---
 
@@ -368,7 +376,22 @@ Firebase config is currently hardcoded in `QuizForge.jsx` (project: quizforge-58
 
 ## Recent Updates (January 2026)
 
-- **Security Hardening & Audit Fixes** (Jan 18):
+- **Security Audit Completion** (Jan 18, Session 6):
+  - **Removed hardcoded Firebase credentials** - Moved to environment variables (`NEXT_PUBLIC_FIREBASE_*`)
+  - **Improved CSP** - Removed `unsafe-eval` in production builds
+  - **Fixed race conditions** - `joinClass` and `leaveClass` now use atomic Firestore operations (`arrayUnion`, `runTransaction`)
+  - **Server-side subscription limits** - `/api/generate` now enforces quiz limits server-side
+  - **Secure org join API** - New `/api/org/join` endpoint with Firebase Admin auth verification
+  - **Code quality fixes**:
+    - Replaced all `.substr()` with `.slice()` (deprecated method)
+    - Fixed silent promise rejection (added proper error logging)
+    - Fixed date type mismatches (timestamp vs ISO string handling)
+  - **Accessibility fixes**:
+    - Added ARIA labels to mobile menu toggle buttons
+    - Changed mobile menu containers to semantic `<nav>` elements
+    - Increased toast duration from 3s to 5s for better readability
+
+- **Security Hardening & Audit Fixes** (Jan 18, Session 5):
   - **Firestore Security Rules** - Complete rewrite with proper access control:
     - Assignments: Only teacher/enrolled students can read
     - Submissions: Uses `studentId` (uid) only, not email (prevents spoofing)
@@ -568,4 +591,4 @@ npx cap open ios     # Open in Xcode
 
 ---
 
-*Last updated: January 18, 2026 (Session 5 - Security Audit, Org Plan Checkout, Billing Cycle)*
+*Last updated: January 18, 2026 (Session 6 - Security Audit Completion)*
