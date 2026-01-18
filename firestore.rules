@@ -30,19 +30,39 @@ service cloud.firestore {
     // User Data Rules
     // =========================================================================
 
-    // User account documents (quizforge-account-{uid})
-    // Users can only read/write their own account data
+    // Shared quiz documents (public) - stored as userData/shared-{id}
     match /userData/{docId} {
-      allow read: if isAuthenticated() && (
-        // Account documents
+      // Shared quizzes are public (anyone can read without auth)
+      allow read: if docId.matches('shared-.*') ||
+        (isAuthenticated() && (
+          (docId.matches('quizforge-account-.*') &&
+           request.auth.uid == getUserIdFromAccountDoc(docId)) ||
+          (docId.matches('quizforge-data-.*') &&
+           request.auth.uid == getUserIdFromDataDoc(docId))
+        ));
+
+      // Shared quiz create: authenticated users only
+      // Shared quiz update: authenticated users (for leaderboard/timesTaken)
+      // Other docs: owner only
+      allow create: if isAuthenticated() && (
+        docId.matches('shared-.*') ||
         (docId.matches('quizforge-account-.*') &&
          request.auth.uid == getUserIdFromAccountDoc(docId)) ||
-        // Data documents
         (docId.matches('quizforge-data-.*') &&
          request.auth.uid == getUserIdFromDataDoc(docId))
       );
 
-      allow write: if isAuthenticated() && (
+      allow update: if isAuthenticated() && (
+        docId.matches('shared-.*') ||
+        (docId.matches('quizforge-account-.*') &&
+         request.auth.uid == getUserIdFromAccountDoc(docId)) ||
+        (docId.matches('quizforge-data-.*') &&
+         request.auth.uid == getUserIdFromDataDoc(docId))
+      );
+
+      // Delete: owner only (shared quizzes check sharedBy field)
+      allow delete: if isAuthenticated() && (
+        (docId.matches('shared-.*') && resource.data.sharedBy == request.auth.uid) ||
         (docId.matches('quizforge-account-.*') &&
          request.auth.uid == getUserIdFromAccountDoc(docId)) ||
         (docId.matches('quizforge-data-.*') &&
@@ -214,25 +234,6 @@ service cloud.firestore {
     function isMemberOfOrg(orgId) {
       return exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)) &&
              get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.status == 'active';
-    }
-
-    // =========================================================================
-    // Shared Quiz Rules (Public)
-    // =========================================================================
-
-    // Public shared quizzes (shared-{id} documents at root level)
-    // Using single-level match to avoid type issues with document.matches()
-    match /{document} {
-      // Allow read access to shared quiz documents for anyone (public quizzes)
-      allow read: if document.matches('shared-.*');
-
-      // Only authenticated users can create shared quizzes
-      allow create: if document.matches('shared-.*') && isAuthenticated();
-
-      // Only the creator can update/delete (check sharedBy field)
-      allow update, delete: if document.matches('shared-.*') &&
-                              isAuthenticated() &&
-                              resource.data.sharedBy == request.auth.uid;
     }
 
     // =========================================================================

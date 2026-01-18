@@ -36,10 +36,15 @@ const storage = {
       return null;
     }
   },
-  async set(key, value) {
+  async set(key, value, sharedBy = null) {
     try {
       const docRef = doc(db, 'userData', key);
-      await setDoc(docRef, { value, updatedAt: new Date() });
+      const docData = { value, updatedAt: new Date() };
+      // Store sharedBy at document root for Firestore rules to check
+      if (sharedBy) {
+        docData.sharedBy = sharedBy;
+      }
+      await setDoc(docRef, docData);
       return { key, value };
     } catch (e) {
       console.error('Storage set error for key:', key, 'Error:', e.message, e.code);
@@ -1617,11 +1622,12 @@ export default function QuizForge() {
           questions: questionsToShare,
           subject: quiz.subject || 'General',
           createdBy: user?.name || 'Anonymous',
+          sharedBy: user?.uid || null,
           createdAt: Date.now()
         };
-        
-        const result = await storage.set(`shared-${shareId}`, JSON.stringify(shareData));
-        
+
+        const result = await storage.set(`shared-${shareId}`, JSON.stringify(shareData), user?.uid);
+
         if (!result) {
           showToast('❌ Could not save quiz to database', 'error');
           return null;
@@ -1680,11 +1686,12 @@ export default function QuizForge() {
           questions: questionsToShare,
           subject: quiz.subject || 'General',
           createdBy: user?.name || 'Anonymous',
+          sharedBy: user?.uid || null,
           createdAt: Date.now(),
           timesTaken: 0
         };
 
-        const result = await storage.set(`shared-${shareId}`, JSON.stringify(shareData));
+        const result = await storage.set(`shared-${shareId}`, JSON.stringify(shareData), user?.uid);
         if (!result) {
           throw new Error('Failed to save share data');
         }
@@ -2911,7 +2918,7 @@ ${quizContent.substring(0, 40000)}
               leaderboard.sort((a, b) => b.score - a.score || a.date - b.date);
               sharedData.leaderboard = leaderboard.slice(0, 10);
 
-              await storage.set(`shared-${currentQuiz.id}`, JSON.stringify(sharedData));
+              await storage.set(`shared-${currentQuiz.id}`, JSON.stringify(sharedData), sharedData.sharedBy);
               // Update local state so UI shows updated count and leaderboard
               setSharedQuizData(sharedData);
               setCurrentQuiz(q => ({ ...q, timesTaken: sharedData.timesTaken, leaderboard: sharedData.leaderboard }));
