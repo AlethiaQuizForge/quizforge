@@ -1958,6 +1958,68 @@ export default function QuizForge() {
         return { success: false, error: `Could not read ${file.name}` };
       }
     }
+    // Image files (JPG, PNG, GIF, WebP) - use Vision API
+    else if (file.type.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(fileName)) {
+      setUploadProgress({ active: true, step: `${prefix}Processing image...`, progress: 20 });
+
+      try {
+        // Convert image to base64
+        const arrayBuffer = await file.arrayBuffer();
+        const base64 = btoa(
+          new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+        );
+
+        setUploadProgress({ active: true, step: `${prefix}AI analyzing image...`, progress: 50 });
+
+        // Get auth token
+        const token = auth.currentUser ? await auth.currentUser.getIdToken() : null;
+        if (!token) {
+          throw new Error('Please sign in to process images');
+        }
+
+        const controller = new AbortController();
+        setUploadController(controller);
+
+        const response = await fetch('/api/vision', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          signal: controller.signal,
+          body: JSON.stringify({ images: [base64] })
+        });
+
+        setUploadController(null);
+
+        if (!response.ok) {
+          let errorMsg = `Vision API error for ${file.name}`;
+          try {
+            const errorData = await response.json();
+            errorMsg = errorData.error || errorMsg;
+          } catch {
+            // Response wasn't valid JSON
+          }
+          throw new Error(errorMsg);
+        }
+
+        const data = await response.json();
+        const visionText = data.text || '';
+
+        setUploadProgress({ active: true, step: `${prefix}Complete!`, progress: 100 });
+
+        if (visionText.length > 50) {
+          return { success: true, text: visionText, name: file.name };
+        }
+        return { success: false, error: `Could not extract text from ${file.name}` };
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          return { success: false, error: 'Upload cancelled' };
+        }
+        console.error('Image processing error:', err);
+        return { success: false, error: err.message || `Could not process ${file.name}` };
+      }
+    }
     return { success: false, error: `Unsupported file type: ${file.name}` };
   };
 
@@ -1970,11 +2032,13 @@ export default function QuizForge() {
 
     const fileArray = Array.from(files).filter(f => {
       const name = f.name.toLowerCase();
-      return name.endsWith('.txt') || name.endsWith('.docx') || name.endsWith('.pdf') || name.endsWith('.pptx');
+      return name.endsWith('.txt') || name.endsWith('.docx') || name.endsWith('.pdf') || name.endsWith('.pptx') ||
+             name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png') || name.endsWith('.gif') || name.endsWith('.webp') ||
+             f.type.startsWith('image/');
     });
 
     if (fileArray.length === 0) {
-      showToast('⚠️ Please use .pdf, .docx, .pptx, or .txt files', 'error');
+      showToast('⚠️ Please use PDF, Word, PowerPoint, text, or image files', 'error');
       return;
     }
 
@@ -6085,7 +6149,7 @@ ${quizContent.substring(0, 40000)}
                       ref={fileInputRef}
                       type="file"
                       multiple
-                      accept=".docx,.pdf,.txt,.pptx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                      accept=".docx,.pdf,.txt,.pptx,.jpg,.jpeg,.png,.gif,.webp,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.presentationml.presentation,image/*"
                       onChange={handleFileUpload}
                       className="hidden"
                       disabled={uploadProgress.active}
@@ -6095,7 +6159,7 @@ ${quizContent.substring(0, 40000)}
                       {uploadProgress.active ? '⏳ Processing...' : 'Drop files here or click to upload'}
                     </p>
                     <p className="text-sm text-slate-500 dark:text-slate-300 mt-1">
-                      PDF, Word (.docx), PowerPoint (.pptx), or Text files
+                      PDF, Word, PowerPoint, Images, or Text files
                     </p>
                     <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                       Multiple files supported • Up to 20 pages per PDF
