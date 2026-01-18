@@ -33,6 +33,7 @@ export const PLANS = {
     name: 'Free',
     price: 0,
     priceId: null,
+    yearlyPriceId: null,
     limits: {
       users: 1,
       quizzesPerMonth: 5,
@@ -52,6 +53,7 @@ export const PLANS = {
     name: 'Pro',
     price: 9,
     priceId: process.env.STRIPE_PRO_PRICE_ID || null,
+    yearlyPriceId: process.env.STRIPE_PRO_YEARLY_PRICE_ID || null,
     limits: {
       users: 1,
       quizzesPerMonth: 25,
@@ -72,6 +74,7 @@ export const PLANS = {
     name: 'School',
     price: 199,
     priceId: process.env.STRIPE_SCHOOL_PRICE_ID || null,
+    yearlyPriceId: process.env.STRIPE_SCHOOL_YEARLY_PRICE_ID || null,
     isOrgPlan: true,
     limits: {
       users: 25,
@@ -92,6 +95,7 @@ export const PLANS = {
     name: 'University',
     price: 499,
     priceId: process.env.STRIPE_UNIVERSITY_PRICE_ID || null,
+    yearlyPriceId: process.env.STRIPE_UNIVERSITY_YEARLY_PRICE_ID || null,
     isOrgPlan: true,
     limits: {
       users: 50,

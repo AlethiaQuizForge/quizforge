@@ -190,7 +190,7 @@ export default function PricingPage() {
   const handleCheckout = async (planId: string, orgName?: string) => {
     if (!user) {
       // Redirect to main app to sign in first
-      window.location.href = '/?redirect=pricing&plan=' + planId;
+      window.location.href = '/?redirect=pricing&plan=' + planId + '&billing=' + billingCycle;
       return;
     }
 
@@ -207,6 +207,7 @@ export default function PricingPage() {
         },
         body: JSON.stringify({
           planId,
+          billingCycle,
           ...(orgName ? { orgName } : {}),
         }),
       });

@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { planId, orgName } = await request.json();
+    const { planId, orgName, billingCycle = 'monthly' } = await request.json();
 
     // SECURITY: Use authenticated user's ID and email, not client-provided values
     const userId = auth.userId;
@@ -41,12 +41,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate billing cycle
+    if (billingCycle !== 'monthly' && billingCycle !== 'yearly') {
+      return NextResponse.json(
+        { error: 'Invalid billing cycle' },
+        { status: 400 }
+      );
+    }
+
     const plan = PLANS[planId as PlanId];
 
-    // Can't checkout for free plan
-    if (!plan.priceId) {
+    // Get the appropriate price ID based on billing cycle
+    const priceId = billingCycle === 'yearly' ? plan.yearlyPriceId : plan.priceId;
+
+    // Can't checkout for free plan or if price ID not configured
+    if (!priceId) {
+      if (plan.price === 0) {
+        return NextResponse.json(
+          { error: 'This plan does not require payment' },
+          { status: 400 }
+        );
+      }
       return NextResponse.json(
-        { error: 'This plan does not require payment' },
+        { error: `${billingCycle === 'yearly' ? 'Yearly' : 'Monthly'} billing not yet available for this plan` },
         { status: 400 }
       );
     }
@@ -54,7 +71,7 @@ export async function POST(request: NextRequest) {
     // Generate idempotency key to prevent duplicate sessions from double-clicks
     // Key is valid for 24 hours, based on user + plan + 5-minute window
     const timeWindow = Math.floor(Date.now() / (5 * 60 * 1000)); // 5-minute windows
-    const idempotencyKey = `checkout_${userId}_${planId}_${timeWindow}`;
+    const idempotencyKey = `checkout_${userId}_${planId}_${billingCycle}_${timeWindow}`;
 
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create(
@@ -63,7 +80,7 @@ export async function POST(request: NextRequest) {
         payment_method_types: ['card'],
         line_items: [
           {
-            price: plan.priceId,
+            price: priceId,
             quantity: 1,
           },
         ],
