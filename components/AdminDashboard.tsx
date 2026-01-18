@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { getAuth } from 'firebase/auth';
 import {
   Organization,
   OrgMember,
@@ -294,6 +295,49 @@ export function AdminDashboard({ orgId, userId, onBack, showToast, onCopyQuiz }:
       }
     } catch (err) {
       showToast('Failed to update domain', 'error');
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handleOpenBillingPortal = async () => {
+    if (!org?.stripeCustomerId) {
+      showToast('No billing information found', 'error');
+      return;
+    }
+
+    setIsActionLoading(true);
+    try {
+      const auth = getAuth();
+      if (!auth.currentUser) {
+        showToast('Please log in to manage billing', 'error');
+        return;
+      }
+
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch('/api/stripe/portal', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          customerId: org.stripeCustomerId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to open billing portal');
+      }
+
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (err) {
+      console.error('Billing portal error:', err);
+      showToast('Failed to open billing portal', 'error');
     } finally {
       setIsActionLoading(false);
     }
@@ -876,12 +920,13 @@ export function AdminDashboard({ orgId, userId, onBack, showToast, onCopyQuiz }:
                   Active
                 </span>
               </div>
-              <a
-                href="/api/stripe/portal"
-                className="text-indigo-600 dark:text-indigo-400 text-sm hover:underline"
+              <button
+                onClick={handleOpenBillingPortal}
+                disabled={isActionLoading}
+                className="text-indigo-600 dark:text-indigo-400 text-sm hover:underline disabled:opacity-50"
               >
                 Manage billing →
-              </a>
+              </button>
             </div>
 
             {/* Danger Zone */}
@@ -891,12 +936,13 @@ export function AdminDashboard({ orgId, userId, onBack, showToast, onCopyQuiz }:
                 <p className="text-sm text-red-600 dark:text-red-300 mb-4">
                   Canceling your subscription will remove all teachers from the organization. This cannot be undone.
                 </p>
-                <a
-                  href="/api/stripe/portal"
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-500 text-sm inline-block"
+                <button
+                  onClick={handleOpenBillingPortal}
+                  disabled={isActionLoading}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-500 text-sm disabled:opacity-50"
                 >
                   Cancel Subscription
-                </a>
+                </button>
               </div>
             )}
           </div>

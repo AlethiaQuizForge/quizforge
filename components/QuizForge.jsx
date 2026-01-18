@@ -1481,13 +1481,17 @@ export default function QuizForge() {
 
     setIsUpgrading(true);
     try {
+      // Get auth token for secure API call
+      const token = await auth.currentUser.getIdToken();
+
       const response = await fetch('/api/stripe/create-checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
           planId: 'pro',
-          userId: auth.currentUser.uid,
-          userEmail: user.email,
         }),
       });
 
