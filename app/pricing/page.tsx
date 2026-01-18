@@ -68,6 +68,7 @@ const PLANS = {
     id: 'school',
     name: 'School',
     price: 199,
+    promoPrice: 159, // 20% off Jan-Feb
     description: 'For departments & small schools',
     limits: {
       users: 25,
@@ -91,6 +92,7 @@ const PLANS = {
     id: 'university',
     name: 'University',
     price: 499,
+    promoPrice: 399, // 20% off Jan-Feb
     description: 'For large institutions',
     limits: {
       users: 50,
@@ -158,6 +160,12 @@ const FEATURES_COMPARISON = [
   { feature: 'Priority Support', free: false, pro: true, school: true, university: 'Dedicated' },
 ];
 
+// Check if we're in Jan-Feb promo period
+const isPromoActive = () => {
+  const month = new Date().getMonth(); // 0 = Jan, 1 = Feb
+  return month === 0 || month === 1;
+};
+
 export default function PricingPage() {
   const [darkMode, setDarkMode] = useState(false);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
@@ -168,6 +176,7 @@ export default function PricingPage() {
   const [orgName, setOrgName] = useState('');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
+  const showPromo = isPromoActive();
 
   // Listen for auth state
   useEffect(() => {
@@ -441,9 +450,17 @@ export default function PricingPage() {
             <h2 className={`text-2xl font-bold text-center mb-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
               For Schools & Universities
             </h2>
-            <p className={`text-center mb-8 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+            <p className={`text-center mb-4 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
               Empower your entire institution with AI-powered assessments
             </p>
+            {showPromo && (
+              <div className="text-center mb-8">
+                <span className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-sm font-bold rounded-full shadow-lg">
+                  <span>🎉</span> New Year Sale: 20% OFF — Ends Feb 28
+                </span>
+              </div>
+            )}
+            {!showPromo && <div className="mb-4" />}
             <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
               {['school', 'university'].map((planId) => {
                 const plan = PLANS[planId as keyof typeof PLANS];
@@ -481,11 +498,26 @@ export default function PricingPage() {
                       </p>
                     </div>
                     <div className="text-center mb-6">
-                      <span className={`text-5xl font-bold ${
-                        isUniversity ? 'text-white' : darkMode ? 'text-white' : 'text-slate-900'
-                      }`}>
-                        {getPrice(plan.price)}
-                      </span>
+                      {showPromo && 'promoPrice' in plan ? (
+                        <>
+                          <span className={`text-2xl line-through opacity-60 mr-2 ${
+                            isUniversity ? 'text-white' : darkMode ? 'text-slate-400' : 'text-slate-400'
+                          }`}>
+                            ${plan.price}
+                          </span>
+                          <span className={`text-5xl font-bold ${
+                            isUniversity ? 'text-white' : darkMode ? 'text-white' : 'text-slate-900'
+                          }`}>
+                            ${(plan as typeof plan & { promoPrice: number }).promoPrice}
+                          </span>
+                        </>
+                      ) : (
+                        <span className={`text-5xl font-bold ${
+                          isUniversity ? 'text-white' : darkMode ? 'text-white' : 'text-slate-900'
+                        }`}>
+                          {getPrice(plan.price)}
+                        </span>
+                      )}
                       <span className={`text-lg ${
                         isUniversity ? 'text-amber-200' : darkMode ? 'text-slate-400' : 'text-slate-500'
                       }`}>
