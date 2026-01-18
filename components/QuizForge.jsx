@@ -490,17 +490,29 @@ export default function QuizForge() {
           // Load user profile from Firestore
           const result = await storage.get(`quizforge-account-${firebaseUser.uid}`);
           if (result && result.value) {
-            const userData = JSON.parse(result.value);
+            let userData;
+            try {
+              userData = JSON.parse(result.value);
+            } catch (parseError) {
+              console.error('Failed to parse user data:', parseError);
+              userData = {};
+            }
             setUser(userData);
-            setUserName(userData.name);
-            setUserType(userData.role);
-            setUserPlan(userData.plan || 'free');
+            setUserName(userData?.name || '');
+            setUserType(userData?.role || 'student');
+            setUserPlan(userData?.plan || 'free');
             setIsLoggedIn(true);
-            
+
             // Load user's data
             const dataResult = await storage.get(`quizforge-data-${firebaseUser.uid}`);
             if (dataResult && dataResult.value) {
-              const data = JSON.parse(dataResult.value);
+              let data;
+              try {
+                data = JSON.parse(dataResult.value);
+              } catch (parseError) {
+                console.error('Failed to parse user data:', parseError);
+                data = {};
+              }
               setQuizzes(data.quizzes || []);
               setJoinedClasses(data.joinedClasses || []);
               setSubmissions(data.submissions || []);
