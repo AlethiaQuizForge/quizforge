@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import * as mammoth from 'mammoth';
 import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, GoogleAuthProvider, OAuthProvider, signInWithPopup } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, GoogleAuthProvider, OAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs, updateDoc, addDoc, onSnapshot, arrayUnion, arrayRemove, runTransaction } from 'firebase/firestore';
 
 // Firebase configuration - requires environment variables
@@ -492,6 +492,54 @@ export default function QuizForge() {
         clearInterval(subscriptionPollRef.current);
       }
     };
+  }, []);
+
+  // Handle Google redirect result (for mobile sign-in)
+  useEffect(() => {
+    const handleRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result && result.user) {
+          const firebaseUser = result.user;
+          // Check if new user needs account creation
+          const existingUser = await storage.get(`quizforge-account-${firebaseUser.uid}`);
+          if (!existingUser || !existingUser.value) {
+            // New user from redirect - get pending role
+            const pendingRole = sessionStorage.getItem('pendingGoogleRole');
+            sessionStorage.removeItem('pendingGoogleRole');
+
+            if (pendingRole) {
+              // Create account with selected role
+              const userData = {
+                name: firebaseUser.displayName || 'User',
+                email: firebaseUser.email,
+                role: pendingRole,
+                createdAt: new Date().toISOString()
+              };
+              await storage.set(`quizforge-account-${firebaseUser.uid}`, JSON.stringify(userData));
+              await storage.set(`quizforge-data-${firebaseUser.uid}`, JSON.stringify({
+                quizzes: [], classes: [], joinedClasses: [], assignments: [], submissions: [], questionBank: [],
+                studentProgress: { totalQuizzesTaken: 0, totalQuestionsAnswered: 0, correctAnswers: 0, averageScore: 0, streakCurrent: 0, streakLongest: 0, lastActiveDate: null, topicPerformance: {}, questionHistory: {}, dailyHistory: [], scoreHistory: [] },
+                achievements: { firstQuiz: false, onFire: false, weekWarrior: false, dedicatedLearner: false, quizMaster: false, perfectScore: false, starStudent: false }
+              }));
+              setUser(userData);
+              setUserName(userData.name);
+              setUserType(pendingRole);
+              setIsLoggedIn(true);
+              setPage(pendingRole === 'teacher' ? 'teacher-dashboard' : pendingRole === 'student' ? 'student-dashboard' : 'creator-dashboard');
+              showToast('Welcome to QuizForge!', 'success');
+            } else {
+              // No role selected - show role selection
+              setSocialLoginPending({ provider: 'google', user: firebaseUser });
+              setShowSocialRoleModal(true);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Redirect result error:', err);
+      }
+    };
+    handleRedirectResult();
   }, []);
 
   // Listen for Firebase auth state changes
@@ -1180,6 +1228,18 @@ export default function QuizForge() {
     setAuthError('');
     try {
       const provider = new GoogleAuthProvider();
+
+      // Use redirect on mobile (popup often fails on mobile browsers)
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (isMobile) {
+        // Store selected role for after redirect
+        if (selectedRole) {
+          sessionStorage.setItem('pendingGoogleRole', selectedRole);
+        }
+        await signInWithRedirect(auth, provider);
+        return; // Redirect will happen, page will reload
+      }
+
       const result = await signInWithPopup(auth, provider);
       const firebaseUser = result.user;
       
