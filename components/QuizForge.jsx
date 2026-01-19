@@ -227,37 +227,38 @@ export default function QuizForge() {
     showToast('Upload cancelled', 'info');
   };
   
-  // Shared quiz checker function
+  // Shared quiz checker function - uses server-side API to bypass client Firestore issues
   const checkForSharedQuiz = async () => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     const sharedId = params.get('quiz');
     if (sharedId) {
       try {
-        const result = await storage.get(`shared-${sharedId}`);
-        if (result && result.value) {
-          let quizData;
-          try {
-            quizData = JSON.parse(result.value);
-          } catch (parseErr) {
-            console.error('Invalid shared quiz data format');
-            showToast('This quiz link is invalid or corrupted', 'error');
-            return;
-          }
+        // Use server-side API route to fetch shared quiz (bypasses client Firestore connection)
+        const response = await fetch(`/api/shared-quiz/${sharedId}`);
+        if (response.ok) {
+          const data = await response.json();
+          const quizData = data.quiz;
           // Validate quiz data structure
           if (!quizData || !Array.isArray(quizData.questions) || quizData.questions.length === 0) {
             console.error('Shared quiz has invalid structure');
             showToast('This quiz appears to be empty or corrupted', 'error');
             return;
           }
+          // Add timesTaken and leaderboard from response
+          quizData.timesTaken = data.timesTaken || 0;
+          quizData.leaderboard = data.leaderboard || [];
           setSharedQuizData(quizData);
           setSharedQuizMode(true);
           setCurrentQuiz(quizData);
           setQuizState({ currentQuestion: 0, selectedAnswer: null, answeredQuestions: new Set(), score: 0, results: [] });
           setPage('take-quiz');
-        } else {
+        } else if (response.status === 404) {
           console.error('Shared quiz not found');
           showToast('Quiz not found. The link may be invalid or expired.', 'error');
+        } else {
+          console.error('Failed to fetch shared quiz');
+          showToast('Could not load quiz. Please try again.', 'error');
         }
       } catch (err) {
         console.error('Could not load shared quiz:', err);
