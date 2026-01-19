@@ -27,7 +27,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: blob: https:",
-              "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://accounts.google.com https://api.anthropic.com https://api.stripe.com wss://*.firebaseio.com https://*.sentry.io",
+              "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://firestore.googleapis.com https://accounts.google.com https://api.anthropic.com https://api.stripe.com wss://*.firebaseio.com https://*.sentry.io",
               "frame-src 'self' https://js.stripe.com https://*.firebaseapp.com https://accounts.google.com",
               "object-src 'none'",
               "base-uri 'self'",
