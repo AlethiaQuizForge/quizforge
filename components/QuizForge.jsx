@@ -240,13 +240,13 @@ export default function QuizForge() {
           try {
             quizData = JSON.parse(result.value);
           } catch (parseErr) {
-            console.log('Invalid shared quiz data format');
+            console.error('Invalid shared quiz data format');
             showToast('This quiz link is invalid or corrupted', 'error');
             return;
           }
           // Validate quiz data structure
           if (!quizData || !Array.isArray(quizData.questions) || quizData.questions.length === 0) {
-            console.log('Shared quiz has invalid structure');
+            console.error('Shared quiz has invalid structure');
             showToast('This quiz appears to be empty or corrupted', 'error');
             return;
           }
@@ -256,11 +256,11 @@ export default function QuizForge() {
           setQuizState({ currentQuestion: 0, selectedAnswer: null, answeredQuestions: new Set(), score: 0, results: [] });
           setPage('take-quiz');
         } else {
-          console.log('Shared quiz not found');
+          console.error('Shared quiz not found');
           showToast('Quiz not found. The link may be invalid or expired.', 'error');
         }
       } catch (err) {
-        console.log('Could not load shared quiz:', err);
+        console.error('Could not load shared quiz:', err);
         showToast('Could not load quiz. Please try again.', 'error');
       }
     }
@@ -475,7 +475,7 @@ export default function QuizForge() {
               }
             }
           } catch (err) {
-            console.log('Error polling subscription status:', err);
+            console.error('Error polling subscription status:', err);
           }
         }, 2000); // Check every 2 seconds
       }
@@ -595,7 +595,7 @@ export default function QuizForge() {
                   }
                   setAssignments(allAssignments);
                 } catch (e) {
-                  console.log('Error fetching assignments:', e);
+                  console.error('Error fetching assignments:', e);
                   setAssignments(data.assignments || []);
                 }
               } else {
@@ -622,7 +622,7 @@ export default function QuizForge() {
                         });
                         return cls;
                       } catch (err) {
-                        console.log(`Error syncing class ${cls.id}:`, err);
+                        console.error(`Error syncing class ${cls.id}:`, err);
                         return cls; // Fall back to local data on error
                       }
                     })
@@ -633,7 +633,7 @@ export default function QuizForge() {
                     .filter(Boolean);
                   setClasses(syncedClasses.length > 0 ? syncedClasses : localClasses);
                 } catch (e) {
-                  console.log('Error syncing classes from Firestore:', e);
+                  console.error('Error syncing classes from Firestore:', e);
                   setClasses(localClasses);
                 }
               } else {
@@ -664,14 +664,14 @@ export default function QuizForge() {
                     });
                     setSubmissions(mergedSubs);
                   } catch (e) {
-                    console.log('Error fetching submissions from Firestore:', e);
+                    console.error('Error fetching submissions from Firestore:', e);
                   }
                 }
               }
             }
           }
         } catch (err) {
-          console.log('Error loading user data:', err);
+          console.error('Error loading user data:', err);
         }
       } else {
         setUser(null);
@@ -696,7 +696,7 @@ export default function QuizForge() {
             currentUserType = accountData.role;
           }
         } catch (e) {
-          console.log('Error getting user type for org join check:', e);
+          console.error('Error getting user type for org join check:', e);
         }
       }
       checkForPendingOrgJoin(!!firebaseUser, currentUserType);
@@ -719,7 +719,7 @@ export default function QuizForge() {
           quizzes, classes, joinedClasses, assignments, submissions, questionBank, studentProgress
         }));
       } catch (err) {
-        console.log('Could not save data:', err.message);
+        console.error('Could not save data:', err.message);
       }
     };
 
@@ -749,7 +749,7 @@ export default function QuizForge() {
       import('@/lib/migration').then(({ checkAndMigrateOnLogin }) => {
         checkAndMigrateOnLogin(auth.currentUser.uid);
       }).catch(err => {
-        console.log('Migration check skipped:', err.message);
+        console.error('Migration check skipped:', err.message);
       });
     }
   }, [isLoggedIn]);
@@ -768,7 +768,7 @@ export default function QuizForge() {
           ));
         }
       }, (error) => {
-        console.log('Class listener error:', error);
+        console.error('Class listener error:', error);
       });
     });
 
@@ -797,7 +797,7 @@ export default function QuizForge() {
           }
         });
       }, (error) => {
-        console.log('Submissions listener error:', error);
+        console.error('Submissions listener error:', error);
       });
     });
 
@@ -1069,7 +1069,7 @@ export default function QuizForge() {
                 });
                 setSubmissions(mergedSubs);
               } catch (e) {
-                console.log('Error fetching submissions:', e);
+                console.error('Error fetching submissions:', e);
                 setSubmissions(data.submissions || []);
               }
             } else {
@@ -1287,7 +1287,7 @@ export default function QuizForge() {
                 });
                 setSubmissions(mergedSubs);
               } catch (e) {
-                console.log('Error fetching submissions:', e);
+                console.error('Error fetching submissions:', e);
                 setSubmissions(data.submissions || []);
               }
             } else {
@@ -1422,7 +1422,7 @@ export default function QuizForge() {
                 });
                 setSubmissions(mergedSubs);
               } catch (e) {
-                console.log('Error fetching submissions:', e);
+                console.error('Error fetching submissions:', e);
                 setSubmissions(data.submissions || []);
               }
             } else {
@@ -1533,7 +1533,7 @@ export default function QuizForge() {
     try {
       await signOut(auth);
     } catch (err) {
-      console.log('Could not sign out:', err);
+      console.error('Could not sign out:', err);
     }
     setUser(null);
     setIsLoggedIn(false);
@@ -3082,7 +3082,7 @@ ${quizContent.substring(0, 40000)}
               try {
                 sharedData = JSON.parse(result.value);
               } catch {
-                console.log('Invalid shared quiz data');
+                console.error('Invalid shared quiz data');
                 return;
               }
               sharedData.timesTaken = (sharedData.timesTaken || 0) + 1;
@@ -3104,7 +3104,7 @@ ${quizContent.substring(0, 40000)}
               setCurrentQuiz(q => ({ ...q, timesTaken: sharedData.timesTaken, leaderboard: sharedData.leaderboard }));
             }
           } catch (e) {
-            console.log('Could not update times taken:', e);
+            console.error('Could not update times taken:', e);
           }
         })());
       }
@@ -3211,7 +3211,7 @@ ${quizContent.substring(0, 40000)}
       try {
         await storage.delete(`quizforge-data-${auth.currentUser.uid}`);
       } catch (err) {
-        console.log('Could not clear data');
+        console.error('Could not clear data');
       }
     }
     
