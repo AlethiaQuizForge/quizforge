@@ -2876,6 +2876,7 @@ ${quizContent.substring(0, 40000)}
 
       // Create notifications for all students in the class
       const studentCount = targetClass.students?.length || 0;
+      let notificationsFailed = 0;
       if (studentCount > 0) {
         const notificationPromises = targetClass.students.map(async (student) => {
           const notification = {
@@ -2897,13 +2898,19 @@ ${quizContent.substring(0, 40000)}
           try {
             await setDoc(doc(db, 'notifications', notification.id), notification);
           } catch (err) {
-            console.log('Could not create notification for student:', student.email);
+            console.error('Could not create notification for student:', student.email, err);
+            notificationsFailed++;
           }
         });
         await Promise.all(notificationPromises);
       }
 
-      showToast(`✅ "${quiz?.name}" assigned to ${targetClass.name}${studentCount > 0 ? ` (${studentCount} students notified)` : ''}!`, 'success');
+      const notifiedCount = studentCount - notificationsFailed;
+      if (notificationsFailed > 0) {
+        showToast(`⚠️ "${quiz?.name}" assigned, but ${notificationsFailed} student notification(s) failed`, 'error');
+      } else {
+        showToast(`✅ "${quiz?.name}" assigned to ${targetClass.name}${notifiedCount > 0 ? ` (${notifiedCount} students notified)` : ''}!`, 'success');
+      }
     } catch (e) {
       console.error('Error saving assignment to Firestore:', e);
       if (e.code === 'unavailable' || e.message?.includes('network')) {
@@ -3053,7 +3060,14 @@ ${quizContent.substring(0, 40000)}
       if (currentAssignment) {
         updatePromises.push(
           submitQuizResult(currentAssignment.id, score, total, quizState.results)
-            .catch(err => console.log('Failed to submit quiz result:', err))
+            .then(() => {
+              // Successfully submitted
+            })
+            .catch(err => {
+              console.error('Failed to submit quiz result:', err);
+              // Notify user of submission failure
+              showToast('Failed to submit assignment. Please try again or contact your teacher.', 'error');
+            })
         );
         setCurrentAssignment(null);
       }

@@ -70,23 +70,28 @@ export async function POST(request: NextRequest) {
           // Check if this is an organization plan
           if (isOrgPlan(planId)) {
             // Create organization for School/University plans
-            try {
-              const { createOrganization } = await getOrgHelpers();
-              const org = await createOrganization({
-                name: orgName || `${planId === 'university' ? 'University' : 'School'} Organization`,
-                plan: planId as OrgPlanId,
-                adminUserId: userId,
-                adminEmail: userEmail || '',
-                stripeCustomerId: customerId,
-                stripeSubscriptionId: subscriptionId,
-              });
+            // CRITICAL: If this fails, we must return error so Stripe retries
+            const { createOrganization } = await getOrgHelpers();
+            const org = await createOrganization({
+              name: orgName || `${planId === 'university' ? 'University' : 'School'} Organization`,
+              plan: planId as OrgPlanId,
+              adminUserId: userId,
+              adminEmail: userEmail || '',
+              stripeCustomerId: customerId,
+              stripeSubscriptionId: subscriptionId,
+            });
 
-              console.log(`Created organization ${org.id} for user ${userId}`);
-            } catch (err) {
-              console.error('Failed to create organization:', err);
+            if (!org || !org.id) {
+              console.error(`Failed to create organization for user ${userId} after payment`);
+              // Return error so Stripe will retry the webhook
+              return NextResponse.json(
+                { error: 'Failed to create organization' },
+                { status: 500 }
+              );
             }
           } else {
             // Individual plan (Pro) - update user's plan using admin SDK
+            // CRITICAL: If this fails, we must return error so Stripe retries
             const updated = await updateServerUserData(userId, {
               plan: planId,
               stripeCustomerId: customerId,
@@ -95,10 +100,13 @@ export async function POST(request: NextRequest) {
               subscribedAt: new Date().toISOString(),
             });
 
-            if (updated) {
-              console.log(`Updated user ${userId} to plan ${planId}`);
-            } else {
-              console.error(`Failed to update user ${userId} plan`);
+            if (!updated) {
+              console.error(`Failed to update user ${userId} plan after payment`);
+              // Return error so Stripe will retry the webhook
+              return NextResponse.json(
+                { error: 'Failed to update user plan' },
+                { status: 500 }
+              );
             }
           }
         }
