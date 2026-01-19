@@ -68,15 +68,24 @@ export async function GET(request: NextRequest) {
             marginBottom: 30,
           }}
         >
-          <svg
-            width="60"
-            height="60"
-            viewBox="0 0 100 100"
-            style={{ marginRight: 15 }}
+          {/* Logo icon - using div instead of SVG text (not supported by @vercel/og) */}
+          <div
+            style={{
+              width: 60,
+              height: 60,
+              backgroundColor: 'white',
+              borderRadius: 12,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginRight: 15,
+              fontSize: 36,
+              fontWeight: 800,
+              color: '#6366f1',
+            }}
           >
-            <rect x="10" y="10" width="80" height="80" rx="15" fill="white" />
-            <text x="50" y="68" fontSize="50" textAnchor="middle" fill="#6366f1">Q</text>
-          </svg>
+            Q
+          </div>
           <span
             style={{
               fontSize: 48,
