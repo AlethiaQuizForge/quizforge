@@ -3074,35 +3074,30 @@ ${quizContent.substring(0, 40000)}
       }
 
       // Increment times taken and update leaderboard for shared quizzes
+      // Uses server-side API to allow anonymous users to submit scores
       if (typeof currentQuiz?.id === 'string' && currentQuiz.id.startsWith('s')) {
         updatePromises.push((async () => {
           try {
-            const result = await storage.get(`shared-${currentQuiz.id}`);
-            if (result && result.value) {
-              let sharedData;
-              try {
-                sharedData = JSON.parse(result.value);
-              } catch {
-                console.error('Invalid shared quiz data');
-                return;
-              }
-              sharedData.timesTaken = (sharedData.timesTaken || 0) + 1;
+            const playerName = user?.name || 'Anonymous';
+            const playerScore = Math.round((score / total) * 100);
 
-              // Update leaderboard (top 10 scores)
-              const playerName = user?.name || 'Anonymous';
-              const playerScore = Math.round((score / total) * 100);
-              const leaderboard = sharedData.leaderboard || [];
-              const newEntry = { name: playerName, score: playerScore, date: Date.now() };
+            const response = await fetch('/api/shared-quiz/submit-score', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                quizId: currentQuiz.id,
+                playerName,
+                score: playerScore
+              })
+            });
 
-              // Add new entry and keep top 10
-              leaderboard.push(newEntry);
-              leaderboard.sort((a, b) => b.score - a.score || a.date - b.date);
-              sharedData.leaderboard = leaderboard.slice(0, 10);
-
-              await storage.set(`shared-${currentQuiz.id}`, JSON.stringify(sharedData), sharedData.sharedBy);
+            if (response.ok) {
+              const data = await response.json();
               // Update local state so UI shows updated count and leaderboard
-              setSharedQuizData(sharedData);
-              setCurrentQuiz(q => ({ ...q, timesTaken: sharedData.timesTaken, leaderboard: sharedData.leaderboard }));
+              setSharedQuizData(prev => ({ ...prev, timesTaken: data.timesTaken, leaderboard: data.leaderboard }));
+              setCurrentQuiz(q => ({ ...q, timesTaken: data.timesTaken, leaderboard: data.leaderboard }));
+            } else {
+              console.error('Failed to submit score:', response.status);
             }
           } catch (e) {
             console.error('Could not update times taken:', e);
