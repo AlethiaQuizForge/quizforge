@@ -3264,14 +3264,15 @@ ${quizContent.substring(0, 40000)}
   const selectedClass = currentClass || classes[0];
   const classAssignments = assignments.filter(a => a.classId === selectedClass?.id);
   // Redirect to auth if trying to access protected pages while not logged in
+  // Exception: shared quiz mode allows unauthenticated users to take quizzes
   useEffect(() => {
-    if (!isLoading && !isLoggedIn) {
+    if (!isLoading && !isLoggedIn && !sharedQuizMode) {
       const protectedPages = ['teacher-dashboard', 'student-dashboard', 'creator-dashboard', 'create-quiz', 'class-manager', 'student-classes', 'profile', 'review-quiz', 'take-quiz', 'quiz-results', 'generating'];
       if (protectedPages.includes(page)) {
         setPage('auth');
       }
     }
-  }, [page, isLoggedIn, isLoading]);
+  }, [page, isLoggedIn, isLoading, sharedQuizMode]);
 
   const classSubmissions = submissions.filter(s => classAssignments.some(a => a.id === s.assignmentId));
 
