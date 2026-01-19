@@ -376,6 +376,20 @@ NEXT_PUBLIC_FIREBASE_APP_ID=...
 
 ## Recent Updates (January 2026)
 
+- **Bug Fixes & Mobile Support** (Jan 19, Session 8):
+  - **Google Sign-in on Mobile** - Fixed popup auth failing on mobile devices:
+    - Uses `signInWithRedirect` on mobile instead of `signInWithPopup`
+    - Added redirect result handler for new users from mobile
+    - Added `accounts.google.com` to CSP frame-src and connect-src
+  - **PDF Upload Fix** - Added `cdnjs.cloudflare.com` to CSP for pdf.js
+  - **Image Upload Support** - Added JPG, PNG, GIF, WebP upload via Vision API
+  - **Dynamic OG Metadata** - Shared quiz links now show quiz title in previews
+  - **Critical Error Handling Fixes**:
+    - Stripe webhook now returns error if org creation fails (Stripe will retry)
+    - Assignment submission failure now notifies user with toast
+    - Student notification failures now tracked and reported to teacher
+  - **Build Fix** - Split page.tsx into server/client components for metadata
+
 - **Security Audit Final Completion** (Jan 18, Session 7):
   - **Firestore Rules for Shared Quizzes** - Fixed access control for `shared-*` documents in userData collection:
     - Public read access (no auth required) for shared quizzes
@@ -618,4 +632,4 @@ npx cap open ios     # Open in Xcode
 
 ---
 
-*Last updated: January 18, 2026 (Session 7 - Security Audit Final, Playwright Tests, Billing Portal Fix)*
+*Last updated: January 19, 2026 (Session 8 - Mobile Google Sign-in, Error Handling, Image Upload)*
