@@ -377,6 +377,9 @@ NEXT_PUBLIC_FIREBASE_APP_ID=...
 ## Recent Updates (January 2026)
 
 - **Bug Fixes & Mobile Support** (Jan 19, Session 8):
+  - **Shared Quiz Access Fix** - Fixed CSP blocking `apis.google.com`:
+    - Added `apis.google.com` to script-src for Firebase Auth to initialize
+    - Without this, shared quiz links redirected to login instead of loading
   - **Google Sign-in on Mobile** - Fixed popup auth failing on mobile devices:
     - Uses `signInWithRedirect` on mobile instead of `signInWithPopup`
     - Added redirect result handler for new users from mobile
