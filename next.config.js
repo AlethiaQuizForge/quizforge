@@ -12,8 +12,8 @@ const nextConfig = {
     const isDev = process.env.NODE_ENV === 'development';
 
     const scriptSrc = isDev
-      ? "'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.firebaseapp.com https://*.googleapis.com https://cdnjs.cloudflare.com"
-      : "'self' 'unsafe-inline' https://js.stripe.com https://*.firebaseapp.com https://*.googleapis.com https://cdnjs.cloudflare.com";
+      ? "'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.firebaseapp.com https://*.googleapis.com https://cdnjs.cloudflare.com https://apis.google.com"
+      : "'self' 'unsafe-inline' https://js.stripe.com https://*.firebaseapp.com https://*.googleapis.com https://cdnjs.cloudflare.com https://apis.google.com";
 
     return [
       {
